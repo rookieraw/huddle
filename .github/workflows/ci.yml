@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm -r run lint
+
+      - name: Typecheck
+        run: pnpm -r run typecheck
+
+      - name: Unit tests
+        run: pnpm -r run test
+
+      - name: Build
+        run: pnpm -r run build
+
+      # Integration tests (Testcontainers, real Postgres/Mongo/Redis) intentionally not
+      # included yet — no such tests exist until Phase 1 introduces real domain code and
+      # infrastructure-layer repositories to test against. Wiring this up against nonexistent
+      # tests would repeat the same mistake as the libs/* lint-script issue in Step 7.

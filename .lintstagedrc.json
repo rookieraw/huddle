@@ -1,0 +1,15 @@
+{
+  "apps/api-gateway/**/*.ts": [
+    "apps/api-gateway/node_modules/.bin/eslint --config apps/api-gateway/eslint.config.mjs --fix",
+    "prettier --write"
+  ],
+  "apps/web/**/*.{ts,tsx}": [
+    "apps/web/node_modules/.bin/eslint --config apps/web/eslint.config.mjs --fix",
+    "prettier --write"
+  ],
+  "libs/**/*.ts": [
+    "eslint --config eslint.config.mjs --fix",
+    "prettier --write"
+  ],
+  "**/*.{json,md,yml,yaml}": ["prettier --write"]
+}

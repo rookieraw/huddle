@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: huddle-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: huddle
+      POSTGRES_PASSWORD: huddle_dev_password
+      POSTGRES_DB: huddle
+    ports:
+      - '${POSTGRES_HOST_PORT:-5432}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U huddle']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mongo:
+    image: mongo:8.0-noble
+    container_name: huddle-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: huddle
+      MONGO_INITDB_ROOT_PASSWORD: huddle_dev_password
+    ports:
+      - '${MONGO_HOST_PORT:-27017}:27017'
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: huddle-redis
+    restart: unless-stopped
+    ports:
+      - '${REDIS_HOST_PORT:-6379}:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+  mongo-data:
+  redis-data:

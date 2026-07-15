@@ -1,0 +1,10 @@
+# Force LF for anything that might run inside Docker/Linux/CI
+* text=auto eol=lf
+
+# Explicit for shell scripts and hooks (husky, CI)
+*.sh text eol=lf
+.husky/* text eol=lf
+
+# Windows-specific files, if any ever appear, keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
