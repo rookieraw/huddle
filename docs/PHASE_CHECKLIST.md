@@ -34,18 +34,21 @@ Target defined in: `DEVELOPMENT_DOCUMENT.md` §8
 - [x] `apps/api-gateway` (NestJS) and `apps/web` (Next.js) both boot via `pnpm dev`
 - [x] Empty `libs/*` folder skeletons exist per §3 directory structure
 - [x] ESLint + Prettier + husky + lint-staged + commitlint enforced on commit
-- [ ] `main` branch protected on GitHub (PR + passing CI required to merge), GitHub Flow adopted
-- [ ] CI (`ci.yml`) green on a push with no code yet
-- [ ] `docs/` folder created, all four planning docs moved into it
+- [x] `main` branch protected on GitHub (PR + passing CI required to merge), GitHub Flow adopted
+- [x] CI (`ci.yml`) green on a push with no code yet
+- [x] `docs/` folder created, all four planning docs moved into it
 
 **Done when:** fresh clone → install → `docker-compose up` → `pnpm dev` → both apps respond.
 
-**Progress note (as of this checklist revision):** workspace scripts, all three Docker
-databases, both apps booting together on their assigned ports, the six `libs/*` skeletons, and
-the full lint/format/commit-hook chain (ESLint + Prettier + husky + lint-staged + commitlint)
-are all confirmed done — verified end to end with a real throwaway test commit (then
-undone via `git update-ref -d HEAD`, since no real commit exists yet per the Step 10 plan).
-Remaining: CI, branch protection, `docs/` folder, README, first commit.
+**Phase 0 complete.** First real commit (`chore: scaffold monorepo structure`) pushed to
+`main`; CI (`checkout` → `pnpm install` → `lint` → `typecheck` → `test` → `build`) confirmed
+green on GitHub Actions. Branch protection on `main` requires PR + passing CI status check
+(deliberately _not_ requiring human approval — solo repo, GitHub disallows self-approval).
+Squash-merge is the only enabled merge method, with commit messages defaulting to PR
+title + description. Full implementation notes, including several real bugs found and fixed
+along the way, are in `DEVELOPMENT_DOCUMENT.md` §8.2 — worth a skim before starting Phase 1,
+since a few (the `lint-staged` binary-resolution issue, the pnpm 11 build-approval changes)
+are the kind of thing that could resurface in a different form later.
 
 ---
 

@@ -54,6 +54,38 @@ Note: an earlier install briefly introduced a duplicate, conflicting `devEngines
 field (auto-added by pnpm itself during an unrelated `pnpm add`) — removed, since
 `packageManager` was already established as the single source of truth in Step 1.
 
+**Build-approval settings (`allowBuilds` in `pnpm-workspace.yaml`) — confirmed correct
+mechanism for pnpm 11:** pnpm 11 removed the older `onlyBuiltDependencies` /
+`neverBuiltDependencies` / `ignoredBuiltDependencies` / `ignoreDepScripts` settings entirely,
+and no longer reads a `"pnpm"` field from `package.json` at all — `allowBuilds` in
+`pnpm-workspace.yaml` is now the only mechanism. Every package with a postinstall/build script
+gets explicitly reviewed and set to `true` or `false` (pnpm auto-adds a placeholder entry for
+anything flagged during install, specifically so it gets a deliberate decision rather than
+being silently skipped):
+
+```yaml
+allowBuilds:
+  sharp: true # Next.js image optimization — functionally required
+  unrs-resolver: true # module resolution used by ESLint tooling — functionally required
+  msgpackr-extract:
+    true # native accel for bullmq's msgpack job serialization (via
+    # @nestjs/bullmq); has a working pure-JS fallback either way, but
+    # will be genuinely exercised once Phase 6 builds the billing
+    # webhook queue
+  '@scarf/scarf':
+    false # pure telemetry beacon (via @nestjs/swagger's dependency tree,
+    # "like Google Analytics for your npm packages" per its own
+    # description) — no functional relationship to Swagger's actual
+    # documentation-generation behavior, denied deliberately
+```
+
+`msgpackr-extract` and `@scarf/scarf` only surfaced during the first CI run (Linux,
+`ubuntu-latest`) — not during local Windows installs — because `msgpackr-extract` ships
+platform-specific optional native binaries, and different platforms resolve different
+optional variants requiring a build step. Worth expecting more platform-specific surprises
+like this the first time any new environment (a CI runner, a teammate's machine, WSL2) installs
+this project's dependencies.
+
 ### Linting & Formatting Toolchain (root-level, governs `libs/*`; `apps/*` keep their own configs)
 
 | Package                  | Installed version | Notes                                                                                                                                                                                                                                                                                                                                                                                                      |

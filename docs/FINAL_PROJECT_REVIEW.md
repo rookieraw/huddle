@@ -2,16 +2,14 @@
 
 ## Junior Backend Engineer Portfolio
 
-**Status:** Phase 0 implementation in progress
-**Date:** July 5, 2026 (package versions corrected July 8, 2026 — see note below)
-**Reviewer:** Complete plan consolidation & validation
+**Status:** Phase 0 complete; Phase 1 (Identity) starting
+**Date:** July 2026
 
-> **Version correction note (July 8, 2026):** Three package versions below were found not to
-> exist on the npm registry during actual Phase 0 install (`@nestjs/config@4.1.0`,
-> `jsonwebtoken@9.0.10`, `mediasoup-client@3.21.1`), and two more were significantly stale
-> (`@nestjs/swagger`, `@nestjs/bullmq`). The corrected values are reflected below and match
-> `PACKAGE_LIST.md`, which remains the authoritative source — always verify against
-> `registry.npmjs.org` before installing, rather than trusting either document at face value.
+> **Note:** This document intentionally does not list exact package versions — those belong
+> solely in `PACKAGE_LIST.md`, which is the single authoritative source. Repeating version
+> numbers across multiple docs is what caused real drift during Phase 0 implementation (a
+> version corrected in one doc but not the other); keeping them in exactly one place avoids
+> that class of problem going forward.
 
 ---
 
@@ -97,79 +95,38 @@ By building Phases 0-8, you'll have:
 
 ---
 
-## 3. TECHNOLOGY STACK (Validated July 2026, corrected July 8, 2026)
+## 3. TECHNOLOGY STACK
 
-### Confirmed Package Versions
+### Stack Overview
 
-**Backend Core:**
+**Backend Core:** NestJS, TypeScript (transition-release adopted deliberately), Node.js LTS
 
-- NestJS: 11.1.27
-- TypeScript: 6.0.3 (transition release toward v7)
-- Node.js: 24 LTS
+**Databases:** PostgreSQL (Docker), MongoDB (Docker), Redis (Docker), Prisma (PostgreSQL ORM), Mongoose (MongoDB ODM)
 
-**Databases:**
+**Real-time & Caching:** Socket.io, ioredis, BullMQ (job queues), `@socket.io/redis-adapter`
 
-- PostgreSQL: 17-alpine (Docker)
-- MongoDB: 8.0 (Docker — `mongo:8.0-noble`; the official image has no Alpine variant, unlike Postgres/Redis)
-- Redis: 7.4-alpine (Docker)
-- Prisma: 7.8.0 (PostgreSQL ORM)
-- Mongoose: 9.7.3 (MongoDB ODM)
+**Authentication:** argon2 (memory-hard password hashing, OWASP-recommended), Passport.js + strategies, `@nestjs/jwt`
 
-**Real-time & Caching:**
+**Payments:** Stripe (Node.js SDK)
 
-- Socket.io: 4.8.3
-- ioredis: 5.11.1 (✅ Supports Redis 2.6.12+ with complete compatibility for Redis 7.x)
-- BullMQ: 5.79.2 (job queues)
-- @socket.io/redis-adapter: 8.3.0
+**Video/WebRTC:** mediasoup (SFU)
 
-**Authentication:**
+**Frontend:** Next.js (App Router), React, TailwindCSS, `@tanstack/react-query`
 
-- argon2: 0.44.0 (memory-hard password hashing, OWASP-recommended)
-- Passport.js: 0.7.0 + strategies
-- @nestjs/jwt: 11.0.2
+**Development:** ESLint (flat config), Prettier, husky + lint-staged, commitlint + commitizen, Jest, ts-jest, Supertest, Testcontainers (real Postgres/Mongo/Redis in tests)
 
-**Payments:**
+**Package Manager & Monorepo:** pnpm workspaces, pinned via Corepack
 
-- Stripe: 22.3.0 (Node.js SDK)
-
-**Video/WebRTC:**
-
-- mediasoup: 3.21.0
-- mediasoup-client: 3.21.0
-
-**Frontend:**
-
-- Next.js: 16.2.10
-- React: 19.2.7
-- TailwindCSS: 4.3.2
-- @tanstack/react-query: 5.101.2
-
-**Development:**
-
-- ESLint: 10.6.0 (flat config) — **except `apps/web`, pinned to `^9.39.5`** (deliberate
-  exception: `eslint-plugin-react`, pulled in via `eslint-config-next`, has no ESLint 10
-  support yet; see `DEVELOPMENT_DOCUMENT.md` §8.2)
-- Prettier: 3.9.4
-- husky: 9.1.7
-- lint-staged: 17.0.8
-- commitlint: 21.2.0
-- commitizen: 4.3.2
-- Jest: 30.4.2
-- ts-jest: 29.4.11
-- Supertest: 7.2.2
-- Testcontainers: 12.0.4 (real Postgres/Mongo/Redis in tests)
-
-**Package Manager & Monorepo:**
-
-- pnpm: pinned via Corepack's `packageManager` field in root `package.json` (not hardcoded
-  here — pnpm ships new releases too frequently for a version number in prose to stay current;
-  run `corepack use pnpm@latest` once in Phase 0 to write the real, current pin)
+**Exact installed versions live in `PACKAGE_LIST.md` — the single source of truth for "what
+version, exactly." This doc intentionally doesn't repeat version numbers, since those go
+stale the moment either doc is updated without the other (this happened repeatedly during
+actual Phase 0 implementation).**
 
 **Why Not:**
 
 - ❌ Turbo.js: Not needed for small monorepo, adds complexity without interview value
-- ❌ TypeScript 5.9: v6.0.3 is the transition release; shows ecosystem awareness
-- ❌ redis@6.1.0: Supports only Redis 7.2+; ioredis supports 2.6.12+ (more flexible)
+- ❌ Older TypeScript: current transition release chosen deliberately; shows ecosystem awareness
+- ❌ `redis` npm package: narrower Redis-server-version support than `ioredis`
 - ❌ LiveKit: mediasoup teaches more; you understand the SFU architecture
 - ❌ Kubernetes/K3s: Document in Phase 9; don't build for junior portfolio
 
@@ -277,7 +234,7 @@ describe('User subscription limits', () => {
   it('free user can create 1 room only', () => {
     /* ... */
   });
-  it('free user has 120 min/month group video', () => {
+  it('free user has no group video access (0 participants allowed)', () => {
     /* ... */
   });
   it('pro user has unlimited group participants', () => {
@@ -329,8 +286,8 @@ it('Stripe webhook is idempotent (fire twice, only one subscription)', () => {
 
 ### Linting & Formatting (Automated)
 
-- **ESLint 10.6.0** (flat config): Shared rules for backend + frontend
-- **Prettier 3.9.4**: Single `.prettierrc` for entire monorepo
+- **ESLint** (flat config): rules per-app (backend and frontend need different rule sets — see `DEVELOPMENT_DOCUMENT.md` §8.2)
+- **Prettier**: Single `.prettierrc` for entire monorepo
 - **husky + lint-staged**: Pre-commit hooks; lint only staged files
 - **TypeScript strict mode**: No `any`, full type safety
 
@@ -347,9 +304,17 @@ docs(architecture): explain DDD bounded contexts
 
 **Tools:**
 
-- **commitlint 21.2.0**: Validates commit message format
-- **commitizen 4.3.2**: Interactive prompt (optional)
-- **Scopes:** identity, chat, conferencing, billing, notification, web, infra, docs
+- **commitlint**: Validates commit message format
+- **commitizen**: Interactive prompt (optional)
+- **Scopes:** identity, chat, conferencing, billing, notification, web, infra, docs, meta
+
+**Scope policy:** required for `feat`/`fix`/`test`/`refactor` (ties the change to a specific
+bounded context — genuinely useful for scanning history by area later); optional for
+`docs`/`chore`/`ci`/`build`, since these are often project-wide rather than tied to one
+context. Where a project-wide process/tooling/doc-sync commit needs a scope for consistency
+across tooling (e.g. VS Code's Commit Message Editor extension vs. the plain CLI producing
+differently-shaped messages), use **`meta`** rather than duplicating the type as its own scope
+(`docs(docs): ...` reads as redundant — `docs(meta): ...` actually communicates something).
 
 ### CI/CD (GitHub Actions)
 
