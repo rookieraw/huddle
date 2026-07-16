@@ -1297,16 +1297,17 @@ describe('VideoSession — video with optional chat integration', () => {
       issues hit and resolved)
 - [x] husky + lint-staged: pre-commit runs lint-staged
 - [x] commitlint + commitizen: commit-msg hook validates Conventional Commits
-- [ ] GitHub Actions `ci.yml`: install → lint → typecheck → unit test → integration test (Testcontainers) → build
-- [ ] Adopt **GitHub Flow** as the git workflow (see note below) — protect `main` on GitHub
+- [x] GitHub Actions `ci.yml`: install → lint → typecheck → unit test → build (Testcontainers
+      integration step intentionally deferred to Phase 1 — see §8.2)
+- [x] Adopt **GitHub Flow** as the git workflow (see note below) — protect `main` on GitHub
       (require PR + passing CI before merge), agree on squash-merge as the default merge strategy
-- [ ] `.env.example` at root documenting all required environment variables
+- [x] `.env.example` at root documenting all required environment variables
 - [x] Verify `docker-compose up` brings up all three databases and they're reachable
 - [x] Verify `pnpm -r --parallel run dev` boots both `api-gateway` and `web` concurrently
-- [ ] Create `docs/` folder at repo root; move all four planning docs into it
+- [x] Create `docs/` folder at repo root; move all four planning docs into it
       (`FINAL_PROJECT_REVIEW.md`, `DEVELOPMENT_DOCUMENT.md`, `PACKAGE_LIST.md`, `PHASE_CHECKLIST.md`)
-- [ ] Write a short root `README.md`: what Huddle is, tech stack summary, setup steps, link to `docs/`
-- [ ] First commit: `chore: scaffold monorepo structure`
+- [x] Write a short root `README.md`: what Huddle is, tech stack summary, setup steps, link to `docs/`
+- [x] First commit: `chore: scaffold monorepo structure`
 
 **Definition of done for Phase 0:** a fresh clone + `pnpm install` + `docker-compose up` +
 `pnpm dev` gets you a running (empty) NestJS API and Next.js frontend, with lint/format/commit
@@ -1330,15 +1331,15 @@ Discovered the hard way during Phase 0 implementation: Next.js and NestJS both d
 existing local PostgreSQL install). The full picture, so this doesn't surprise you again in a
 later phase:
 
-| Service                                    | Port                                                                             | Status                                                                                                                |
-| ------------------------------------------ | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `apps/web` (Next.js)                       | 3000                                                                             | Standard default, kept as-is                                                                                          |
-| `apps/api-gateway` (Nest HTTP + Socket.io) | 4000                                                                             | Changed from Nest's 3000 default to avoid colliding with `apps/web` — set via `process.env.PORT ?? 4000` in `main.ts` |
-| PostgreSQL (Docker, host-side)             | `${POSTGRES_HOST_PORT:-5432}` (commonly `5433` if you also run Postgres locally) | Host-side mapping only; container internally still uses 5432. Configurable per-developer via `.env` (see §8.2)        |
-| MongoDB (Docker)                           | 27017                                                                            | No conflicts observed so far                                                                                          |
-| Redis (Docker)                             | 6379                                                                             | No conflicts observed so far                                                                                          |
-| coturn (Phase 3, TURN server)              | 3478 (typical)                                                                   | Not yet configured — verify for conflicts when Phase 3 starts                                                         |
-| mediasoup (Phase 5, RTP/SFU)               | Dynamic UDP range, typically 40000-49999                                         | Needs explicit Docker port range exposure when Phase 5 starts — not yet configured                                    |
+| Service                                    | Port                                     | Status                                                                                                                |
+| ------------------------------------------ | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `apps/web` (Next.js)                       | 3000                                     | Standard default, kept as-is                                                                                          |
+| `apps/api-gateway` (Nest HTTP + Socket.io) | 4000                                     | Changed from Nest's 3000 default to avoid colliding with `apps/web` — set via `process.env.PORT ?? 4000` in `main.ts` |
+| PostgreSQL (Docker, host-side)             | `${POSTGRES_HOST_PORT:-5432}`            | Configurable per-developer via `.env` (see §8.2)                                                                      |
+| MongoDB (Docker, host-side)                | `${MONGO_HOST_PORT:-27017}`              | Same pattern as Postgres, for consistency — no conflict observed yet, but any developer could hit one                 |
+| Redis (Docker, host-side)                  | `${REDIS_HOST_PORT:-6379}`               | Same pattern                                                                                                          |
+| coturn (Phase 3, TURN server)              | 3478 (typical)                           | Not yet configured — verify for conflicts when Phase 3 starts                                                         |
+| mediasoup (Phase 5, RTP/SFU)               | Dynamic UDP range, typically 40000-49999 | Needs explicit Docker port range exposure when Phase 5 starts — not yet configured                                    |
 
 **Rule of thumb going forward:** whenever a new service or container is introduced in a later
 phase, check this table first, add a row for it, and verify with `netstat -ano | findstr :<port>`
@@ -1541,6 +1542,127 @@ root...`). Fix: merge `allowBuilds`/`ignoredBuiltDependencies` into the root
   index. `git log --oneline` is the authoritative way to confirm this worked — VS Code's Git
   Graph extension can show a stale cached view immediately after, catching up only once
   manually refreshed.
+
+**GitHub Actions CI (Step 9)**
+
+- Verified current major versions for every action before writing the workflow, rather than
+  assuming: `actions/checkout@v6`, `actions/setup-node@v6`, `pnpm/action-setup@v6`.
+- `pnpm/action-setup@v6` needs no `version:` input — it auto-reads the pinned version from
+  root `package.json`'s `packageManager` field, keeping CI and local dev on the exact same
+  pnpm version with zero separate number to maintain.
+- `actions/setup-node`'s `cache: pnpm` must be set explicitly — pnpm caching isn't
+  auto-detected the way npm's is.
+- The Testcontainers/integration-test CI step was deliberately left out of `ci.yml` entirely
+  rather than stubbed — no such tests exist until Phase 1 introduces real
+  infrastructure-layer repositories to test against. Same "don't wire up what doesn't exist
+  yet" principle as the `libs/*` lint-script mistake in Step 7.
+
+**A `git commit` can silently run a different tool version than `pnpm -r run lint` does —
+the most subtle bug hit in Phase 0 (Step 10).** `.lintstagedrc.json` ran a bare `eslint`
+command for both `apps/api-gateway` and `apps/web`. `lint-staged` executes commands with `cwd`
+set to the **repo root**, not the individual app folder — so under pnpm's strict,
+non-hoisted `node_modules`, that bare `eslint` resolved to the **root's** pinned
+`eslint@10.6.0`, not `apps/web`'s separately-pinned `eslint@^9.39.5`, even though the
+`--config apps/web/eslint.config.mjs` flag correctly pointed at `web`'s config file — the
+config path and the binary executing it were silently mismatched. This reproduced the exact
+`eslint-plugin-react`/ESLint 10 crash (`contextOrFilename.getFilename is not a function`,
+tracked upstream at `vercel/next.js#89764` — confirmed a real, still-open compatibility gap,
+and confirmed via that thread that workarounds like manually setting `settings.react.version`
+are unreliable "whack-a-mole" fixes other rules still crash on afterward). The first
+suspected culprit was `next.config.ts` needing a `globalIgnores` entry (a plain config file
+with no JSX, plausible target for exclusion) — but an isolated test proved this was a red
+herring: running `pnpm exec eslint next.config.ts` directly from within `apps/web` (correct
+cwd, correct resolved binary) passed clean, proving the file itself was never the problem.
+**Fix:** point `.lintstagedrc.json` at each app's own local binary explicitly —
+`apps/api-gateway/node_modules/.bin/eslint` / `apps/web/node_modules/.bin/eslint` — rather
+than a bare `eslint` command that resolves relative to `lint-staged`'s own cwd. `libs/**/*.ts`
+was unaffected, since root _is_ the correct binary for `libs` anyway. Lesson: in a mixed-version
+monorepo, verify which binary a tool command actually resolves to, not just which config
+file it's pointed at — the two can silently diverge based on invocation `cwd`.
+
+**pnpm 11 removed the old build-approval settings entirely — `allowBuilds` is now the only
+mechanism, and `package.json`'s `"pnpm"` field is no longer read at all.** Confirmed directly
+from pnpm 11's own release notes: `onlyBuiltDependencies`, `onlyBuiltDependenciesFile`,
+`neverBuiltDependencies`, `ignoredBuiltDependencies`, and `ignoreDepScripts` are all gone;
+`allowBuilds` (in `pnpm-workspace.yaml` only) replaces them. A config edit had briefly kept an
+`ignoredBuiltDependencies` block alongside `allowBuilds` — that block was silently doing
+nothing (unrecognized YAML keys don't error, they're just ignored), an easy trap. Per pnpm's
+own docs: the default for any package **not** listed in `allowBuilds` is deny
+(`strictDepBuilds` defaults to `true`, causing a hard error rather than a warning) — but the
+better practice is still to list every reviewed package explicitly with `true`/`false` rather
+than relying on silent omission, since pnpm itself auto-adds placeholder entries for anything
+flagged during install specifically so each one gets a deliberate, visible decision.
+
+- CI's first real run (Linux, `ubuntu-latest`) surfaced two _new_ flagged packages —
+  `@scarf/scarf` and `msgpackr-extract` — that never appeared during local (Windows) installs,
+  because `msgpackr-extract` ships platform-specific optional native binaries; different
+  platforms resolve different optional variants needing a build step.
+- Traced both to their actual source rather than guessing: `msgpackr-extract` comes via
+  `@nestjs/bullmq` → `bullmq` → `msgpackr` (binary job-data serialization); `@scarf/scarf`
+  comes via `@nestjs/swagger`'s dependency tree. Both `@nestjs/bullmq` and `@nestjs/swagger`
+  were already installed in Step 4 (bundled into the initial exact-pin `@nestjs/*` install,
+  not deferred to a later phase).
+- **Decision, made deliberately rather than blanket-approving everything the way `sharp`/
+  `unrs-resolver` were:** `msgpackr-extract: true` (real, if optional, functional benefit —
+  `bullmq` falls back to a working pure-JS implementation either way, but the native path
+  will actually be exercised once Phase 6 builds the billing webhook queue) and
+  `"@scarf/scarf": false` (pure telemetry beacon — "like Google Analytics for your npm
+  packages," per its own npm description — with zero functional relationship to Swagger's
+  actual documentation-generation behavior). Final `pnpm-workspace.yaml`:
+  ```yaml
+  allowBuilds:
+    sharp: true
+    unrs-resolver: true
+    msgpackr-extract: true
+    '@scarf/scarf': false
+  ```
+
+**`typescript-eslint`'s `tseslint.config(...)` helper is itself deprecated** in favor of
+`defineConfig` from `eslint/config` (part of ESLint core) — the two are functionally
+identical, `tseslint.config` was always just a thin wrapper. Migrated root `eslint.config.mjs`
+accordingly; this also makes root and `apps/web` consistent in which top-level config helper
+they use (only `apps/api-gateway`, per Nest's own scaffold convention, still uses the older
+pattern directly — worth checking if Nest's own generated config shows the same deprecation
+warning in a future Nest CLI version).
+
+**A stray nested lockfile is easy to miss until you actually read the commit's file list.**
+`apps/web/pnpm-lock.yaml` — a leftover from `create-next-app` scaffolding before it became
+part of the pnpm workspace — got committed alongside the real root lockfile. A pnpm workspace
+should have exactly one lockfile, at the root. Fixed via `git commit --amend --no-edit` before
+pushing (safe specifically because nothing had been pushed yet — no shared history to
+disrupt), keeping Phase 0's history as one accurate commit rather than a "scaffold" commit
+immediately followed by a fixup.
+
+**GitHub repository & branch protection setup, decided deliberately for solo portfolio use —
+not just "turn everything on":**
+
+- Created the GitHub repo empty (no auto-generated README/`.gitignore`/license) specifically
+  to avoid a conflicting history on the very first push, since the local repo already had
+  these staged.
+- Branch protection on `main`: require a pull request before merging, require the CI status
+  check to pass — **but explicitly left "Require approvals" unchecked.** GitHub disables
+  self-approval on your own PRs with no admin bypass; enabling this with a required count of 1
+  would have locked out every merge entirely, since there's no second reviewer. The three
+  sibling sub-options ("dismiss stale approvals," "require Code Owners review," "require
+  approval of the most recent push") are all moot once "Require approvals" itself is off, and
+  were left unchecked too.
+- **Real gotcha:** the status-check search box matches the workflow's **job id**
+  (`build-and-test`), not the top-level `name:` field in `ci.yml` (`CI`) — searching "CI" in
+  the branch-protection status-check picker finds nothing.
+- Merge button settings: only "Allow squash merging" enabled (merge commits and rebase merging
+  both disabled) — enforces the GitHub Flow decision already stated above, rather than leaving
+  it as an unenforced convention anyone could violate by picking the wrong button on a PR.
+  Squash commit message format explicitly set to "Pull request title and description" rather
+  than left on GitHub's own default (which, for any PR with 2+ commits, dumps the full list of
+  every individual commit message into the squash commit — exactly the noise squashing is
+  meant to eliminate).
+- **PR granularity decision for solo, job-hunting-portfolio use:** open one PR per meaningful
+  `PHASE_CHECKLIST.md` line item, not one per commit — enough that each PR is a real,
+  reviewable unit of work with an honest description (what was built, why, what was tested),
+  not empty process ceremony. The self-review nature of a solo repo means the usual "second
+  pair of eyes" value of a PR is absent regardless of how it's configured; the actual value
+  kept is the CI gate plus a demonstrable, explainable history — worth being honest about
+  that tradeoff rather than pretending the process is identical to a team's.
 
 **Local environment specifics (Windows + git bash)**
 
