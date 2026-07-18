@@ -404,6 +404,9 @@ importers:
 
   libs/identity:
     dependencies:
+      '@huddle/shared-kernel':
+        specifier: workspace:*
+        version: link:../shared-kernel
       argon2:
         specifier: ^0.44.0
         version: 0.44.0
