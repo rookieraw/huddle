@@ -7,3 +7,4 @@ allowBuilds:
   unrs-resolver: true
   msgpackr-extract: true
   '@scarf/scarf': false
+  argon2: true
