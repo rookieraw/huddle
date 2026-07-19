@@ -1,11 +1,12 @@
 import * as argon2 from 'argon2';
+import { DomainError } from '@huddle/shared-kernel';
 
 export class PasswordHash {
   private constructor(private readonly hash: string) {}
 
   static async fromPlainText(plainPassword: string): Promise<PasswordHash> {
     if (plainPassword.length < 8) {
-      throw new Error('Password must be at least 8 characters');
+      throw new DomainError('Password must be at least 8 characters');
     }
 
     const hash = await argon2.hash(plainPassword, {
