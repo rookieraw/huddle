@@ -49,6 +49,15 @@ describe('User', () => {
         DomainError,
       );
     });
+
+    it('returns the email the user registered with', async () => {
+      const { user } = await User.register(
+        'ada@example.com',
+        'correct-horse-battery',
+      );
+
+      expect(user.getEmail()).toBe('ada@example.com');
+    });
   });
 
   describe('registerViaOAuth', () => {

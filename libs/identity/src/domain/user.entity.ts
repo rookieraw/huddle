@@ -57,6 +57,10 @@ export class User {
     return this.emailVerified;
   }
 
+  getEmail(): string {
+    return this.email;
+  }
+
   getOAuthProvider(): string | null {
     return this.oauthProvider;
   }
