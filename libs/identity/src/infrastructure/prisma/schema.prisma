@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client"
+  output   = "./generated"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["identity"]
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String?  @map("password_hash")
+  emailVerified Boolean  @default(false) @map("email_verified")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  oauthProviders OAuthProvider[]
+  refreshTokens  RefreshToken[]
+
+  @@map("users")
+  @@schema("identity")
+}
+
+model OAuthProvider {
+  id         String   @id @default(uuid())
+  provider   String
+  providerId String   @map("provider_id")
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([provider, providerId])
+  @@map("oauth_providers")
+  @@schema("identity")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique @map("token_hash")
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("refresh_tokens")
+  @@schema("identity")
+}

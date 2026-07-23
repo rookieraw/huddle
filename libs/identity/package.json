@@ -30,11 +30,15 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^26.1.0",
     "jest": "^30.4.2",
+    "prisma": "7.9.0",
     "ts-jest": "^29.4.11",
     "typescript": "6.0.3"
   },
   "dependencies": {
     "@huddle/shared-kernel": "workspace:*",
-    "argon2": "^0.44.0"
+    "@prisma/adapter-pg": "7.9.0",
+    "@prisma/client": "7.9.0",
+    "argon2": "^0.44.0",
+    "dotenv": "^17.4.2"
   }
 }
