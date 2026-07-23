@@ -38,6 +38,24 @@ export class User {
     return { user, event: new UserCreatedEvent(user.id, user.email) };
   }
 
+  static reconstitute(data: {
+    id: string;
+    email: string;
+    passwordHash: string | null;
+    emailVerified: boolean;
+    createdAt: Date;
+    oauthProvider: string | null;
+  }): User {
+    return new User(
+      data.id,
+      data.email,
+      data.passwordHash ? PasswordHash.fromHash(data.passwordHash) : null,
+      data.emailVerified,
+      data.createdAt,
+      data.oauthProvider,
+    );
+  }
+
   verifyEmail(): UserVerifiedEvent {
     if (this.emailVerified) {
       throw new DomainError('Email already verified');
@@ -63,5 +81,13 @@ export class User {
 
   getOAuthProvider(): string | null {
     return this.oauthProvider;
+  }
+
+  getPasswordHash(): PasswordHash | null {
+    return this.passwordHash;
+  }
+
+  getCreatedAt(): Date {
+    return this.createdAt;
   }
 }

@@ -1,5 +1,6 @@
 import { DomainError } from '@huddle/shared-kernel';
 import { User } from './user.entity';
+import { PasswordHash } from './value-objects/password-hash.vo';
 
 describe('User', () => {
   describe('register', () => {
@@ -139,6 +140,72 @@ describe('User', () => {
       const { user } = User.registerViaOAuth('ada@example.com', 'google');
 
       await expect(user.verifyPassword('anything')).resolves.toBe(false);
+    });
+  });
+
+  describe('getPasswordHash', () => {
+    it('returns null for an OAuth-only user', () => {
+      const { user } = User.registerViaOAuth('ada@example.com', 'google');
+
+      expect(user.getPasswordHash()).toBeNull();
+    });
+
+    it('returns the PasswordHash for a password-registered user', async () => {
+      const { user } = await User.register(
+        'ada@example.com',
+        'correct-horse-battery',
+      );
+
+      expect(user.getPasswordHash()).toBeInstanceOf(PasswordHash);
+    });
+  });
+
+  describe('getCreatedAt', () => {
+    it('returns the registration timestamp', async () => {
+      const before = Date.now();
+      const { user } = await User.register(
+        'ada@example.com',
+        'correct-horse-battery',
+      );
+      const after = Date.now();
+
+      expect(user.getCreatedAt().getTime()).toBeGreaterThanOrEqual(before);
+      expect(user.getCreatedAt().getTime()).toBeLessThanOrEqual(after);
+    });
+  });
+
+  describe('reconstitute', () => {
+    it('rebuilds a password-based user from persisted data without re-validating', () => {
+      const persistedHash =
+        '$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$c29tZWhhc2g';
+
+      const user = User.reconstitute({
+        id: 'existing-id',
+        email: 'ada@example.com',
+        passwordHash: persistedHash,
+        emailVerified: true,
+        createdAt: new Date('2024-01-01T00:00:00.000Z'),
+        oauthProvider: null,
+      });
+
+      expect(user.id).toBe('existing-id');
+      expect(user.getEmail()).toBe('ada@example.com');
+      expect(user.isEmailVerified()).toBe(true);
+      expect(user.getPasswordHash()?.value).toBe(persistedHash);
+    });
+
+    it('rebuilds an OAuth-based user with no password hash', () => {
+      const user = User.reconstitute({
+        id: 'existing-id',
+        email: 'ada@example.com',
+        passwordHash: null,
+        emailVerified: true,
+        createdAt: new Date('2024-01-01T00:00:00.000Z'),
+        oauthProvider: 'google',
+      });
+
+      expect(user.getPasswordHash()).toBeNull();
+      expect(user.getOAuthProvider()).toBe('google');
     });
   });
 });
