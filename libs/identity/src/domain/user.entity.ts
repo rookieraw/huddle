@@ -12,6 +12,7 @@ export class User {
     private emailVerified: boolean,
     private readonly createdAt: Date,
     private readonly oauthProvider: string | null,
+    private readonly oauthProviderId: string | null,
   ) {}
 
   static async register(
@@ -19,13 +20,22 @@ export class User {
     plainPassword: string,
   ): Promise<{ user: User; event: UserCreatedEvent }> {
     const hash = await PasswordHash.fromPlainText(plainPassword);
-    const user = new User(randomUUID(), email, hash, false, new Date(), null);
+    const user = new User(
+      randomUUID(),
+      email,
+      hash,
+      false,
+      new Date(),
+      null,
+      null,
+    );
     return { user, event: new UserCreatedEvent(user.id, user.email) };
   }
 
   static registerViaOAuth(
     email: string,
     provider: 'google' | 'github',
+    providerId: string,
   ): { user: User; event: UserCreatedEvent } {
     const user = new User(
       randomUUID(),
@@ -34,6 +44,7 @@ export class User {
       true,
       new Date(),
       provider,
+      providerId,
     );
     return { user, event: new UserCreatedEvent(user.id, user.email) };
   }
@@ -45,6 +56,7 @@ export class User {
     emailVerified: boolean;
     createdAt: Date;
     oauthProvider: string | null;
+    oauthProviderId: string | null;
   }): User {
     return new User(
       data.id,
@@ -53,6 +65,7 @@ export class User {
       data.emailVerified,
       data.createdAt,
       data.oauthProvider,
+      data.oauthProviderId,
     );
   }
 
@@ -81,6 +94,10 @@ export class User {
 
   getOAuthProvider(): string | null {
     return this.oauthProvider;
+  }
+
+  getOAuthProviderId(): string | null {
+    return this.oauthProviderId;
   }
 
   getPasswordHash(): PasswordHash | null {
