@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "test": "jest",
+    "test": "jest --testPathIgnorePatterns=\\.integration\\.spec\\.ts$",
+    "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --testRegex=\".*\\.integration\\.spec\\.ts$\" --testTimeout=30000",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "typecheck": "tsc --noEmit",
@@ -27,10 +28,13 @@
     "testEnvironment": "node"
   },
   "devDependencies": {
+    "@testcontainers/postgresql": "^12.0.4",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.1.0",
+    "cross-env": "^10.1.0",
     "jest": "^30.4.2",
     "prisma": "7.9.0",
+    "testcontainers": "^12.0.4",
     "ts-jest": "^29.4.11",
     "typescript": "6.0.3"
   },
