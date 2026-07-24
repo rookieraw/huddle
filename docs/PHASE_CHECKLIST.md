@@ -56,12 +56,12 @@ are the kind of thing that could resurface in a different form later.
 
 Target defined in: `DEVELOPMENT_DOCUMENT.md` §4.1, §6.1 (Identity endpoints)
 
-- [ ] `User` entity implemented exactly as specced (register, registerViaOAuth, verifyEmail, verifyPassword)
-- [ ] `PasswordHash` VO using argon2id
-- [ ] Prisma schema `identity` namespace migrated (`users`, `oauth_providers`, `refresh_tokens`)
+- [x] `User` entity implemented exactly as specced (register, registerViaOAuth, verifyEmail, verifyPassword)
+- [x] `PasswordHash` VO using argon2id
+- [x] Prisma schema `identity` namespace migrated (`users`, `oauth_providers`, `refresh_tokens`)
 - [ ] All REST endpoints in §6.1 Identity section return correct status codes
 - [ ] Google + GitHub OAuth flows work end-to-end (manual test)
-- [ ] Domain-layer unit tests: register, duplicate email, password too short, OAuth pre-verified
+- [x] Domain-layer unit tests: register, duplicate email, password too short, OAuth pre-verified
 - [ ] E2E test: register → verify email → login → receive JWT pair
 
 **Done when:** you can register, verify, log in, refresh token, and OAuth-login via Postman/curl.
