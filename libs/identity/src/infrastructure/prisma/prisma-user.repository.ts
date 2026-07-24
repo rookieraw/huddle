@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import { Prisma, PrismaClient } from './generated/client';
 import { User } from '../../domain/user.entity';
 import { UserRepository } from '../../application/ports/user.repository.port';
@@ -6,6 +7,7 @@ type UserWithOAuthProviders = Prisma.UserGetPayload<{
   include: { oauthProviders: true };
 }>;
 
+@Injectable()
 export class PrismaUserRepository implements UserRepository {
   constructor(private readonly prisma: PrismaClient) {}
 

@@ -21,6 +21,9 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "setupFiles": [
+      "reflect-metadata"
+    ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
@@ -40,9 +43,12 @@
   },
   "dependencies": {
     "@huddle/shared-kernel": "workspace:*",
+    "@nestjs/common": "11.1.27",
+    "@nestjs/config": "4.0.4",
     "@prisma/adapter-pg": "7.9.0",
     "@prisma/client": "7.9.0",
     "argon2": "^0.44.0",
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "reflect-metadata": "^0.2.2"
   }
 }

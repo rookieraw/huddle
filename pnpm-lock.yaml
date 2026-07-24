@@ -407,6 +407,12 @@ importers:
       '@huddle/shared-kernel':
         specifier: workspace:*
         version: link:../shared-kernel
+      '@nestjs/common':
+        specifier: 11.1.27
+        version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/config':
+        specifier: 4.0.4
+        version: 4.0.4(@nestjs/common@11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2))(rxjs@7.8.2)
       '@prisma/adapter-pg':
         specifier: 7.9.0
         version: 7.9.0
@@ -419,6 +425,9 @@ importers:
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
     devDependencies:
       '@testcontainers/postgresql':
         specifier: ^12.0.4
