@@ -13,6 +13,8 @@ export class User {
     private readonly createdAt: Date,
     private readonly oauthProvider: string | null,
     private readonly oauthProviderId: string | null,
+    private verificationToken: string | null,
+    private verificationTokenExpiresAt: Date | null,
   ) {}
 
   static async register(
@@ -20,6 +22,9 @@ export class User {
     plainPassword: string,
   ): Promise<{ user: User; event: UserCreatedEvent }> {
     const hash = await PasswordHash.fromPlainText(plainPassword);
+    const verificationTokenExpiresAt = new Date(
+      Date.now() + 24 * 60 * 60 * 1000,
+    );
     const user = new User(
       randomUUID(),
       email,
@@ -28,6 +33,8 @@ export class User {
       new Date(),
       null,
       null,
+      randomUUID(),
+      verificationTokenExpiresAt,
     );
     return { user, event: new UserCreatedEvent(user.id, user.email) };
   }
@@ -45,6 +52,8 @@ export class User {
       new Date(),
       provider,
       providerId,
+      null,
+      null,
     );
     return { user, event: new UserCreatedEvent(user.id, user.email) };
   }
@@ -57,6 +66,8 @@ export class User {
     createdAt: Date;
     oauthProvider: string | null;
     oauthProviderId: string | null;
+    verificationToken: string | null;
+    verificationTokenExpiresAt: Date | null;
   }): User {
     return new User(
       data.id,
@@ -66,6 +77,8 @@ export class User {
       data.createdAt,
       data.oauthProvider,
       data.oauthProviderId,
+      data.verificationToken,
+      data.verificationTokenExpiresAt,
     );
   }
 
@@ -73,7 +86,15 @@ export class User {
     if (this.emailVerified) {
       throw new DomainError('Email already verified');
     }
+    if (
+      !this.verificationTokenExpiresAt ||
+      this.verificationTokenExpiresAt.getTime() < Date.now()
+    ) {
+      throw new DomainError('Verification token has expired');
+    }
     this.emailVerified = true;
+    this.verificationToken = null;
+    this.verificationTokenExpiresAt = null;
     return new UserVerifiedEvent(this.id);
   }
 
@@ -84,12 +105,20 @@ export class User {
     return this.passwordHash.verify(plainPassword);
   }
 
+  getEmail(): string {
+    return this.email;
+  }
+
+  getPasswordHash(): PasswordHash | null {
+    return this.passwordHash;
+  }
+
   isEmailVerified(): boolean {
     return this.emailVerified;
   }
 
-  getEmail(): string {
-    return this.email;
+  getCreatedAt(): Date {
+    return this.createdAt;
   }
 
   getOAuthProvider(): string | null {
@@ -100,11 +129,11 @@ export class User {
     return this.oauthProviderId;
   }
 
-  getPasswordHash(): PasswordHash | null {
-    return this.passwordHash;
+  getVerificationToken(): string | null {
+    return this.verificationToken;
   }
 
-  getCreatedAt(): Date {
-    return this.createdAt;
+  getVerificationTokenExpiresAt(): Date | null {
+    return this.verificationTokenExpiresAt;
   }
 }
