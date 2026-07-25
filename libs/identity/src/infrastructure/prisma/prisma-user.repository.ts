@@ -24,6 +24,19 @@ export class PrismaUserRepository implements UserRepository {
     return this.toDomain(record);
   }
 
+  async findByVerificationToken(token: string): Promise<User | null> {
+    const record = await this.prisma.user.findUnique({
+      where: { verificationToken: token },
+      include: { oauthProviders: true },
+    });
+
+    if (!record) {
+      return null;
+    }
+
+    return this.toDomain(record);
+  }
+
   async save(user: User): Promise<void> {
     const passwordHash = user.getPasswordHash();
     const oauthProvider = user.getOAuthProvider();
@@ -37,11 +50,15 @@ export class PrismaUserRepository implements UserRepository {
         passwordHash: passwordHash ? passwordHash.value : null,
         emailVerified: user.isEmailVerified(),
         createdAt: user.getCreatedAt(),
+        verificationToken: user.getVerificationToken(),
+        verificationTokenExpiresAt: user.getVerificationTokenExpiresAt(),
       },
       update: {
         email: user.getEmail(),
         passwordHash: passwordHash ? passwordHash.value : null,
         emailVerified: user.isEmailVerified(),
+        verificationToken: user.getVerificationToken(),
+        verificationTokenExpiresAt: user.getVerificationTokenExpiresAt(),
       },
     });
 
@@ -76,6 +93,8 @@ export class PrismaUserRepository implements UserRepository {
       createdAt: record.createdAt,
       oauthProvider: oauth?.provider ?? null,
       oauthProviderId: oauth?.providerId ?? null,
+      verificationToken: record.verificationToken,
+      verificationTokenExpiresAt: record.verificationTokenExpiresAt,
     });
   }
 }

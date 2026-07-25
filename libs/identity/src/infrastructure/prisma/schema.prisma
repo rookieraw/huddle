@@ -11,11 +11,13 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  passwordHash  String?  @map("password_hash")
-  emailVerified Boolean  @default(false) @map("email_verified")
-  createdAt     DateTime @default(now()) @map("created_at")
+  id                          String   @id @default(uuid())
+  email                       String   @unique
+  passwordHash                String?  @map("password_hash")
+  emailVerified               Boolean  @default(false) @map("email_verified")
+  createdAt                   DateTime @default(now()) @map("created_at")
+  verificationToken           String?   @unique @map("verification_token")
+  verificationTokenExpiresAt  DateTime? @map("verification_token_expires_at")
 
   oauthProviders OAuthProvider[]
   refreshTokens  RefreshToken[]

@@ -10,6 +10,15 @@ class InMemoryUserRepository implements UserRepository {
     return this.usersByEmail.get(email) ?? null;
   }
 
+  async findByVerificationToken(token: string): Promise<User | null> {
+    for (const user of this.usersByEmail.values()) {
+      if (user.getVerificationToken() === token) {
+        return user;
+      }
+    }
+    return null;
+  }
+
   async save(user: User): Promise<void> {
     this.usersByEmail.set(user.getEmail(), user);
   }
