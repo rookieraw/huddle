@@ -17,3 +17,6 @@ Content-Type: application/json
   "email": "ada@example.com",
   "password": "correct-horse-battery"
 }
+
+### Verify email (replace token with the one from the register response)
+GET {{baseUrl}}/auth/verify?token=PASTE_TOKEN_HERE

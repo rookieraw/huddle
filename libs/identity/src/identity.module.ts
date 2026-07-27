@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RegisterUserUseCase } from './application/use-cases/register-user.use-case';
 import { LoginUserUseCase } from './application/use-cases/login-user.use-case';
+import { VerifyEmailUseCase } from './application/use-cases/verify-email.use-case';
 import {
   USER_REPOSITORY,
   UserRepository,
@@ -34,6 +35,11 @@ import { IdentityController } from './interface/http/identity.controller';
     {
       provide: LoginUserUseCase,
       useFactory: (repo: UserRepository) => new LoginUserUseCase(repo),
+      inject: [USER_REPOSITORY],
+    },
+    {
+      provide: VerifyEmailUseCase,
+      useFactory: (repo: UserRepository) => new VerifyEmailUseCase(repo),
       inject: [USER_REPOSITORY],
     },
   ],
