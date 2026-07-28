@@ -83,6 +83,17 @@ describe('RefreshToken', () => {
       expect(() => refreshToken.revoke()).not.toThrow();
       expect(refreshToken.isRevoked()).toBe(true);
     });
+
+    it('exposes the exact revocation timestamp', () => {
+      const { refreshToken } = RefreshToken.issue('user-id-1');
+      const now = new Date();
+      jest.useFakeTimers();
+      jest.setSystemTime(now);
+
+      refreshToken.revoke();
+
+      expect(refreshToken.getRevokedAt()).toStrictEqual(now);
+    });
   });
 
   describe('reconstitute', () => {
@@ -113,6 +124,20 @@ describe('RefreshToken', () => {
       });
 
       expect(refreshToken.isRevoked()).toBe(true);
+    });
+
+    it('exposes a revokedAt loaded from persisted data', () => {
+      const revokedAt = new Date('2024-06-01T00:00:00.000Z');
+      const refreshToken = RefreshToken.reconstitute({
+        id: 'existing-id',
+        userId: 'user-id-1',
+        tokenHash: 'persisted-hash',
+        expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+        createdAt: new Date('2024-01-01T00:00:00.000Z'),
+        revokedAt,
+      });
+
+      expect(refreshToken.getRevokedAt()).toBe(revokedAt);
     });
   });
 });

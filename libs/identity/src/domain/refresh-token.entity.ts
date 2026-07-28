@@ -79,4 +79,8 @@ export class RefreshToken {
   getCreatedAt(): Date {
     return this.createdAt;
   }
+
+  getRevokedAt(): Date | null {
+    return this.revokedAt;
+  }
 }
