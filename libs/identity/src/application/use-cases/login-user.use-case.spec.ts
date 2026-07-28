@@ -19,6 +19,15 @@ class InMemoryUserRepository implements UserRepository {
     return null;
   }
 
+  async findById(id: string): Promise<User | null> {
+    for (const user of this.usersByEmail.values()) {
+      if (user.id === id) {
+        return user;
+      }
+    }
+    return null;
+  }
+
   async save(user: User): Promise<void> {
     this.usersByEmail.set(user.getEmail(), user);
   }

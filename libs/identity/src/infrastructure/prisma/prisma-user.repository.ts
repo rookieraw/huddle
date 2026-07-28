@@ -37,6 +37,19 @@ export class PrismaUserRepository implements UserRepository {
     return this.toDomain(record);
   }
 
+  async findById(id: string): Promise<User | null> {
+    const record = await this.prisma.user.findUnique({
+      where: { id },
+      include: { oauthProviders: true },
+    });
+
+    if (!record) {
+      return null;
+    }
+
+    return this.toDomain(record);
+  }
+
   async save(user: User): Promise<void> {
     const passwordHash = user.getPasswordHash();
     const oauthProvider = user.getOAuthProvider();

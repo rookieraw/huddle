@@ -1,6 +1,6 @@
 generator client {
-  provider = "prisma-client"
-  output   = "./generated"
+  provider            = "prisma-client"
+  output              = "./generated"
   moduleFormat        = "cjs"
   importFileExtension = ""
 }
@@ -11,13 +11,13 @@ datasource db {
 }
 
 model User {
-  id                          String   @id @default(uuid())
-  email                       String   @unique
-  passwordHash                String?  @map("password_hash")
-  emailVerified               Boolean  @default(false) @map("email_verified")
-  createdAt                   DateTime @default(now()) @map("created_at")
-  verificationToken           String?   @unique @map("verification_token")
-  verificationTokenExpiresAt  DateTime? @map("verification_token_expires_at")
+  id                         String    @id @default(uuid())
+  email                      String    @unique
+  passwordHash               String?   @map("password_hash")
+  emailVerified              Boolean   @default(false) @map("email_verified")
+  createdAt                  DateTime  @default(now()) @map("created_at")
+  verificationToken          String?   @unique @map("verification_token")
+  verificationTokenExpiresAt DateTime? @map("verification_token_expires_at")
 
   oauthProviders OAuthProvider[]
   refreshTokens  RefreshToken[]
@@ -40,12 +40,13 @@ model OAuthProvider {
 }
 
 model RefreshToken {
-  id        String   @id @default(uuid())
-  tokenHash String   @unique @map("token_hash")
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
+  id        String    @id @default(uuid())
+  tokenHash String    @unique @map("token_hash")
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
 
   @@map("refresh_tokens")
   @@schema("identity")
