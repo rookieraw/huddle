@@ -140,4 +140,28 @@ describe('RefreshToken', () => {
       expect(refreshToken.getRevokedAt()).toBe(revokedAt);
     });
   });
+
+  describe('hashToken', () => {
+    it('is deterministic — the same raw token always hashes to the same value', () => {
+      const hash1 = RefreshToken.hashToken('some-raw-token');
+      const hash2 = RefreshToken.hashToken('some-raw-token');
+
+      expect(hash1).toBe(hash2);
+    });
+
+    it('produces different hashes for different raw tokens', () => {
+      const hash1 = RefreshToken.hashToken('token-a');
+      const hash2 = RefreshToken.hashToken('token-b');
+
+      expect(hash1).not.toBe(hash2);
+    });
+
+    it('matches the hash produced by issue() for the same raw token', () => {
+      const { refreshToken, rawToken } = RefreshToken.issue('user-id-1');
+
+      expect(RefreshToken.hashToken(rawToken)).toBe(
+        refreshToken.getTokenHash(),
+      );
+    });
+  });
 });

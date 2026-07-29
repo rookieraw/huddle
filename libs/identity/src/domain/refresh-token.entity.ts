@@ -12,12 +12,16 @@ export class RefreshToken {
     private revokedAt: Date | null,
   ) {}
 
+  static hashToken(rawToken: string): string {
+    return createHash('sha256').update(rawToken).digest('hex');
+  }
+
   static issue(userId: string): {
     refreshToken: RefreshToken;
     rawToken: string;
   } {
     const rawToken = randomBytes(32).toString('hex');
-    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+    const tokenHash = RefreshToken.hashToken(rawToken);
 
     const refreshToken = new RefreshToken(
       randomUUID(),
