@@ -20,3 +20,11 @@ Content-Type: application/json
 
 ### Verify email (replace token with the one from the register response)
 GET {{baseUrl}}/auth/verify?token=PASTE_TOKEN_HERE
+
+### Refresh token (replace refreshToken with the one from the login response)
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "PASTE_REFRESH_TOKEN_HERE"
+}

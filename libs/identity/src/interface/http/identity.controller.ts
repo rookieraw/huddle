@@ -15,8 +15,11 @@ import { DomainError } from '@huddle/shared-kernel';
 import { RegisterUserUseCase } from '../../application/use-cases/register-user.use-case';
 import { LoginUserUseCase } from '../../application/use-cases/login-user.use-case';
 import { VerifyEmailUseCase } from '../../application/use-cases/verify-email.use-case';
+import { IssueRefreshTokenUseCase } from '../../application/use-cases/issue-refresh-token.use-case';
+import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.use-case';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @Controller('auth')
 export class IdentityController {
@@ -24,6 +27,8 @@ export class IdentityController {
     private readonly registerUserUseCase: RegisterUserUseCase,
     private readonly loginUserUseCase: LoginUserUseCase,
     private readonly verifyEmailUseCase: VerifyEmailUseCase,
+    private readonly issueRefreshTokenUseCase: IssueRefreshTokenUseCase,
+    private readonly refreshTokenUseCase: RefreshTokenUseCase,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -58,7 +63,28 @@ export class IdentityController {
         sub: user.id,
         email: user.getEmail(),
       });
-      return { accessToken };
+      const { rawToken: refreshToken } =
+        await this.issueRefreshTokenUseCase.execute(user.id);
+      return { accessToken, refreshToken };
+    } catch (error) {
+      if (error instanceof DomainError) {
+        throw new UnauthorizedException(error.message);
+      }
+      throw error;
+    }
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(@Body() dto: RefreshTokenDto) {
+    try {
+      const { refreshToken, rawToken } = await this.refreshTokenUseCase.execute(
+        dto.refreshToken,
+      );
+      const accessToken = await this.jwtService.signAsync({
+        sub: refreshToken.getUserId(),
+      });
+      return { accessToken, refreshToken: rawToken };
     } catch (error) {
       if (error instanceof DomainError) {
         throw new UnauthorizedException(error.message);
