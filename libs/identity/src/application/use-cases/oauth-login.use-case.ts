@@ -30,6 +30,11 @@ export class OAuthLoginUseCase {
           'Cannot link OAuth provider: email is not verified by the provider',
         );
       }
+      if (!existingByEmail.isEmailVerified()) {
+        throw new DomainError(
+          'Cannot link OAuth provider: existing account email is not verified',
+        );
+      }
 
       existingByEmail.linkOAuthProvider(provider, providerId);
       await this.userRepository.save(existingByEmail);

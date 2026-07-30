@@ -123,6 +123,7 @@ describe('OAuthLoginUseCase', () => {
       'ada@example.com',
       'correct-horse-battery',
     );
+    existing.verifyEmail(); // account must already be verified for linking to be trustworthy
     await repository.save(existing);
     const useCase = new OAuthLoginUseCase(repository);
 
@@ -177,6 +178,48 @@ describe('OAuthLoginUseCase', () => {
         emailVerifiedByProvider: false,
       }),
     ).rejects.toThrow(DomainError);
+  });
+
+  it('rejects linking when the existing account itself has never been verified, even if the provider asserts a verified email', async () => {
+    const repository = new InMemoryUserRepository();
+    const { user: existing } = await User.register(
+      'ada@example.com',
+      'correct-horse-battery',
+    );
+    // deliberately not verified — guards against pre-hijacking: an attacker
+    // registering a victim's email with a password they never verify
+    await repository.save(existing);
+    const useCase = new OAuthLoginUseCase(repository);
+
+    await expect(
+      useCase.execute({
+        provider: 'google',
+        providerId: 'google-sub-123',
+        email: 'ada@example.com',
+        emailVerifiedByProvider: true,
+      }),
+    ).rejects.toThrow(DomainError);
+  });
+
+  it('does not modify the existing account when rejecting a link to an unverified account', async () => {
+    const repository = new InMemoryUserRepository();
+    const { user: existing } = await User.register(
+      'ada@example.com',
+      'correct-horse-battery',
+    );
+    await repository.save(existing);
+    const useCase = new OAuthLoginUseCase(repository);
+
+    await useCase
+      .execute({
+        provider: 'google',
+        providerId: 'google-sub-123',
+        email: 'ada@example.com',
+        emailVerifiedByProvider: true,
+      })
+      .catch(() => {});
+
+    expect(existing.getOAuthProviderId('google')).toBeNull();
   });
 
   it('does not modify the existing account when rejecting an unverified-email link attempt', async () => {
