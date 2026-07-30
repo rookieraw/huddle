@@ -6,5 +6,9 @@ export interface UserRepository {
   findByEmail(email: string): Promise<User | null>;
   findByVerificationToken(token: string): Promise<User | null>;
   findById(id: string): Promise<User | null>;
+  findByOAuthProvider(
+    provider: 'google' | 'github',
+    providerId: string,
+  ): Promise<User | null>;
   save(user: User): Promise<void>;
 }

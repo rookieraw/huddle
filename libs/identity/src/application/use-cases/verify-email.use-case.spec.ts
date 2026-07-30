@@ -28,6 +28,18 @@ class InMemoryUserRepository implements UserRepository {
     return null;
   }
 
+  async findByOAuthProvider(
+    provider: 'google' | 'github',
+    providerId: string,
+  ): Promise<User | null> {
+    for (const user of this.usersByEmail.values()) {
+      if (user.getOAuthProviderId(provider) === providerId) {
+        return user;
+      }
+    }
+    return null;
+  }
+
   async save(user: User): Promise<void> {
     this.usersByEmail.set(user.getEmail(), user);
   }

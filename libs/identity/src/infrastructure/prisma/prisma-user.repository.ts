@@ -50,6 +50,26 @@ export class PrismaUserRepository implements UserRepository {
     return this.toDomain(record);
   }
 
+  async findByOAuthProvider(
+    provider: 'google' | 'github',
+    providerId: string,
+  ): Promise<User | null> {
+    const record = await this.prisma.user.findFirst({
+      where: {
+        oauthProviders: {
+          some: { provider, providerId },
+        },
+      },
+      include: { oauthProviders: true },
+    });
+
+    if (!record) {
+      return null;
+    }
+
+    return this.toDomain(record);
+  }
+
   async save(user: User): Promise<void> {
     const passwordHash = user.getPasswordHash();
 

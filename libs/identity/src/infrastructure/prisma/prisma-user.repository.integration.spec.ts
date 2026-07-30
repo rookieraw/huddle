@@ -108,4 +108,46 @@ describe('PrismaUserRepository (integration)', () => {
       ].sort(sortByProvider),
     );
   });
+
+  it('returns null when no user has the given provider/providerId linked', async () => {
+    const found = await repository.findByOAuthProvider(
+      'google',
+      'nonexistent-sub',
+    );
+
+    expect(found).toBeNull();
+  });
+
+  it('finds a user by their linked OAuth provider identity', async () => {
+    const { user } = User.registerViaOAuth(
+      'ivy@example.com',
+      'google',
+      'google-sub-555',
+    );
+    await repository.save(user);
+
+    const found = await repository.findByOAuthProvider(
+      'google',
+      'google-sub-555',
+    );
+
+    expect(found?.id).toBe(user.id);
+    expect(found?.getEmail()).toBe('ivy@example.com');
+  });
+
+  it('does not match a providerId under the wrong provider', async () => {
+    const { user } = User.registerViaOAuth(
+      'ivy@example.com',
+      'google',
+      'google-sub-555',
+    );
+    await repository.save(user);
+
+    const found = await repository.findByOAuthProvider(
+      'github',
+      'google-sub-555',
+    );
+
+    expect(found).toBeNull();
+  });
 });
