@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RegisterUserUseCase } from './application/use-cases/register-user.use-case';
 import { LoginUserUseCase } from './application/use-cases/login-user.use-case';
 import { VerifyEmailUseCase } from './application/use-cases/verify-email.use-case';
 import { IssueRefreshTokenUseCase } from './application/use-cases/issue-refresh-token.use-case';
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token.use-case';
+import { OAuthLoginUseCase } from './application/use-cases/oauth-login.use-case';
 import {
   USER_REPOSITORY,
   UserRepository,
@@ -17,10 +19,15 @@ import {
 import { PrismaUserRepository } from './infrastructure/prisma/prisma-user.repository';
 import { PrismaRefreshTokenRepository } from './infrastructure/prisma/prisma-refresh-token.repository';
 import { prismaClientProvider } from './infrastructure/prisma/prisma-client.provider';
+import { GoogleStrategy } from './infrastructure/passport/google.strategy';
+import { GithubStrategy } from './infrastructure/passport/github.strategy';
+import { GoogleAuthGuard } from './infrastructure/passport/google-auth.guard';
+import { GithubAuthGuard } from './infrastructure/passport/github-auth.guard';
 import { IdentityController } from './interface/http/identity.controller';
 
 @Module({
   imports: [
+    PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -65,6 +72,15 @@ import { IdentityController } from './interface/http/identity.controller';
         new RefreshTokenUseCase(repo),
       inject: [REFRESH_TOKEN_REPOSITORY],
     },
+    {
+      provide: OAuthLoginUseCase,
+      useFactory: (repo: UserRepository) => new OAuthLoginUseCase(repo),
+      inject: [USER_REPOSITORY],
+    },
+    GoogleStrategy,
+    GithubStrategy,
+    GoogleAuthGuard,
+    GithubAuthGuard,
   ],
 })
 export class IdentityModule {}

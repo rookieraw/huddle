@@ -50,6 +50,7 @@
   },
   "devDependencies": {
     "@testcontainers/postgresql": "^12.0.4",
+    "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.1.0",
     "@types/passport-github2": "^1.2.9",
@@ -66,6 +67,7 @@
     "@nestjs/common": "11.1.27",
     "@nestjs/config": "4.0.4",
     "@nestjs/jwt": "11.0.2",
+    "@nestjs/passport": "11.0.5",
     "@prisma/adapter-pg": "7.9.0",
     "@prisma/client": "7.9.0",
     "argon2": "^0.44.0",

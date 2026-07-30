@@ -28,3 +28,9 @@ Content-Type: application/json
 {
   "refreshToken": "PASTE_REFRESH_TOKEN_HERE"
 }
+
+### OAuth Google login (open in browser, not via REST Client — requires interactive consent)
+# GET http://localhost:4000/auth/oauth/google
+
+### OAuth GitHub login (open in browser, not via REST Client — requires interactive consent)
+# GET http://localhost:4000/auth/oauth/github

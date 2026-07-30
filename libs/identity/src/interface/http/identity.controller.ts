@@ -8,10 +8,14 @@ import {
   HttpStatus,
   Post,
   Query,
+  Req,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { DomainError } from '@huddle/shared-kernel';
+import { User } from '../../domain/user.entity';
 import { RegisterUserUseCase } from '../../application/use-cases/register-user.use-case';
 import { LoginUserUseCase } from '../../application/use-cases/login-user.use-case';
 import { VerifyEmailUseCase } from '../../application/use-cases/verify-email.use-case';
@@ -20,6 +24,8 @@ import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.u
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { GoogleAuthGuard } from '../../infrastructure/passport/google-auth.guard';
+import { GithubAuthGuard } from '../../infrastructure/passport/github-auth.guard';
 
 @Controller('auth')
 export class IdentityController {
@@ -59,13 +65,7 @@ export class IdentityController {
   async login(@Body() dto: LoginUserDto) {
     try {
       const user = await this.loginUserUseCase.execute(dto.email, dto.password);
-      const accessToken = await this.jwtService.signAsync({
-        sub: user.id,
-        email: user.getEmail(),
-      });
-      const { rawToken: refreshToken } =
-        await this.issueRefreshTokenUseCase.execute(user.id);
-      return { accessToken, refreshToken };
+      return await this.issueTokens(user);
     } catch (error) {
       if (error instanceof DomainError) {
         throw new UnauthorizedException(error.message);
@@ -105,5 +105,41 @@ export class IdentityController {
       }
       throw error;
     }
+  }
+
+  @Get('oauth/google')
+  @UseGuards(GoogleAuthGuard)
+  googleLogin() {
+    // Guard redirects to Google's consent screen; this body never runs.
+  }
+
+  @Get('oauth/google/callback')
+  @UseGuards(GoogleAuthGuard)
+  async googleCallback(@Req() req: Request) {
+    return this.issueTokens(req.user as User);
+  }
+
+  @Get('oauth/github')
+  @UseGuards(GithubAuthGuard)
+  githubLogin() {
+    // Guard redirects to GitHub's consent screen; this body never runs.
+  }
+
+  @Get('oauth/github/callback')
+  @UseGuards(GithubAuthGuard)
+  async githubCallback(@Req() req: Request) {
+    return this.issueTokens(req.user as User);
+  }
+
+  private async issueTokens(
+    user: User,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    const accessToken = await this.jwtService.signAsync({
+      sub: user.id,
+      email: user.getEmail(),
+    });
+    const { rawToken: refreshToken } =
+      await this.issueRefreshTokenUseCase.execute(user.id);
+    return { accessToken, refreshToken };
   }
 }
