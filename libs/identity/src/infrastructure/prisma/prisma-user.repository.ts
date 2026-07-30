@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, PrismaClient } from './generated/client';
-import { User } from '../../domain/user.entity';
+import { User, LinkedOAuthProvider } from '../../domain/user.entity';
 import { UserRepository } from '../../application/ports/user.repository.port';
 
 type UserWithOAuthProviders = Prisma.UserGetPayload<{
@@ -52,8 +52,6 @@ export class PrismaUserRepository implements UserRepository {
 
   async save(user: User): Promise<void> {
     const passwordHash = user.getPasswordHash();
-    const oauthProvider = user.getOAuthProvider();
-    const oauthProviderId = user.getOAuthProviderId();
 
     await this.prisma.user.upsert({
       where: { id: user.id },
@@ -75,17 +73,14 @@ export class PrismaUserRepository implements UserRepository {
       },
     });
 
-    if (oauthProvider && oauthProviderId) {
+    for (const { provider, providerId } of user.getOAuthProviders()) {
       await this.prisma.oAuthProvider.upsert({
         where: {
-          provider_providerId: {
-            provider: oauthProvider,
-            providerId: oauthProviderId,
-          },
+          provider_providerId: { provider, providerId },
         },
         create: {
-          provider: oauthProvider,
-          providerId: oauthProviderId,
+          provider,
+          providerId,
           userId: user.id,
         },
         update: {
@@ -96,7 +91,12 @@ export class PrismaUserRepository implements UserRepository {
   }
 
   private toDomain(record: UserWithOAuthProviders): User {
-    const oauth = record.oauthProviders[0] ?? null;
+    const oauthProviders: LinkedOAuthProvider[] = record.oauthProviders.map(
+      (p) => ({
+        provider: p.provider as LinkedOAuthProvider['provider'],
+        providerId: p.providerId,
+      }),
+    );
 
     return User.reconstitute({
       id: record.id,
@@ -104,8 +104,7 @@ export class PrismaUserRepository implements UserRepository {
       passwordHash: record.passwordHash,
       emailVerified: record.emailVerified,
       createdAt: record.createdAt,
-      oauthProvider: oauth?.provider ?? null,
-      oauthProviderId: oauth?.providerId ?? null,
+      oauthProviders,
       verificationToken: record.verificationToken,
       verificationTokenExpiresAt: record.verificationTokenExpiresAt,
     });

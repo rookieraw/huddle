@@ -84,8 +84,28 @@ describe('PrismaUserRepository (integration)', () => {
     const found = await repository.findByEmail('grace@example.com');
 
     expect(found?.getPasswordHash()).toBeNull();
-    expect(found?.getOAuthProvider()).toBe('google');
-    expect(found?.getOAuthProviderId()).toBe('google-sub-789');
+    expect(found?.getOAuthProviderId('google')).toBe('google-sub-789');
     expect(found?.isEmailVerified()).toBe(true);
+  });
+
+  it('round-trips multiple linked OAuth providers on the same user', async () => {
+    const { user } = User.registerViaOAuth(
+      'grace@example.com',
+      'google',
+      'google-sub-789',
+    );
+    user.linkOAuthProvider('github', 'github-id-321');
+    await repository.save(user);
+
+    const found = await repository.findByEmail('grace@example.com');
+    const sortByProvider = (a: { provider: string }, b: { provider: string }) =>
+      a.provider.localeCompare(b.provider);
+
+    expect(found?.getOAuthProviders().sort(sortByProvider)).toEqual(
+      [
+        { provider: 'github', providerId: 'github-id-321' },
+        { provider: 'google', providerId: 'google-sub-789' },
+      ].sort(sortByProvider),
+    );
   });
 });

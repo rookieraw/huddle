@@ -13,13 +13,13 @@ describe('User', () => {
       expect(user.isEmailVerified()).toBe(false);
     });
 
-    it('has no OAuth provider for a password-registered user', async () => {
+    it('has no linked OAuth providers for a password-registered user', async () => {
       const { user } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
       );
 
-      expect(user.getOAuthProvider()).toBeNull();
+      expect(user.getOAuthProviders()).toEqual([]);
     });
 
     it('assigns a unique id to each registered user', async () => {
@@ -85,6 +85,7 @@ describe('User', () => {
       );
 
       expect(user.isEmailVerified()).toBe(true);
+      expect(user.getPasswordHash()).toBeNull();
     });
 
     it('returns a UserCreatedEvent carrying the new user id and email', () => {
@@ -105,7 +106,9 @@ describe('User', () => {
         'google-sub-123',
       );
 
-      expect(user.getOAuthProvider()).toBe('google');
+      expect(user.getOAuthProviders()).toEqual([
+        { provider: 'google', providerId: 'google-sub-123' },
+      ]);
     });
 
     it('has no verification token, since OAuth accounts are pre-verified', () => {
@@ -121,23 +124,135 @@ describe('User', () => {
   });
 
   describe('getOAuthProviderId', () => {
-    it('returns null for a password-registered user', async () => {
+    it('returns null for a provider that is not linked', async () => {
       const { user } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
       );
 
-      expect(user.getOAuthProviderId()).toBeNull();
+      expect(user.getOAuthProviderId('google')).toBeNull();
     });
 
-    it('returns the external provider id for an OAuth-registered user', () => {
+    it('returns the external provider id for a linked provider', () => {
       const { user } = User.registerViaOAuth(
         'ada@example.com',
         'google',
         'google-sub-123',
       );
 
-      expect(user.getOAuthProviderId()).toBe('google-sub-123');
+      expect(user.getOAuthProviderId('google')).toBe('google-sub-123');
+      expect(user.getOAuthProviderId('github')).toBeNull();
+    });
+  });
+
+  describe('linkOAuthProvider', () => {
+    it('attaches an OAuth provider to a password-registered user', async () => {
+      const { user } = await User.register(
+        'ada@example.com',
+        'correct-horse-battery',
+      );
+
+      user.linkOAuthProvider('google', 'google-sub-123');
+
+      expect(user.getOAuthProviderId('google')).toBe('google-sub-123');
+    });
+
+    it('does not affect the existing password hash', async () => {
+      const { user } = await User.register(
+        'ada@example.com',
+        'correct-horse-battery',
+      );
+      const originalHash = user.getPasswordHash();
+
+      user.linkOAuthProvider('google', 'google-sub-123');
+
+      expect(user.getPasswordHash()).toBe(originalHash);
+    });
+
+    it('allows linking a second, different provider', () => {
+      const { user } = User.registerViaOAuth(
+        'ada@example.com',
+        'google',
+        'google-sub-123',
+      );
+
+      user.linkOAuthProvider('github', 'github-id-456');
+
+      expect(user.getOAuthProviders()).toEqual([
+        { provider: 'google', providerId: 'google-sub-123' },
+        { provider: 'github', providerId: 'github-id-456' },
+      ]);
+    });
+
+    it('is idempotent when re-linking the same provider and providerId', () => {
+      const { user } = User.registerViaOAuth(
+        'ada@example.com',
+        'google',
+        'google-sub-123',
+      );
+
+      expect(() =>
+        user.linkOAuthProvider('google', 'google-sub-123'),
+      ).not.toThrow();
+      expect(user.getOAuthProviders()).toHaveLength(1);
+    });
+
+    it('throws DomainError when the same provider is already linked to a different providerId', () => {
+      const { user } = User.registerViaOAuth(
+        'ada@example.com',
+        'google',
+        'google-sub-123',
+      );
+
+      expect(() => user.linkOAuthProvider('google', 'google-sub-999')).toThrow(
+        DomainError,
+      );
+    });
+  });
+
+  describe('unlinkOAuthProvider', () => {
+    it('removes a linked provider', () => {
+      const { user } = User.registerViaOAuth(
+        'ada@example.com',
+        'google',
+        'google-sub-123',
+      );
+      user.linkOAuthProvider('github', 'github-id-456');
+
+      user.unlinkOAuthProvider('google');
+
+      expect(user.getOAuthProviders()).toEqual([
+        { provider: 'github', providerId: 'github-id-456' },
+      ]);
+    });
+
+    it('throws DomainError when the provider is not linked', async () => {
+      const { user } = await User.register(
+        'ada@example.com',
+        'correct-horse-battery',
+      );
+
+      expect(() => user.unlinkOAuthProvider('google')).toThrow(DomainError);
+    });
+
+    it('throws DomainError when it would remove the last authentication method', () => {
+      const { user } = User.registerViaOAuth(
+        'ada@example.com',
+        'google',
+        'google-sub-123',
+      );
+
+      expect(() => user.unlinkOAuthProvider('google')).toThrow(DomainError);
+    });
+
+    it('allows unlinking a provider when a password still exists', async () => {
+      const { user } = await User.register(
+        'ada@example.com',
+        'correct-horse-battery',
+      );
+      user.linkOAuthProvider('google', 'google-sub-123');
+
+      expect(() => user.unlinkOAuthProvider('google')).not.toThrow();
     });
   });
 
@@ -152,8 +267,7 @@ describe('User', () => {
         passwordHash: persistedHash,
         emailVerified: true,
         createdAt: new Date('2024-01-01T00:00:00.000Z'),
-        oauthProvider: null,
-        oauthProviderId: null,
+        oauthProviders: [],
         verificationToken: null,
         verificationTokenExpiresAt: null,
       });
@@ -164,22 +278,24 @@ describe('User', () => {
       expect(user.getPasswordHash()?.value).toBe(persistedHash);
     });
 
-    it('rebuilds an OAuth-based user with no password hash', () => {
+    it('rebuilds a user with multiple linked OAuth providers', () => {
       const user = User.reconstitute({
         id: 'existing-id',
         email: 'ada@example.com',
         passwordHash: null,
         emailVerified: true,
         createdAt: new Date('2024-01-01T00:00:00.000Z'),
-        oauthProvider: 'google',
-        oauthProviderId: 'google-sub-123',
+        oauthProviders: [
+          { provider: 'google', providerId: 'google-sub-123' },
+          { provider: 'github', providerId: 'github-id-456' },
+        ],
         verificationToken: null,
         verificationTokenExpiresAt: null,
       });
 
       expect(user.getPasswordHash()).toBeNull();
-      expect(user.getOAuthProvider()).toBe('google');
-      expect(user.getOAuthProviderId()).toBe('google-sub-123');
+      expect(user.getOAuthProviderId('google')).toBe('google-sub-123');
+      expect(user.getOAuthProviderId('github')).toBe('github-id-456');
     });
   });
 
@@ -223,8 +339,7 @@ describe('User', () => {
         passwordHash: '$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$c29tZWhhc2g',
         emailVerified: false,
         createdAt: new Date('2024-01-01T00:00:00.000Z'),
-        oauthProvider: null,
-        oauthProviderId: null,
+        oauthProviders: [],
         verificationToken: 'some-token',
         verificationTokenExpiresAt: new Date('2024-01-02T00:00:00.000Z'),
       });

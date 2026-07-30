@@ -96,8 +96,7 @@ describe('VerifyEmailUseCase', () => {
       passwordHash: '$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$c29tZWhhc2g',
       emailVerified: false,
       createdAt: new Date('2024-01-01T00:00:00.000Z'),
-      oauthProvider: null,
-      oauthProviderId: null,
+      oauthProviders: [],
       verificationToken: 'expired-token',
       verificationTokenExpiresAt: new Date('2024-01-02T00:00:00.000Z'),
     });

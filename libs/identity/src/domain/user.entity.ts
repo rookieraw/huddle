@@ -4,6 +4,13 @@ import { PasswordHash } from './value-objects/password-hash.vo';
 import { UserCreatedEvent } from './events/user-created.event';
 import { UserVerifiedEvent } from './events/user-verified.event';
 
+export type OAuthProviderName = 'google' | 'github';
+
+export interface LinkedOAuthProvider {
+  provider: OAuthProviderName;
+  providerId: string;
+}
+
 export class User {
   private constructor(
     public readonly id: string,
@@ -11,8 +18,7 @@ export class User {
     private passwordHash: PasswordHash | null,
     private emailVerified: boolean,
     private readonly createdAt: Date,
-    private readonly oauthProvider: string | null,
-    private readonly oauthProviderId: string | null,
+    private oauthProviders: LinkedOAuthProvider[],
     private verificationToken: string | null,
     private verificationTokenExpiresAt: Date | null,
   ) {}
@@ -31,8 +37,7 @@ export class User {
       hash,
       false,
       new Date(),
-      null,
-      null,
+      [],
       randomUUID(),
       verificationTokenExpiresAt,
     );
@@ -41,7 +46,7 @@ export class User {
 
   static registerViaOAuth(
     email: string,
-    provider: 'google' | 'github',
+    provider: OAuthProviderName,
     providerId: string,
   ): { user: User; event: UserCreatedEvent } {
     const user = new User(
@@ -50,8 +55,7 @@ export class User {
       null,
       true,
       new Date(),
-      provider,
-      providerId,
+      [{ provider, providerId }],
       null,
       null,
     );
@@ -64,8 +68,7 @@ export class User {
     passwordHash: string | null;
     emailVerified: boolean;
     createdAt: Date;
-    oauthProvider: string | null;
-    oauthProviderId: string | null;
+    oauthProviders: LinkedOAuthProvider[];
     verificationToken: string | null;
     verificationTokenExpiresAt: Date | null;
   }): User {
@@ -75,8 +78,7 @@ export class User {
       data.passwordHash ? PasswordHash.fromHash(data.passwordHash) : null,
       data.emailVerified,
       data.createdAt,
-      data.oauthProvider,
-      data.oauthProviderId,
+      data.oauthProviders,
       data.verificationToken,
       data.verificationTokenExpiresAt,
     );
@@ -105,6 +107,40 @@ export class User {
     return this.passwordHash.verify(plainPassword);
   }
 
+  linkOAuthProvider(provider: OAuthProviderName, providerId: string): void {
+    const existing = this.oauthProviders.find((p) => p.provider === provider);
+
+    if (existing) {
+      if (existing.providerId !== providerId) {
+        throw new DomainError(
+          `Provider ${provider} is already linked to a different account`,
+        );
+      }
+      return; // idempotent re-link
+    }
+
+    this.oauthProviders.push({ provider, providerId });
+  }
+
+  unlinkOAuthProvider(provider: OAuthProviderName): void {
+    const existing = this.oauthProviders.find((p) => p.provider === provider);
+    if (!existing) {
+      throw new DomainError(`Provider ${provider} is not linked`);
+    }
+
+    const wouldHaveNoAuthMethod =
+      !this.passwordHash && this.oauthProviders.length === 1;
+    if (wouldHaveNoAuthMethod) {
+      throw new DomainError(
+        'Cannot unlink the last remaining authentication method',
+      );
+    }
+
+    this.oauthProviders = this.oauthProviders.filter(
+      (p) => p.provider !== provider,
+    );
+  }
+
   getEmail(): string {
     return this.email;
   }
@@ -121,12 +157,15 @@ export class User {
     return this.createdAt;
   }
 
-  getOAuthProvider(): string | null {
-    return this.oauthProvider;
+  getOAuthProviders(): LinkedOAuthProvider[] {
+    return [...this.oauthProviders];
   }
 
-  getOAuthProviderId(): string | null {
-    return this.oauthProviderId;
+  getOAuthProviderId(provider: OAuthProviderName): string | null {
+    return (
+      this.oauthProviders.find((p) => p.provider === provider)?.providerId ??
+      null
+    );
   }
 
   getVerificationToken(): string | null {
