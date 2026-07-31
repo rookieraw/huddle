@@ -1117,7 +1117,7 @@ separate media-meeting module.
 
 ```
 POST   /auth/register              { email, password }              -> 201 { userId }
-POST   /auth/verify-email          { token }                         -> 200
+GET    /auth/verify?token=<token>                                    -> 200
 POST   /auth/login                 { email, password }               -> 200 { accessToken, refreshToken }
 POST   /auth/refresh               { refreshToken }                  -> 200 { accessToken, refreshToken }
 POST   /auth/logout                (auth required)                   -> 204
@@ -1127,6 +1127,11 @@ GET    /auth/oauth/github          -> redirect to GitHub
 GET    /auth/oauth/github/callback -> redirect with tokens
 GET    /users/me                   (auth required)                   -> 200 { id, email, tier }
 ```
+
+Note: `/auth/verify` is GET with the token in the query string rather than POST, since it's
+reached by clicking a link in an actual email — a browser navigation, not a form
+submission. This mirrors virtually every SaaS's email-verification/password-reset link
+pattern (GET, single-use token, query string).
 
 ### Chat
 
