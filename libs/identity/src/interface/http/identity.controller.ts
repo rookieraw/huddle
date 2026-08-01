@@ -78,13 +78,7 @@ export class IdentityController {
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() dto: RefreshTokenDto) {
     try {
-      const { refreshToken, rawToken } = await this.refreshTokenUseCase.execute(
-        dto.refreshToken,
-      );
-      const accessToken = await this.jwtService.signAsync({
-        sub: refreshToken.getUserId(),
-      });
-      return { accessToken, refreshToken: rawToken };
+      return await this.refreshTokenUseCase.execute(dto.refreshToken);
     } catch (error) {
       if (error instanceof DomainError) {
         throw new UnauthorizedException(error.message);

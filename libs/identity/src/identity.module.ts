@@ -75,9 +75,21 @@ import { IdentityController } from './interface/http/identity.controller';
     },
     {
       provide: RefreshTokenUseCase,
-      useFactory: (repo: RefreshTokenRepository) =>
-        new RefreshTokenUseCase(repo),
-      inject: [REFRESH_TOKEN_REPOSITORY],
+      useFactory: (
+        refreshTokenRepository: RefreshTokenRepository,
+        userRepository: UserRepository,
+        issueAuthTokensUseCase: IssueAuthTokensUseCase,
+      ) =>
+        new RefreshTokenUseCase(
+          refreshTokenRepository,
+          userRepository,
+          issueAuthTokensUseCase,
+        ),
+      inject: [
+        REFRESH_TOKEN_REPOSITORY,
+        USER_REPOSITORY,
+        IssueAuthTokensUseCase,
+      ],
     },
     {
       provide: OAuthLoginUseCase,
