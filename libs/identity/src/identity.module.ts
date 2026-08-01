@@ -27,8 +27,10 @@ import { prismaClientProvider } from './infrastructure/prisma/prisma-client.prov
 import { JwtTokenIssuer } from './infrastructure/jwt/jwt-token-issuer';
 import { GoogleStrategy } from './infrastructure/passport/google.strategy';
 import { GithubStrategy } from './infrastructure/passport/github.strategy';
+import { JwtStrategy } from './infrastructure/passport/jwt.strategy';
 import { GoogleAuthGuard } from './infrastructure/passport/google-auth.guard';
 import { GithubAuthGuard } from './infrastructure/passport/github-auth.guard';
+import { JwtAuthGuard } from './infrastructure/passport/jwt-auth.guard';
 import { IdentityController } from './interface/http/identity.controller';
 
 @Module({
@@ -106,8 +108,10 @@ import { IdentityController } from './interface/http/identity.controller';
     },
     GoogleStrategy,
     GithubStrategy,
+    JwtStrategy,
     GoogleAuthGuard,
     GithubAuthGuard,
+    JwtAuthGuard,
   ],
 })
 export class IdentityModule {}
