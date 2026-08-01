@@ -19,8 +19,8 @@ import { User } from '../../domain/user.entity';
 import { RegisterUserUseCase } from '../../application/use-cases/register-user.use-case';
 import { LoginUserUseCase } from '../../application/use-cases/login-user.use-case';
 import { VerifyEmailUseCase } from '../../application/use-cases/verify-email.use-case';
-import { IssueRefreshTokenUseCase } from '../../application/use-cases/issue-refresh-token.use-case';
 import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.use-case';
+import { IssueAuthTokensUseCase } from '../../application/use-cases/issue-auth-tokens.use-case'; // ← replaces IssueRefreshTokenUseCase import here
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -33,8 +33,8 @@ export class IdentityController {
     private readonly registerUserUseCase: RegisterUserUseCase,
     private readonly loginUserUseCase: LoginUserUseCase,
     private readonly verifyEmailUseCase: VerifyEmailUseCase,
-    private readonly issueRefreshTokenUseCase: IssueRefreshTokenUseCase,
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
+    private readonly issueAuthTokensUseCase: IssueAuthTokensUseCase,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -65,7 +65,7 @@ export class IdentityController {
   async login(@Body() dto: LoginUserDto) {
     try {
       const user = await this.loginUserUseCase.execute(dto.email, dto.password);
-      return await this.issueTokens(user);
+      return await this.issueAuthTokensUseCase.execute(user);
     } catch (error) {
       if (error instanceof DomainError) {
         throw new UnauthorizedException(error.message);
@@ -116,7 +116,7 @@ export class IdentityController {
   @Get('oauth/google/callback')
   @UseGuards(GoogleAuthGuard)
   async googleCallback(@Req() req: Request) {
-    return this.issueTokens(req.user as User);
+    return this.issueAuthTokensUseCase.execute(req.user as User);
   }
 
   @Get('oauth/github')
@@ -128,18 +128,6 @@ export class IdentityController {
   @Get('oauth/github/callback')
   @UseGuards(GithubAuthGuard)
   async githubCallback(@Req() req: Request) {
-    return this.issueTokens(req.user as User);
-  }
-
-  private async issueTokens(
-    user: User,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
-    const accessToken = await this.jwtService.signAsync({
-      sub: user.id,
-      email: user.getEmail(),
-    });
-    const { rawToken: refreshToken } =
-      await this.issueRefreshTokenUseCase.execute(user.id);
-    return { accessToken, refreshToken };
+    return this.issueAuthTokensUseCase.execute(req.user as User);
   }
 }

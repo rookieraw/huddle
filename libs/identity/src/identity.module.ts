@@ -8,6 +8,7 @@ import { VerifyEmailUseCase } from './application/use-cases/verify-email.use-cas
 import { IssueRefreshTokenUseCase } from './application/use-cases/issue-refresh-token.use-case';
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token.use-case';
 import { OAuthLoginUseCase } from './application/use-cases/oauth-login.use-case';
+import { IssueAuthTokensUseCase } from './application/use-cases/issue-auth-tokens.use-case';
 import {
   USER_REPOSITORY,
   UserRepository,
@@ -16,9 +17,14 @@ import {
   REFRESH_TOKEN_REPOSITORY,
   RefreshTokenRepository,
 } from './application/ports/refresh-token.repository.port';
+import {
+  TOKEN_ISSUER,
+  TokenIssuer,
+} from './application/ports/token-issuer.port';
 import { PrismaUserRepository } from './infrastructure/prisma/prisma-user.repository';
 import { PrismaRefreshTokenRepository } from './infrastructure/prisma/prisma-refresh-token.repository';
 import { prismaClientProvider } from './infrastructure/prisma/prisma-client.provider';
+import { JwtTokenIssuer } from './infrastructure/jwt/jwt-token-issuer';
 import { GoogleStrategy } from './infrastructure/passport/google.strategy';
 import { GithubStrategy } from './infrastructure/passport/github.strategy';
 import { GoogleAuthGuard } from './infrastructure/passport/google-auth.guard';
@@ -45,6 +51,7 @@ import { IdentityController } from './interface/http/identity.controller';
       provide: REFRESH_TOKEN_REPOSITORY,
       useClass: PrismaRefreshTokenRepository,
     },
+    { provide: TOKEN_ISSUER, useClass: JwtTokenIssuer },
     {
       provide: RegisterUserUseCase,
       useFactory: (repo: UserRepository) => new RegisterUserUseCase(repo),
@@ -76,6 +83,14 @@ import { IdentityController } from './interface/http/identity.controller';
       provide: OAuthLoginUseCase,
       useFactory: (repo: UserRepository) => new OAuthLoginUseCase(repo),
       inject: [USER_REPOSITORY],
+    },
+    {
+      provide: IssueAuthTokensUseCase,
+      useFactory: (
+        tokenIssuer: TokenIssuer,
+        issueRefreshTokenUseCase: IssueRefreshTokenUseCase,
+      ) => new IssueAuthTokensUseCase(tokenIssuer, issueRefreshTokenUseCase),
+      inject: [TOKEN_ISSUER, IssueRefreshTokenUseCase],
     },
     GoogleStrategy,
     GithubStrategy,
