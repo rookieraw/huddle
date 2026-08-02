@@ -9,6 +9,7 @@ import { IssueRefreshTokenUseCase } from './application/use-cases/issue-refresh-
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token.use-case';
 import { OAuthLoginUseCase } from './application/use-cases/oauth-login.use-case';
 import { IssueAuthTokensUseCase } from './application/use-cases/issue-auth-tokens.use-case';
+import { LogoutUseCase } from './application/use-cases/logout.use-case';
 import {
   USER_REPOSITORY,
   UserRepository,
@@ -106,6 +107,12 @@ import { UsersController } from './interface/http/users.controller';
         issueRefreshTokenUseCase: IssueRefreshTokenUseCase,
       ) => new IssueAuthTokensUseCase(tokenIssuer, issueRefreshTokenUseCase),
       inject: [TOKEN_ISSUER, IssueRefreshTokenUseCase],
+    },
+    {
+      provide: LogoutUseCase,
+      useFactory: (refreshTokenRepository: RefreshTokenRepository) =>
+        new LogoutUseCase(refreshTokenRepository),
+      inject: [REFRESH_TOKEN_REPOSITORY],
     },
     GoogleStrategy,
     GithubStrategy,

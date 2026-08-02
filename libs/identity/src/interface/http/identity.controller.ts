@@ -20,12 +20,16 @@ import { RegisterUserUseCase } from '../../application/use-cases/register-user.u
 import { LoginUserUseCase } from '../../application/use-cases/login-user.use-case';
 import { VerifyEmailUseCase } from '../../application/use-cases/verify-email.use-case';
 import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.use-case';
-import { IssueAuthTokensUseCase } from '../../application/use-cases/issue-auth-tokens.use-case'; // ← replaces IssueRefreshTokenUseCase import here
+import { IssueAuthTokensUseCase } from '../../application/use-cases/issue-auth-tokens.use-case';
+import { LogoutUseCase } from '../../application/use-cases/logout.use-case';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { LogoutDto } from './dto/logout.dto';
 import { GoogleAuthGuard } from '../../infrastructure/passport/google-auth.guard';
 import { GithubAuthGuard } from '../../infrastructure/passport/github-auth.guard';
+import { JwtAuthGuard } from '../../infrastructure/passport/jwt-auth.guard';
+import { AuthenticatedUser } from '../../infrastructure/passport/jwt.strategy';
 
 @Controller('auth')
 export class IdentityController {
@@ -35,6 +39,7 @@ export class IdentityController {
     private readonly verifyEmailUseCase: VerifyEmailUseCase,
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
     private readonly issueAuthTokensUseCase: IssueAuthTokensUseCase,
+    private readonly logoutUseCase: LogoutUseCase,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -79,6 +84,21 @@ export class IdentityController {
   async refresh(@Body() dto: RefreshTokenDto) {
     try {
       return await this.refreshTokenUseCase.execute(dto.refreshToken);
+    } catch (error) {
+      if (error instanceof DomainError) {
+        throw new UnauthorizedException(error.message);
+      }
+      throw error;
+    }
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(204)
+  async logout(@Req() req: Request, @Body() dto: LogoutDto): Promise<void> {
+    const user = req.user as AuthenticatedUser;
+    try {
+      await this.logoutUseCase.execute(user.id, dto.refreshToken);
     } catch (error) {
       if (error instanceof DomainError) {
         throw new UnauthorizedException(error.message);

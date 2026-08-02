@@ -59,7 +59,7 @@ Target defined in: `DEVELOPMENT_DOCUMENT.md` §4.1, §6.1 (Identity endpoints)
 - [x] `User` entity implemented exactly as specced (register, registerViaOAuth, verifyEmail, verifyPassword)
 - [x] `PasswordHash` VO using argon2id
 - [x] Prisma schema `identity` namespace migrated (`users`, `oauth_providers`, `refresh_tokens`)
-- [ ] All REST endpoints in §6.1 Identity section return correct status codes
+- [x] All REST endpoints in §6.1 Identity section return correct status codes
 - [x] Google + GitHub OAuth flows work end-to-end (manual test)
 - [x] Domain-layer unit tests: register, duplicate email, password too short, OAuth pre-verified
 - [ ] E2E test: register → verify email → login → receive JWT pair
@@ -79,6 +79,15 @@ password, then inheriting the victim's later legitimate OAuth login). See
 `POST /auth/verify-email {token}` originally specified in `DEVELOPMENT_DOCUMENT.md` §6.1 —
 the doc was updated to match, since verification is reached by clicking a link in an actual
 email (a browser GET navigation), not a form submission.
+
+`JwtStrategy` validates access tokens statelessly — it trusts the signed
+payload (`{ sub, email }`) directly with no database lookup per request,
+consistent with the short (15-minute) token lifetime. `POST /auth/logout`
+revokes only the specific refresh token presented, not all of the user's
+sessions, which is required for correct multi-device behavior; ownership
+is checked so a token can't be revoked by a user other than the one it
+belongs to. `GET /users/me` returns a hardcoded `tier: "free"` for now —
+Billing (Phase 4) owns the real value once `Subscription`/`Tier` exist.
 
 ---
 
