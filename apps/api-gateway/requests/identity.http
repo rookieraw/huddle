@@ -1,4 +1,7 @@
 @baseUrl = http://localhost:4000
+@verificationToken = PASTE_VERIFICATION_TOKEN_HERE
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZmVkOGVmZi0xYjc1LTRlMWMtODRkMy01ZjlmNzMxNDg0M2EiLCJlbWFpbCI6ImFkYUBleGFtcGxlLmNvbSIsImlhdCI6MTc4NTYzNjAzMywiZXhwIjoxNzg1NjM2OTMzfQ.jwVrfSbQxiWG0dc7k2Yro2BXQQFD0zgiWYX6_moezUQ
+@refreshToken = b390b90f6dc1773bd493abf1cd5b8a23be8d0a7d0e4f64d179fac940003f7a86
 
 ### Register
 POST {{baseUrl}}/auth/register
@@ -9,6 +12,9 @@ Content-Type: application/json
   "password": "correct-horse-battery"
 }
 
+### Verify email (paste verificationToken above from the register response, then send)
+GET {{baseUrl}}/auth/verify?token={{verificationToken}}
+
 ### Login
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
@@ -18,16 +24,24 @@ Content-Type: application/json
   "password": "correct-horse-battery"
 }
 
-### Verify email (replace token with the one from the register response)
-GET {{baseUrl}}/auth/verify?token=PASTE_TOKEN_HERE
-
-### Refresh token (replace refreshToken with the one from the login response)
+### Refresh token (paste refreshToken above from the login response, then send)
 POST {{baseUrl}}/auth/refresh
 Content-Type: application/json
 
 {
-  "refreshToken": "PASTE_REFRESH_TOKEN_HERE"
+  "refreshToken": "{{refreshToken}}"
 }
+
+### Get current user (paste accessToken above from the login response, then send)
+GET {{baseUrl}}/users/me
+Authorization: Bearer {{accessToken}}
+
+### Get current user — no token (should return 401)
+GET {{baseUrl}}/users/me
+
+### Get current user — garbage token (should return 401)
+GET {{baseUrl}}/users/me
+Authorization: Bearer not-a-real-token
 
 ### OAuth Google login (open in browser, not via REST Client — requires interactive consent)
 # GET http://localhost:4000/auth/oauth/google

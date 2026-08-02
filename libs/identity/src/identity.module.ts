@@ -32,6 +32,7 @@ import { GoogleAuthGuard } from './infrastructure/passport/google-auth.guard';
 import { GithubAuthGuard } from './infrastructure/passport/github-auth.guard';
 import { JwtAuthGuard } from './infrastructure/passport/jwt-auth.guard';
 import { IdentityController } from './interface/http/identity.controller';
+import { UsersController } from './interface/http/users.controller';
 
 @Module({
   imports: [
@@ -45,7 +46,7 @@ import { IdentityController } from './interface/http/identity.controller';
       inject: [ConfigService],
     }),
   ],
-  controllers: [IdentityController],
+  controllers: [IdentityController, UsersController],
   providers: [
     prismaClientProvider,
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
