@@ -109,4 +109,13 @@ describe('Identity (e2e)', () => {
         .expect(409);
     });
   });
+
+  describe('input validation', () => {
+    it('rejects a malformed email with 400, proving ValidationPipe is wired', async () => {
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ email: 'not-an-email', password: 'correct-horse-battery' })
+        .expect(400);
+    });
+  });
 });
