@@ -41,7 +41,10 @@ jobs:
       - name: Unit tests
         run: pnpm -r run test
 
-      # Integration and E2E tests (Testcontainers, real Postgres) exist as of Phase 1 —
-      # libs/identity's test:integration and apps/api-gateway's test:e2e — but aren't
-      # wired into this workflow yet. Deferred as its own step: needs Docker-in-Docker
-      # on the runner (untested here so far) and adds real runtime cost per push.
+      # Testcontainers-backed suites — real ephemeral Postgres via the Docker daemon
+      # already present on ubuntu-latest runners, no services: block or DinD needed.
+      - name: Integration tests
+        run: pnpm --filter @huddle/identity test:integration
+
+      - name: E2E tests
+        run: pnpm --filter api-gateway test:e2e
