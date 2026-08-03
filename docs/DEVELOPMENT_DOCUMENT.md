@@ -30,6 +30,14 @@
    - 8.1 Port Allocation (Local Development)
    - 8.2 Implementation Notes & Lessons Learned (Phase 0)
 9. What Changed From the Original Plan (Summary of Today's Session)
+10. Phase 1 Implementation Notes & Lessons Learned (Identity)
+    - 10.1 Architecture & Layering Decisions
+    - 10.2 Security & Domain Decisions
+    - 10.3 OAuth Account-Linking Design
+    - 10.4 Testing Strategy Decisions
+    - 10.5 Bugs Found & Fixed
+    - 10.6 Tooling & Environment Issues
+    - 10.7 Lessons Learned
 
 ---
 
@@ -1697,3 +1705,224 @@ not just "turn everything on":**
 4. Cross-context reads (Chat needs tier limits from Billing, Conferencing needs chat room
    lookup) go through **port interfaces + in-process adapters**, the exact seam Phase 14 will
    cut along for microservice extraction.
+
+---
+
+## 10. Phase 1 Implementation Notes & Lessons Learned (Identity)
+
+Consolidated across five Identity development sessions (chat1–chat5), covering everything
+from initial `User`/`PasswordHash` domain work through OAuth linking, `JwtStrategy`,
+`/auth/logout`, `/users/me`, and the automated E2E suite. Kept here in the same spirit as
+§8.2 — real decisions and real bugs, so nothing gets rediscovered from scratch in a later
+phase.
+
+### 10.1 Architecture & Layering Decisions
+
+- Domain and Application layers stay pure TypeScript (zero NestJS imports); Infrastructure
+  and Interface layers may freely use `@Injectable()`/`@Controller()`. Use cases are plain
+  classes wired via manual factory providers + a `Symbol` injection token per repository
+  interface (`USER_REPOSITORY`, `REFRESH_TOKEN_REPOSITORY`).
+- **Per-context Prisma schemas, no cross-context `@relation`s** — supports future
+  microservice extraction (Identity's schema already matches §5.1 exactly: `User` with an
+  array `oauthProviders: OAuthProvider[]` and `refreshTokens: RefreshToken[]`).
+- **Token issuance extracted behind a `TokenIssuer` port**
+  (`application/ports/token-issuer.port.ts`), implemented by `JwtTokenIssuer` (infra) —
+  mirrors the repository-port pattern, keeps `@nestjs/jwt`'s `JwtService` out of the
+  application layer.
+- **`IssueAuthTokensUseCase`** composes `TokenIssuer` + `IssueRefreshTokenUseCase` into one
+  `{ accessToken, refreshToken }` result, reused by `login()`, both OAuth callbacks, and
+  `RefreshTokenUseCase`.
+- **Folder convention:** `infrastructure/passport/` groups by mechanism (all Passport
+  strategies/guards); `infrastructure/jwt/` groups by library (`@nestjs/jwt` signing only) —
+  deliberately different axes, not an inconsistency.
+- **No global exception filter yet** — local `try/catch` per controller maps `DomainError` →
+  endpoint-specific HTTP status (409/401/400). Deferred until a 2nd controller makes the
+  duplication cost real (now true for `IdentityController` + `UsersController`; revisit if a
+  3rd controller lands in Phase 2).
+- **`/users/me` lives in its own `UsersController` (`@Controller('users')`)**, separate from
+  `IdentityController`'s `/auth` prefix — distinct REST resource, not bolted onto Identity's
+  controller.
+- **Refresh tokens stay opaque, server-verified, hashed DB rows — not JWTs.** Confirmed
+  deliberately: a self-verifying refresh JWT would still need a server-side revocation list
+  for logout/theft response, so it buys nothing over the current design.
+- **Two different hashing algorithms, deliberately:** argon2id for passwords (slow, resists
+  offline guessing of low-entropy human input); SHA-256 for refresh tokens (fast — the token
+  itself is already high-entropy, so hashing only protects against a DB leak).
+
+### 10.2 Security & Domain Decisions
+
+- **Login checks password validity before email-verification status** (prevents leaking
+  verification state pre-auth); identical error message for "unknown email" vs. "wrong
+  password" (prevents enumeration). All refresh-token rejection branches (not-found, expired,
+  revoked/reuse) throw the same `'Invalid refresh token'` message for the same reason.
+- **Verification tokens:** `randomUUID()`, 24hr expiry, stored raw/unhashed (low-value,
+  single-use), cleared after use.
+- **Refresh token rotation, in order:** not-found → reject; expired → reject; revoked (reuse
+  detected) → mass-revoke **all** tokens for that `userId`, then reject; valid → revoke
+  presented token, issue + persist new one, return new pair. Reuse detection is the one
+  exception to "scope actions to a single token" — reuse of a rotated token signals theft, so
+  the blast radius is deliberately the whole account.
+- **Concurrent-refresh races are a client-side concern** (request dedup/mutex), not a
+  server-side grace period — a grace period would weaken reuse-detection.
+- **Access token payload is fixed at `{ sub, email }` only.** Standing rule: never put
+  frequently-changing business state (tier, roles) in a JWT payload, since it can't be
+  invalidated before natural expiry. `GET /users/me` returns a hardcoded `tier: "free"` with a
+  `TODO(billing)` — real value awaits Phase 4's `Subscription`/`Tier`.
+- **`JwtStrategy` is fully stateless** — trusts the verified payload directly, zero DB lookup
+  per request, consistent with the 15-minute access-token lifetime.
+- **`POST /auth/logout` revokes only the presented refresh token**, never all of a user's
+  sessions — required for correct multi-device behavior (session rows are independent
+  per-session objects, not a per-user slot). Ownership is checked (token's `userId` must match
+  the authenticated caller) so a token can't be revoked by a user other than the one it
+  belongs to; mismatch → generic `DomainError` (no info leak). Logout is idempotent
+  (not-found/already-revoked → 204 no-op) and revokes regardless of expiry, since logout is
+  user-driven invalidation, distinct from time-based expiry.
+- **Change-password and delete-account are explicitly deferred** — both carry real design
+  weight (password change must revoke all refresh tokens; delete-account needs a soft/hard
+  delete decision) and are out of Phase 1 scope.
+
+### 10.3 OAuth Account-Linking Design
+
+- **`User.oauthProviders` is an array, not a single slot** — one account can link both Google
+  and GitHub. `linkOAuthProvider` is idempotent on exact re-link, throws only on
+  same-provider/different-providerId conflict. `unlinkOAuthProvider` throws if not linked, or
+  if removal would leave the account with no password and no other provider (lockout
+  prevention).
+- **Auto-link by email match on verified providers**, chosen over reject (safer, worse UX) or
+  confirm-via-password (more common in production, deferred as future work). **Both sides
+  must be verified**: the OAuth provider must assert the email is verified, _and_ the existing
+  account must have already completed its own `/auth/verify` — matching one side only was a
+  real security bug (see §10.5). An unverified-email match on an existing account is rejected,
+  not silently linked.
+- **`OAuthLoginUseCase`** (application layer, framework-free) orchestrates: find-by-provider
+  (return, no writes) → find-by-email (verify-and-link) → `registerViaOAuth` (new user).
+- **GitHub strategy uses `allRawEmails: true`** so `profile.emails[]` includes `verified`/
+  `primary` flags at all — the default profile shape omits them.
+- **Strategies' `validate()` returns the user or throws — never calls `done()` itself**;
+  `@nestjs/passport`'s wrapper already does that from the return/throw. `DomainError` →
+  `UnauthorizedException` mapping lives inside the strategy, not the controller, since guards
+  run before the controller and a controller-level `try/catch` can't intercept a
+  guard-thrown error.
+- **OAuth callback returns JSON, not a redirect** — no frontend exists yet to redirect to.
+- **`/auth/verify` stays `GET /auth/verify?token=...`**, not the `POST /auth/verify-email
+{token}` originally specified — corrected in this doc to match, since email-verification
+  links are always a browser GET, not a form submission.
+
+### 10.4 Testing Strategy Decisions
+
+- **E2E scope**: automated Phase 1 E2E limited to `register → verify → login` per the literal
+  `PHASE_CHECKLIST.md` wording — refresh and OAuth remain manually-verified only (the
+  checklist never required their automation).
+- **Three distinct test-file "homes"**, each for a different concern:
+  - `identity.e2e-spec.ts` — full-stack proof only (real DB/HTTP/DI via Testcontainers), kept
+    lean: happy path + duplicate-email 409 + one `ValidationPipe`-wiring canary.
+  - `*.dto.spec.ts` — `class-validator`'s `validate()` + `plainToInstance()` directly, no Nest
+    bootstrap, for format-rule coverage.
+  - `identity.controller.spec.ts` — plain instantiation + hand-rolled `execute` fakes, no
+    DI/HTTP, for `DomainError` → HTTP status mapping.
+- Dedicated ephemeral Testcontainers Postgres per e2e spec file (mirrors the existing Prisma
+  integration-test pattern); `DATABASE_URL` set on `process.env` before compiling `AppModule`
+  (dotenv won't override an already-set var).
+- `jest-e2e.json` deliberately has no `customExportConditions` — resolves `@huddle/identity`
+  via compiled `dist/`, same as the real runtime, so e2e runs require `pnpm -r build` first.
+- One file per bounded context for e2e (`identity.e2e-spec.ts`), not per-flow files, with
+  nested `describe` blocks sharing one app/container instance — container spin-up is the
+  expensive part.
+- Password policy kept simple — no uppercase/number/symbol rules, matching this doc's
+  documented "8 characters, no complexity" policy.
+- Extracted the duplicated `InMemoryRefreshTokenRepository` (previously verbatim across 3 spec
+  files) into `test-support/`, mirroring the existing `InMemoryUserRepository` convention.
+
+### 10.5 Bugs Found & Fixed
+
+- **Real security bug (account pre-hijacking):** `OAuthLoginUseCase` originally checked only
+  the _provider's_ verified-email claim, not the _existing account's_ own verification status
+  — an attacker could pre-register a victim's email with an unverified password, then inherit
+  the victim's later legitimate OAuth login. Caught via manual testing, not the original test
+  suite; fixed with an added check + 2 new tests.
+- **Latent bug from an earlier handoff, actually still unfixed:** `RefreshTokenUseCase`
+  rebuilt the rotated access token with only `{ sub }`, omitting `email` — would have broken
+  `GET /users/me` after any refresh. Root cause: the refresh flow rebuilt the payload manually
+  instead of re-fetching the current `User`. Fixed by having `RefreshTokenUseCase` depend on
+  `UserRepository` + `IssueAuthTokensUseCase`. Discovered via this fix: a valid, unexpired
+  refresh token whose user has since been deleted was previously unhandled — now explicitly
+  rejected.
+- **`@types/passport-github2` doesn't type `verified`/`primary` on `profile.emails[]` at
+  all** — required a hand-rolled `GithubOAuthProfile` interface after inspecting the actual
+  library source, since the shipped types don't reflect real runtime output.
+- **`@nestjs/passport`'s `handleRequest` re-throws a raw thrown error unwrapped** (not
+  auto-converted to 401) — only a _missing_ user with no error becomes a generic
+  `UnauthorizedException`. Found by reading source before writing code, avoiding a silent
+  500-vs-401 mismatch.
+- **Prisma 7.9.0's dynamic `import()`** blocked by Jest's VM module registry
+  (`ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING_FLAG`) in `apps/api-gateway`'s e2e run — same root
+  cause already solved in `libs/identity`'s `test:integration` script. Fixed by adding
+  `cross-env NODE_OPTIONS=--experimental-vm-modules` to `apps/api-gateway`'s `test:e2e` script
+  (new `cross-env` devDependency — see `PACKAGE_LIST.md`).
+- **Test-layer duplication caught twice:** two proposed `IssueRefreshTokenUseCase` tests
+  (hash≠raw-token, multi-issue uniqueness) duplicated existing domain-layer coverage and were
+  rejected; an initial `LogoutUseCase` test re-tested `RefreshToken.revoke()`'s own
+  idempotency instead of testing the use case's own behavior — replaced with a spy-based test
+  on `repository.save` actually being invoked.
+- **`pnpm --filter @huddle/identity test <pattern>` silently drops matching suites** without a
+  `--` separator (pnpm/Jest arg-forwarding, worse under git-bash on Windows). Reliable form:
+  `pnpm --filter @huddle/identity test -- <pattern>`, or the plain command with no pattern as
+  a safe fallback.
+
+### 10.6 Tooling & Environment Issues
+
+- **Editor-only "Cannot find name `describe`"** in `test/*.ts` files — root `tsconfig.json`
+  excludes `test/` and scopes `rootDir` to `src`, so VS Code's language service has no config
+  covering test files and loses ambient Jest types. Confirmed _not_ a real test failure, since
+  `ts-jest`'s `isolatedModules` mode doesn't enforce `rootDir`/`exclude` or do real
+  type-checking. Fixed with a standalone `test/tsconfig.json`.
+- **ESLint parsing error** after adding `test/tsconfig.json`: `allowDefaultProject:
+['test/*.ts']` collided with `projectService` now finding a real config for those files.
+  Fixed by switching to `projectService: true`.
+- **Real (not false-alarm) ESLint findings:** `no-unsafe-member-access`/`no-unsafe-assignment`
+  correctly fired on `supertest`'s `any`-typed `.body`. Fixed via local response-shape
+  interfaces + one `as Type` assertion per response, not by disabling the rule.
+- **`.http` file gotcha:** copying a JSON string value into a REST Client `.http` file often
+  drags along the surrounding quotes — caused a real 401 during manual testing. REST Client's
+  named-request auto-chaining (`{{name.response.body...}}`) only resolves within the same
+  active VS Code session, so manual `@variable` declarations were chosen deliberately for
+  `identity.http` for cross-session predictability.
+
+### 10.7 Lessons Learned
+
+- Recently-changed tools (Prisma 7) can diverge meaningfully from training-data assumptions —
+  verify against current docs/registry rather than trust memory, especially for fast-moving
+  libraries. This applies to library _behavior_, not just version numbers: verify from actual
+  installed source (not memory or shipped type definitions alone) — this changed real
+  implementation decisions twice (GitHub's `allRawEmails`, `@nestjs/passport`'s
+  `validate()`/`handleRequest` contracts).
+- **`ts-jest`'s `isolatedModules` does not catch cross-file type errors** (e.g., constructor
+  argument-count mismatches) — only `pnpm typecheck` does, and must be run separately and
+  habitually, not just at commit time. A green test run doesn't prove type-safety or
+  lint-cleanliness either — `lint` needs the same separate, habitual treatment.
+- **A test's assertions must match its title's exact claim** — a passing test with a
+  mismatched or dropped assertion gives false confidence; this recurred more than once in one
+  file and is worth deliberately auditing for, not just trusting green output. Related: `toEqual`
+  vs. `arrayContaining` isn't just an ordering choice — it's exactness vs. presence-only.
+- **Don't re-test a lower layer's guarantee at a higher layer** — if an entity method already
+  owns an invariant (e.g., idempotent `revoke()`), a use-case-level test should verify what the
+  use case itself does (e.g., still calls `repository.save()`), not re-prove the entity's
+  guarantee through extra indirection.
+- **"Reject" isn't the universal safe default for account-linking** — the actual
+  industry-common pattern is confirm-via-password, with silent auto-link on trusted verified
+  providers also common; "reject" was a deliberate simpler choice for portfolio scope, not a
+  universally-correct security stance.
+- **Doc-vs-code mismatches are sometimes the doc's fault** — default assumption shouldn't be
+  "make code match spec"; check whether the spec reflects a real constraint (e.g., email links
+  are inherently GET) before treating a deviation as something to fix in code.
+- **Handoff docs can go stale relative to actual code** — a documented "fix" wasn't actually
+  applied to the files in one session; verifying actual file state against notes at session
+  start is worth doing, not just trusting prior summaries. This interim sync (chat1–chat5,
+  reconciled against the actual checklist/package-list state) exists for the same reason.
+- **Four different tools have four different module-resolution/type-checking models**
+  (editor language service, `ts-jest` execution, `tsc --noEmit`, ESLint's typed linting) — a
+  fix for one doesn't imply the others are fine.
+- Commit discipline needs active, immediate prompting at each Green state — deferring "just
+  one more thing" causes unrelated work to get bundled together. The same discipline applies
+  to keeping `PHASE_CHECKLIST.md` accurate in real time, not batch-updated after the fact —
+  this sync found it was, in fact, already accurate, which is the goal going forward.

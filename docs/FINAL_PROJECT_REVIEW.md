@@ -2,7 +2,11 @@
 
 ## Junior Backend Engineer Portfolio
 
-**Status:** Phase 0 complete; Phase 1 (Identity) starting
+**Status:** Phase 0 complete; Phase 1 (Identity) in progress — register, login, email
+verification, refresh-token rotation + reuse detection, Google/GitHub OAuth (multi-provider
+linking), `JwtStrategy`/`JwtAuthGuard`, `POST /auth/logout`, `GET /users/me`, and the
+`register → verify → login` automated E2E suite are all implemented and verified. See
+`DEVELOPMENT_DOCUMENT.md` §10 for full implementation notes.
 **Date:** July 2026
 
 > **Note:** This document intentionally does not list exact package versions — those belong
@@ -530,5 +534,8 @@ You have:
 5. **Interview-winning features** (auth, real-time, payments, video)
 6. **Professional practices** (TDD, linting, git conventions, CI/CD)
 
-**Status: in active Phase 0 implementation.** See `DEVELOPMENT_DOCUMENT.md` §8 for the live
-setup checklist and §8.2 for implementation notes/lessons learned as they're discovered.
+**Status: Phase 0 complete; Phase 1 (Identity) in active implementation.** See
+`DEVELOPMENT_DOCUMENT.md` §8 for the Phase 0 setup checklist and §10 for Phase 1
+implementation notes/lessons learned, updated as they're discovered. Remaining Phase 1 work
+is manual-only verification cleanup (refresh/OAuth flows stay manually tested by design —
+see §10.4); Phase 1 is otherwise functionally complete per `PHASE_CHECKLIST.md`.
