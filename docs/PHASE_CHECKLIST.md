@@ -62,7 +62,7 @@ Target defined in: `DEVELOPMENT_DOCUMENT.md` §4.1, §6.1 (Identity endpoints)
 - [x] All REST endpoints in §6.1 Identity section return correct status codes
 - [x] Google + GitHub OAuth flows work end-to-end (manual test)
 - [x] Domain-layer unit tests: register, duplicate email, password too short, OAuth pre-verified
-- [ ] E2E test: register → verify email → login → receive JWT pair
+- [x] E2E test: register → verify email → login → receive JWT pair
 
 **Done when:** you can register, verify, log in, refresh token, and OAuth-login via Postman/curl.
 
