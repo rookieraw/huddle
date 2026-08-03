@@ -25,6 +25,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate Prisma Client (identity)
+        working-directory: libs/identity
+        run: pnpm exec prisma generate --schema=./src/infrastructure/prisma/schema.prisma
+
+      - name: Build
+        run: pnpm -r run build
+
       - name: Lint
         run: pnpm -r run lint
 
@@ -34,10 +41,7 @@ jobs:
       - name: Unit tests
         run: pnpm -r run test
 
-      - name: Build
-        run: pnpm -r run build
-
-      # Integration tests (Testcontainers, real Postgres/Mongo/Redis) intentionally not
-      # included yet — no such tests exist until Phase 1 introduces real domain code and
-      # infrastructure-layer repositories to test against. Wiring this up against nonexistent
-      # tests would repeat the same mistake as the libs/* lint-script issue in Step 7.
+      # Integration and E2E tests (Testcontainers, real Postgres) exist as of Phase 1 —
+      # libs/identity's test:integration and apps/api-gateway's test:e2e — but aren't
+      # wired into this workflow yet. Deferred as its own step: needs Docker-in-Docker
+      # on the runner (untested here so far) and adds real runtime cost per push.
