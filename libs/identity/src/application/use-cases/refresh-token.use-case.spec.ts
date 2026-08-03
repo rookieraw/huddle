@@ -1,30 +1,12 @@
 import { DomainError } from '@huddle/shared-kernel';
 import { User } from '../../domain/user.entity';
 import { RefreshToken } from '../../domain/refresh-token.entity';
-import { RefreshTokenRepository } from '../ports/refresh-token.repository.port';
 import { InMemoryUserRepository } from '../../test-support/in-memory-user.repository';
+import { InMemoryRefreshTokenRepository } from '../../test-support/in-memory-refresh-token.repository';
 import { FakeTokenIssuer } from '../../test-support/fake-token-issuer';
 import { IssueRefreshTokenUseCase } from './issue-refresh-token.use-case';
 import { IssueAuthTokensUseCase } from './issue-auth-tokens.use-case';
 import { RefreshTokenUseCase } from './refresh-token.use-case';
-
-class InMemoryRefreshTokenRepository implements RefreshTokenRepository {
-  private readonly tokensByHash = new Map<string, RefreshToken>();
-
-  async findByTokenHash(tokenHash: string): Promise<RefreshToken | null> {
-    return this.tokensByHash.get(tokenHash) ?? null;
-  }
-
-  async findAllByUserId(userId: string): Promise<RefreshToken[]> {
-    return [...this.tokensByHash.values()].filter(
-      (token) => token.getUserId() === userId,
-    );
-  }
-
-  async save(refreshToken: RefreshToken): Promise<void> {
-    this.tokensByHash.set(refreshToken.getTokenHash(), refreshToken);
-  }
-}
 
 function buildUseCase(refreshTokenRepository: InMemoryRefreshTokenRepository) {
   const userRepository = new InMemoryUserRepository();

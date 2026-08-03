@@ -1,25 +1,7 @@
 import { DomainError } from '@huddle/shared-kernel';
 import { RefreshToken } from '../../domain/refresh-token.entity';
-import { RefreshTokenRepository } from '../ports/refresh-token.repository.port';
+import { InMemoryRefreshTokenRepository } from '../../test-support/in-memory-refresh-token.repository';
 import { LogoutUseCase } from './logout.use-case';
-
-class InMemoryRefreshTokenRepository implements RefreshTokenRepository {
-  private readonly tokensByHash = new Map<string, RefreshToken>();
-
-  async findByTokenHash(tokenHash: string): Promise<RefreshToken | null> {
-    return this.tokensByHash.get(tokenHash) ?? null;
-  }
-
-  async findAllByUserId(userId: string): Promise<RefreshToken[]> {
-    return [...this.tokensByHash.values()].filter(
-      (token) => token.getUserId() === userId,
-    );
-  }
-
-  async save(refreshToken: RefreshToken): Promise<void> {
-    this.tokensByHash.set(refreshToken.getTokenHash(), refreshToken);
-  }
-}
 
 describe('LogoutUseCase', () => {
   it('revokes the presented token when it belongs to the requesting user', async () => {
