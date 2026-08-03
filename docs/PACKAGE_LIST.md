@@ -127,6 +127,45 @@ the `devEngines`/`packageManager` cleanup above.
 
 ---
 
+## Actually Installed — Phase 1 (Identity)
+
+Real installs verified against `registry.npmjs.org` at time of this sync, not just the
+original plan below. Where the resolved "latest" now differs from the original Phase 1+ plan,
+the newer number is what's actually reflected in the lockfile; re-run the registry check
+yourself before your next install, since these move continuously.
+
+| Package                          | Plan version  | Verified current (this sync) | Range strategy                                                                                                                                                                                                                                                                                                                       |
+| -------------------------------- | ------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@nestjs/jwt`                    | `11.0.2`      | `11.0.2` (unchanged)         | Exact (NestJS family lockstep)                                                                                                                                                                                                                                                                                                       |
+| `@nestjs/passport`               | `11.0.5`      | `11.0.5` (unchanged)         | Exact (NestJS family lockstep)                                                                                                                                                                                                                                                                                                       |
+| `@nestjs/testing`                | `11.1.27`     | `11.1.28` available          | Exact — **keep pinned to whatever `@nestjs/core` actually resolves to**, don't bump independently                                                                                                                                                                                                                                    |
+| `passport`                       | `^0.7.0`      | `0.7.0` (unchanged)          | Caret                                                                                                                                                                                                                                                                                                                                |
+| `passport-jwt`                   | `^4.0.1`      | `4.0.1` (unchanged)          | Caret                                                                                                                                                                                                                                                                                                                                |
+| `passport-google-oauth20`        | `^2.0.0`      | `2.0.0` (unchanged)          | Caret                                                                                                                                                                                                                                                                                                                                |
+| `passport-github2`               | `^0.1.12`     | `0.1.12` (unchanged)         | Caret                                                                                                                                                                                                                                                                                                                                |
+| `argon2`                         | `^0.44.0`     | `0.45.1` available           | Caret — safe to let float up                                                                                                                                                                                                                                                                                                         |
+| `@prisma/client`                 | `7.8.0`       | `7.9.1` available            | Exact — bump deliberately alongside `prisma`/`@prisma/adapter-pg` together                                                                                                                                                                                                                                                           |
+| `@prisma/adapter-pg`             | `7.8.0`       | `7.9.1` available            | Exact — same lockstep as above                                                                                                                                                                                                                                                                                                       |
+| `prisma` (CLI, dev)              | `7.8.0`       | `7.9.1` available            | Exact — same lockstep as above                                                                                                                                                                                                                                                                                                       |
+| `class-validator`                | `^0.15.1`     | `0.15.1` (unchanged)         | Caret                                                                                                                                                                                                                                                                                                                                |
+| `class-transformer`              | `^0.5.1`      | `0.5.1` (unchanged)          | Caret                                                                                                                                                                                                                                                                                                                                |
+| `jest`                           | `^30.4.2`     | `30.4.2` (unchanged)         | Caret                                                                                                                                                                                                                                                                                                                                |
+| `ts-jest`                        | `^29.4.11`    | `29.4.12` available          | Caret                                                                                                                                                                                                                                                                                                                                |
+| `supertest`                      | `^7.2.2`      | `7.2.2` (unchanged)          | Caret                                                                                                                                                                                                                                                                                                                                |
+| `@testcontainers/postgresql`     | `^12.0.4`     | `12.0.4` (unchanged)         | Caret                                                                                                                                                                                                                                                                                                                                |
+| `@types/passport-jwt`            | `^4.0.1`      | `4.0.1` (unchanged)          | Caret                                                                                                                                                                                                                                                                                                                                |
+| `@types/passport-google-oauth20` | `^2.0.17`     | `2.0.17` (unchanged)         | Caret                                                                                                                                                                                                                                                                                                                                |
+| `@types/passport-github2`        | `^1.2.9`      | `1.2.9` (unchanged)          | Caret — **types are incomplete** (missing `verified`/`primary` on `profile.emails[]`); a hand-rolled `GithubOAuthProfile` interface supplements this package, see `DEVELOPMENT_DOCUMENT.md` §10.5                                                                                                                                    |
+| `cross-env`                      | _not planned_ | `^10.1.0`                    | Caret — **new addition**, not in the original Phase 1+ plan. Needed only in `apps/api-gateway`'s `test:e2e` script, to set `NODE_OPTIONS=--experimental-vm-modules` cross-platform (Prisma 7's dynamic `import()` needs this flag under Jest's VM sandbox — same root cause as `libs/identity`'s existing `test:integration` script) |
+
+**Not yet needed / correctly deferred:** `jsonwebtoken` (raw signing is handled entirely
+through `@nestjs/jwt`'s `JwtService` via the `TokenIssuer` port — no direct usage exists),
+`mongoose`, `socket.io`/`@socket.io/redis-adapter`, `ioredis`, `bullmq`, `stripe`, `mediasoup`/
+`mediasoup-client`, `nodemailer` — all correctly untouched, since Phase 1 (Identity) has no
+Chat/Conferencing/Billing/Notification dependencies.
+
+---
+
 ## Installation Command (Monorepo Root) — Original Plan, Phases 1+
 
 The commands below are the **original Phase 1+ plan** for later-phase dependencies (Identity,
@@ -347,16 +386,21 @@ image, proven at scale. `redis` package is not installed anywhere in this projec
 | `commitizen`                      | ^4.3.2  | Root                                                                 |
 | `cz-conventional-changelog`       | ^3.3.0  | Root                                                                 |
 
-### Testing (Phase 1+, not yet installed)
+### Testing — Installed (Phase 1, Identity)
 
-| Package                      | Version |
-| ---------------------------- | ------- |
-| `jest`                       | 30.4.2  |
-| `ts-jest`                    | 29.4.11 |
-| `supertest`                  | 7.2.2   |
-| `@testcontainers/postgresql` | 12.0.4  |
-| `@testcontainers/mongodb`    | 12.0.4  |
-| `@testcontainers/redis`      | 12.0.4  |
+`jest`, `ts-jest`, `supertest`, and `@testcontainers/postgresql` are installed and in active
+use (unit, domain, DTO, controller, and e2e specs — see `DEVELOPMENT_DOCUMENT.md` §10.4).
+`@testcontainers/mongodb` and `@testcontainers/redis` remain not-yet-installed — no Mongoose
+or Redis infrastructure-layer code exists yet; both are Phase 2 dependencies.
+
+| Package                      | Version | Status                             |
+| ---------------------------- | ------- | ---------------------------------- |
+| `jest`                       | 30.4.2  | Installed (Phase 1)                |
+| `ts-jest`                    | 29.4.12 | Installed (Phase 1)                |
+| `supertest`                  | 7.2.2   | Installed (Phase 1)                |
+| `@testcontainers/postgresql` | 12.0.4  | Installed (Phase 1)                |
+| `@testcontainers/mongodb`    | 12.0.4  | Not yet installed — Phase 2 (Chat) |
+| `@testcontainers/redis`      | 12.0.4  | Not yet installed — Phase 2 (Chat) |
 
 ### Type Definitions
 
@@ -429,7 +473,11 @@ pnpm exec next --version       # should print 16.2.10
 
 ✅ Phase 0 root tooling (Steps 1-8): versions above reflect **actual, verified installs**, not
 just plans.
-⚠️ Phase 1+ package versions (Identity, Chat, Conferencing, Billing): last verified at planning
-time — **re-check against the registry immediately before installing**, given the drift found
-repeatedly in this project so far.
+✅ Phase 1 (Identity) auth/testing packages: versions above reflect **actual, verified
+installs**, re-checked against the registry as of this sync (see "Actually Installed — Phase
+1 (Identity)" above). One new addition vs. the original plan: `cross-env` (e2e script,
+cross-platform `NODE_OPTIONS`).
+⚠️ Phase 2+ package versions (Chat, Conferencing, Billing, Notification): last verified at
+planning time — **re-check against the registry immediately before installing**, given the
+drift found repeatedly in this project so far.
 ✅ Consistent with `FINAL_PROJECT_REVIEW.md` and `DEVELOPMENT_DOCUMENT.md`.

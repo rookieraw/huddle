@@ -7,3 +7,9 @@ allowBuilds:
   unrs-resolver: true
   msgpackr-extract: true
   '@scarf/scarf': false
+  argon2: true
+  '@prisma/engines': true
+  prisma: true
+  cpu-features: true
+  protobufjs: true
+  ssh2: true

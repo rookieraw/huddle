@@ -25,6 +25,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate Prisma Client (identity)
+        working-directory: libs/identity
+        run: pnpm exec prisma generate --schema=./src/infrastructure/prisma/schema.prisma
+        env:
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+
+      - name: Build
+        run: pnpm -r run build
+
       - name: Lint
         run: pnpm -r run lint
 
@@ -34,10 +43,18 @@ jobs:
       - name: Unit tests
         run: pnpm -r run test
 
-      - name: Build
-        run: pnpm -r run build
+      # Testcontainers-backed suites — real ephemeral Postgres via the Docker daemon
+      # already present on ubuntu-latest runners, no services: block or DinD needed.
+      - name: Integration tests
+        run: pnpm --filter @huddle/identity test:integration
 
-      # Integration tests (Testcontainers, real Postgres/Mongo/Redis) intentionally not
-      # included yet — no such tests exist until Phase 1 introduces real domain code and
-      # infrastructure-layer repositories to test against. Wiring this up against nonexistent
-      # tests would repeat the same mistake as the libs/* lint-script issue in Step 7.
+      - name: E2E tests
+        run: pnpm --filter api-gateway test:e2e
+        env:
+          JWT_SECRET: ci-placeholder-jwt-secret
+          GOOGLE_CLIENT_ID: ci-placeholder-google-client-id
+          GOOGLE_CLIENT_SECRET: ci-placeholder-google-client-secret
+          GOOGLE_CALLBACK_URL: http://localhost:4000/auth/oauth/google/callback
+          GITHUB_CLIENT_ID: ci-placeholder-github-client-id
+          GITHUB_CLIENT_SECRET: ci-placeholder-github-client-secret
+          GITHUB_CALLBACK_URL: http://localhost:4000/auth/oauth/github/callback

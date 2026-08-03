@@ -1,0 +1,91 @@
+@baseUrl = http://localhost:4000
+@verificationToken = PASTE_VERIFICATION_TOKEN_HERE
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZmVkOGVmZi0xYjc1LTRlMWMtODRkMy01ZjlmNzMxNDg0M2EiLCJlbWFpbCI6ImFkYUBleGFtcGxlLmNvbSIsImlhdCI6MTc4NTY5OTcyMSwiZXhwIjoxNzg1NzAwNjIxfQ.nH51cZQgUM4gEsS11dCibYSZr4mjAfSvNh-a55yvsgU
+@refreshToken = 3f1e763c19864f26e18ee6e06d03366f512e83acdecf6d8fe3778d1b0b8dea8f
+
+### Register
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "ada@example.com",
+  "password": "correct-horse-battery"
+}
+
+### Verify email (paste verificationToken above from the register response, then send)
+GET {{baseUrl}}/auth/verify?token={{verificationToken}}
+
+### Login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "ada@example.com",
+  "password": "correct-horse-battery"
+}
+
+### Refresh token (paste refreshToken above from the login response, then send)
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### Get current user (paste accessToken above from the login response, then send)
+GET {{baseUrl}}/users/me
+Authorization: Bearer {{accessToken}}
+
+### Get current user — no token (should return 401)
+GET {{baseUrl}}/users/me
+
+### Get current user — garbage token (should return 401)
+GET {{baseUrl}}/users/me
+Authorization: Bearer not-a-real-token
+
+### Logout (paste accessToken and refreshToken above from the login response, then send)
+POST {{baseUrl}}/auth/logout
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### Logout — no token (should return 401)
+POST {{baseUrl}}/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### Logout — missing refreshToken in body (should return 400)
+POST {{baseUrl}}/auth/logout
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{}
+
+### Logout — same token again (should return 204, idempotent no-op)
+POST {{baseUrl}}/auth/logout
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### Refresh with the now-revoked token (should return 401 — logout actually invalidated it)
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### OAuth Google login (open in browser, not via REST Client — requires interactive consent)
+# GET http://localhost:4000/auth/oauth/google
+
+### OAuth GitHub login (open in browser, not via REST Client — requires interactive consent)
+# GET http://localhost:4000/auth/oauth/github
