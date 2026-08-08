@@ -35,3 +35,9 @@ libs/**/generated/
 
 # Docker volumes (if any local bind mounts are added later)
 docker-data/
+
+# Local AI working context; not part of the public documentation
+/docs/ai/
+
+# Local archive of documentation snapshots; not tracked by Git
+/docs/archive/
