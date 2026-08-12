@@ -18,6 +18,7 @@ model User {
   createdAt                  DateTime  @default(now()) @map("created_at")
   verificationToken          String?   @unique @map("verification_token")
   verificationTokenExpiresAt DateTime? @map("verification_token_expires_at")
+  displayName                String    @map("display_name")
 
   oauthProviders OAuthProvider[]
   refreshTokens  RefreshToken[]
