@@ -83,6 +83,7 @@ export class PrismaUserRepository implements UserRepository {
         createdAt: user.getCreatedAt(),
         verificationToken: user.getVerificationToken(),
         verificationTokenExpiresAt: user.getVerificationTokenExpiresAt(),
+        displayName: user.getDisplayName(),
       },
       update: {
         email: user.getEmail(),
@@ -90,6 +91,7 @@ export class PrismaUserRepository implements UserRepository {
         emailVerified: user.isEmailVerified(),
         verificationToken: user.getVerificationToken(),
         verificationTokenExpiresAt: user.getVerificationTokenExpiresAt(),
+        displayName: user.getDisplayName(),
       },
     });
 
@@ -127,6 +129,7 @@ export class PrismaUserRepository implements UserRepository {
       oauthProviders,
       verificationToken: record.verificationToken,
       verificationTokenExpiresAt: record.verificationTokenExpiresAt,
+      displayName: record.displayName,
     });
   }
 }

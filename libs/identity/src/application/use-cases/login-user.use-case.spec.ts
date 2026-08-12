@@ -1,5 +1,6 @@
 import { DomainError } from '@huddle/shared-kernel';
 import { User } from '../../domain/user.entity';
+import { DisplayName } from '../../domain/value-objects/display-name.vo';
 import { InMemoryUserRepository } from '../../test-support/in-memory-user.repository';
 import { LoginUserUseCase } from './login-user.use-case';
 
@@ -8,7 +9,11 @@ async function createVerifiedUser(
   email: string,
   password: string,
 ): Promise<User> {
-  const { user } = await User.register(email, password);
+  const { user } = await User.register(
+    email,
+    password,
+    DisplayName.create('Test User'),
+  );
   user.verifyEmail();
   await repository.save(user);
   return user;
@@ -86,6 +91,7 @@ describe('LoginUserUseCase', () => {
     const { user } = await User.register(
       'ada@example.com',
       'correct-horse-battery',
+      DisplayName.create('Ada Lovelace'),
     );
     await repository.save(user);
     const useCase = new LoginUserUseCase(repository);

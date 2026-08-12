@@ -1,6 +1,7 @@
 import { DomainError } from '@huddle/shared-kernel';
 import { User } from '../../domain/user.entity';
 import { RefreshToken } from '../../domain/refresh-token.entity';
+import { DisplayName } from '../../domain/value-objects/display-name.vo';
 import { InMemoryUserRepository } from '../../test-support/in-memory-user.repository';
 import { InMemoryRefreshTokenRepository } from '../../test-support/in-memory-refresh-token.repository';
 import { FakeTokenIssuer } from '../../test-support/fake-token-issuer';
@@ -84,7 +85,11 @@ describe('RefreshTokenUseCase', () => {
 
   it('rotates a valid token: revokes the old one, persists a new one under the same user', async () => {
     const repository = new InMemoryRefreshTokenRepository();
-    const { user } = await User.register('ada@example.com', 'password123');
+    const { user } = await User.register(
+      'ada@example.com',
+      'password123',
+      DisplayName.create('Ada Lovelace'),
+    );
     user.verifyEmail();
     const { useCase, userRepository } = buildUseCase(repository);
     await userRepository.save(user);
@@ -114,7 +119,11 @@ describe('RefreshTokenUseCase', () => {
 
   it('embeds the current user id and email in the rotated access token payload', async () => {
     const repository = new InMemoryRefreshTokenRepository();
-    const { user } = await User.register('ada@example.com', 'password123');
+    const { user } = await User.register(
+      'ada@example.com',
+      'password123',
+      DisplayName.create('Ada Lovelace'),
+    );
     user.verifyEmail();
     const { useCase, userRepository, tokenIssuer } = buildUseCase(repository);
     await userRepository.save(user);

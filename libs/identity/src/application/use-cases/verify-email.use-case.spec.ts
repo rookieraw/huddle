@@ -1,5 +1,6 @@
 import { DomainError } from '@huddle/shared-kernel';
 import { User } from '../../domain/user.entity';
+import { DisplayName } from '../../domain/value-objects/display-name.vo';
 import { InMemoryUserRepository } from '../../test-support/in-memory-user.repository';
 import { VerifyEmailUseCase } from './verify-email.use-case';
 
@@ -9,6 +10,7 @@ describe('VerifyEmailUseCase', () => {
     const { user } = await User.register(
       'ada@example.com',
       'correct-horse-battery',
+      DisplayName.create('Ada Lovelace'),
     );
     await repository.save(user);
     const token = user.getVerificationToken()!;
@@ -24,6 +26,7 @@ describe('VerifyEmailUseCase', () => {
     const { user } = await User.register(
       'ada@example.com',
       'correct-horse-battery',
+      DisplayName.create('Ada Lovelace'),
     );
     await repository.save(user);
     const token = user.getVerificationToken()!;
@@ -49,6 +52,7 @@ describe('VerifyEmailUseCase', () => {
     const { user } = await User.register(
       'ada@example.com',
       'correct-horse-battery',
+      DisplayName.create('Ada Lovelace'),
     );
     await repository.save(user);
     const token = user.getVerificationToken()!;
@@ -69,6 +73,7 @@ describe('VerifyEmailUseCase', () => {
       oauthProviders: [],
       verificationToken: 'expired-token',
       verificationTokenExpiresAt: new Date('2024-01-02T00:00:00.000Z'),
+      displayName: 'Ada Lovelace',
     });
     await repository.save(user);
     const useCase = new VerifyEmailUseCase(repository);
