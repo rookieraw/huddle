@@ -7,6 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { DomainError } from '@huddle/shared-kernel';
 import { User } from '../../domain/user.entity';
+import { DisplayName } from '../../domain/value-objects/display-name.vo';
 import { RegisterUserUseCase } from '../../application/use-cases/register-user.use-case';
 import { LoginUserUseCase } from '../../application/use-cases/login-user.use-case';
 import { VerifyEmailUseCase } from '../../application/use-cases/verify-email.use-case';
@@ -53,6 +54,7 @@ async function createVerifiedUser(): Promise<User> {
   const { user } = await User.register(
     'ada@example.com',
     'correct-horse-battery',
+    DisplayName.create('Ada Lovelace'),
   );
   user.verifyEmail();
   return user;
@@ -60,10 +62,11 @@ async function createVerifiedUser(): Promise<User> {
 
 describe('IdentityController', () => {
   describe('register', () => {
-    it('returns id, email, and verificationToken on success', async () => {
+    it('returns id, email, displayName, and verificationToken on success', async () => {
       const { user } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
       const registerUserUseCase = {
         execute: jest.fn().mockResolvedValue({ user, event: {} }),
@@ -73,15 +76,18 @@ describe('IdentityController', () => {
       const result = await controller.register({
         email: 'ada@example.com',
         password: 'correct-horse-battery',
+        displayName: 'Ada Lovelace',
       });
 
       expect(registerUserUseCase.execute).toHaveBeenCalledWith(
         'ada@example.com',
         'correct-horse-battery',
+        'Ada Lovelace',
       );
       expect(result).toEqual({
         id: user.id,
         email: 'ada@example.com',
+        displayName: 'Ada Lovelace',
         verificationToken: user.getVerificationToken(),
       });
     });
@@ -98,6 +104,7 @@ describe('IdentityController', () => {
         controller.register({
           email: 'ada@example.com',
           password: 'correct-horse-battery',
+          displayName: 'Ada Lovelace',
         }),
       ).rejects.toBeInstanceOf(ConflictException);
     });
@@ -113,6 +120,7 @@ describe('IdentityController', () => {
         controller.register({
           email: 'ada@example.com',
           password: 'correct-horse-battery',
+          displayName: 'Ada Lovelace',
         }),
       ).rejects.toBe(unexpected);
     });
