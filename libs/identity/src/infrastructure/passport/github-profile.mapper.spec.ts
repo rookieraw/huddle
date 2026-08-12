@@ -5,6 +5,8 @@ function buildProfile(
 ): GithubOAuthProfile {
   return {
     id: 'github-id-456',
+    displayName: 'Ada Lovelace',
+    username: 'adalovelace',
     emails: [{ value: 'ada@example.com', primary: true, verified: true }],
     ...overrides,
   };
@@ -62,5 +64,45 @@ describe('mapGithubProfile', () => {
 
   it('throws when the profile has no email address', () => {
     expect(() => mapGithubProfile(buildProfile({ emails: [] }))).toThrow();
+  });
+
+  it('extracts the provider display name when present', () => {
+    const result = mapGithubProfile(
+      buildProfile({ displayName: 'Ada Lovelace' }),
+    );
+
+    expect(result.displayName).toBe('Ada Lovelace');
+  });
+
+  it('falls back to username when displayName is absent', () => {
+    const result = mapGithubProfile(
+      buildProfile({ displayName: undefined, username: 'adalovelace' }),
+    );
+
+    expect(result.displayName).toBe('adalovelace');
+  });
+
+  it('returns undefined display name when neither displayName nor username is present', () => {
+    const result = mapGithubProfile(
+      buildProfile({ displayName: undefined, username: undefined }),
+    );
+
+    expect(result.displayName).toBeUndefined();
+  });
+
+  it('returns undefined display name when the provided name is only whitespace', () => {
+    const result = mapGithubProfile(
+      buildProfile({ displayName: '   ', username: undefined }),
+    );
+
+    expect(result.displayName).toBeUndefined();
+  });
+
+  it('returns undefined display name when the provided name exceeds 50 characters', () => {
+    const result = mapGithubProfile(
+      buildProfile({ displayName: 'A'.repeat(51), username: undefined }),
+    );
+
+    expect(result.displayName).toBeUndefined();
   });
 });
