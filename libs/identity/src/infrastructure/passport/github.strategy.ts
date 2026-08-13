@@ -27,7 +27,8 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     _refreshToken: string,
     profile: GithubOAuthProfile,
   ): Promise<User> {
-    const { providerId, email, emailVerified } = mapGithubProfile(profile);
+    const { providerId, email, emailVerified, displayName } =
+      mapGithubProfile(profile);
 
     try {
       return await this.oauthLoginUseCase.execute({
@@ -35,6 +36,7 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
         providerId,
         email,
         emailVerifiedByProvider: emailVerified,
+        displayName,
       });
     } catch (error) {
       if (error instanceof DomainError) {
