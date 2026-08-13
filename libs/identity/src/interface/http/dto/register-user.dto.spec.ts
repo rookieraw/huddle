@@ -131,4 +131,52 @@ describe('RegisterUserDto', () => {
 
     expect(errors.some((e) => e.property === 'displayName')).toBe(false);
   });
+
+  it('accepts a display name padded with whitespace that is exactly 50 characters after trimming', async () => {
+    const paddedName = `  ${'A'.repeat(50)}  `;
+
+    const errors = await validateInput({
+      email: 'ada@example.com',
+      password: 'correct-horse-battery',
+      displayName: paddedName,
+    });
+
+    expect(errors.some((e) => e.property === 'displayName')).toBe(false);
+  });
+
+  it('rejects a display name that exceeds 50 characters even after trimming, regardless of padding', async () => {
+    const paddedOverLimitName = `  ${'A'.repeat(51)}  `;
+
+    const errors = await validateInput({
+      email: 'ada@example.com',
+      password: 'correct-horse-battery',
+      displayName: paddedOverLimitName,
+    });
+
+    const displayNameError = errors.find((e) => e.property === 'displayName');
+    expect(displayNameError?.constraints).toHaveProperty('maxLength');
+  });
+
+  it('rejects 51 astral-plane (surrogate-pair) code points as over the code-point length limit', async () => {
+    const astralChar = String.fromCodePoint(0x1f600); // 😀
+    const errors = await validateInput({
+      email: 'ada@example.com',
+      password: 'correct-horse-battery',
+      displayName: astralChar.repeat(51),
+    });
+
+    const displayNameError = errors.find((e) => e.property === 'displayName');
+    expect(displayNameError?.constraints).toHaveProperty('maxLength');
+  });
+
+  it('accepts exactly 50 astral-plane (surrogate-pair) code points, since class-validator counts code points not UTF-16 units', async () => {
+    const astralChar = String.fromCodePoint(0x1f600);
+    const errors = await validateInput({
+      email: 'ada@example.com',
+      password: 'correct-horse-battery',
+      displayName: astralChar.repeat(50),
+    });
+
+    expect(errors.some((e) => e.property === 'displayName')).toBe(false);
+  });
 });

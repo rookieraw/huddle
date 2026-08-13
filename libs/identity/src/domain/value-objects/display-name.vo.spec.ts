@@ -57,6 +57,24 @@ describe('DisplayName', () => {
       expect(displayName.value).toBe('A'.repeat(50));
     });
 
+    it('counts a surrogate-pair character as one Unicode code point, matching class-validator', () => {
+      const astralChar = String.fromCodePoint(0x1f600); // 😀, a UTF-16 surrogate pair
+      const fiftyAstralChars = astralChar.repeat(50);
+
+      const displayName = DisplayName.create(fiftyAstralChars);
+
+      expect(displayName.value).toBe(fiftyAstralChars);
+    });
+
+    it('throws DomainError when the code-point length exceeds 50, even for surrogate-pair characters', () => {
+      const astralChar = String.fromCodePoint(0x1f600);
+      const fiftyOneAstralChars = astralChar.repeat(51);
+
+      expect(() => DisplayName.create(fiftyOneAstralChars)).toThrow(
+        DomainError,
+      );
+    });
+
     it('allows two different DisplayName instances to hold the same value', () => {
       const first = DisplayName.create('Ada Lovelace');
       const second = DisplayName.create('Ada Lovelace');

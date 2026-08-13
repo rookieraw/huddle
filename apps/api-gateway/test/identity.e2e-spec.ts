@@ -173,5 +173,40 @@ describe('Identity (e2e)', () => {
         })
         .expect(400);
     });
+
+    it('accepts a display name padded with whitespace that trims to exactly 50 characters', async () => {
+      const email = `e2e-padded-name-${Date.now()}@example.com`;
+      const paddedName = `  ${'A'.repeat(50)}  `;
+
+      const registerRes = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email,
+          password: 'correct-horse-battery',
+          displayName: paddedName,
+        })
+        .expect(201);
+      const registerBody = registerRes.body as RegisterResponseBody;
+
+      expect(registerBody.displayName).toBe('A'.repeat(50));
+    });
+
+    it('accepts exactly 50 astral-plane (surrogate-pair) code points as a display name', async () => {
+      const email = `e2e-astral-name-${Date.now()}@example.com`;
+      const astralChar = String.fromCodePoint(0x1f600); // 😀
+      const fiftyAstralChars = astralChar.repeat(50);
+
+      const registerRes = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email,
+          password: 'correct-horse-battery',
+          displayName: fiftyAstralChars,
+        })
+        .expect(201);
+      const registerBody = registerRes.body as RegisterResponseBody;
+
+      expect(registerBody.displayName).toBe(fiftyAstralChars);
+    });
   });
 });
