@@ -1,5 +1,7 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { execSync } from 'node:child_process';
+import { mkdtempSync, mkdirSync, copyFileSync, cpSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import {
   PostgreSqlContainer,
@@ -8,39 +10,67 @@ import {
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from './generated/client';
 
-const MIGRATIONS_DIR = join(__dirname, 'migrations');
+const PRISMA_DIR = __dirname; // .../libs/identity/src/infrastructure/prisma
+const IDENTITY_PACKAGE_ROOT = resolve(PRISMA_DIR, '../../..'); // .../libs/identity
+const REAL_MIGRATIONS_DIR = join(PRISMA_DIR, 'migrations');
+const REAL_SCHEMA_PATH = join(PRISMA_DIR, 'schema.prisma');
+
 const PRE_EXISTING_MIGRATIONS = [
   '20260723090721_init',
   '20260725233142_add_verification_token',
   '20260728043707_add_refresh_token_revoked_at',
 ];
-// Updated once the real migration folder is generated in the GREEN step.
 const DISPLAY_NAME_MIGRATION = '20260812094909_add_display_name';
 
-function readMigrationSql(folder: string): string {
-  return readFileSync(join(MIGRATIONS_DIR, folder, 'migration.sql'), 'utf-8');
+function runMigrateDeploy(schemaPath: string, databaseUrl: string): void {
+  execSync(`pnpm exec prisma migrate deploy --schema="${schemaPath}"`, {
+    cwd: IDENTITY_PACKAGE_ROOT,
+    env: { ...process.env, DATABASE_URL: databaseUrl },
+    stdio: 'inherit',
+  });
 }
 
-describe('add-display-name migration (integration)', () => {
+describe('add-display-name migration (integration, via real prisma migrate deploy)', () => {
   let container: StartedPostgreSqlContainer;
   let prisma: PrismaClient;
+  let tempDir: string;
   const credentialUserId = randomUUID();
   const oauthUserId = randomUUID();
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer('postgres:17-alpine').start();
     const connectionString = container.getConnectionUri();
+
+    // Build a temporary schema + migrations directory containing only the
+    // three pre-existing (Phase 1) migrations, to reproduce exactly what a
+    // real deployment's recorded migration history looked like before this
+    // change — then deploy through the real Prisma CLI, not raw SQL.
+    tempDir = mkdtempSync(join(tmpdir(), 'huddle-migration-test-'));
+    copyFileSync(REAL_SCHEMA_PATH, join(tempDir, 'schema.prisma'));
+    const tempMigrationsDir = join(tempDir, 'migrations');
+    mkdirSync(tempMigrationsDir);
+    copyFileSync(
+      join(REAL_MIGRATIONS_DIR, 'migration_lock.toml'),
+      join(tempMigrationsDir, 'migration_lock.toml'),
+    );
+    for (const folder of PRE_EXISTING_MIGRATIONS) {
+      cpSync(
+        join(REAL_MIGRATIONS_DIR, folder),
+        join(tempMigrationsDir, folder),
+        {
+          recursive: true,
+        },
+      );
+    }
+
+    runMigrateDeploy(join(tempDir, 'schema.prisma'), connectionString);
+
     const adapter = new PrismaPg({ connectionString });
     prisma = new PrismaClient({ adapter });
 
-    // Reproduce the exact Phase 1 schema by applying only the
-    // pre-existing migrations, in order.
-    for (const folder of PRE_EXISTING_MIGRATIONS) {
-      await prisma.$executeRawUnsafe(readMigrationSql(folder));
-    }
-
     // Seed rows representing real Phase 1 users: one credential-based,
-    // one OAuth-only (no password hash).
+    // one OAuth-only (no password hash) — inserted via raw SQL since the
+    // generated client's types assume the final (post-migration) schema.
     await prisma.$executeRawUnsafe(
       `INSERT INTO identity.users (id, email, password_hash, email_verified, created_at)
        VALUES ($1, $2, $3, $4, now())`,
@@ -57,13 +87,40 @@ describe('add-display-name migration (integration)', () => {
       true,
     );
 
-    // Now apply the migration under test.
-    await prisma.$executeRawUnsafe(readMigrationSql(DISPLAY_NAME_MIGRATION));
-  }, 60000);
+    // Now add the migration under test to the temp migrations directory
+    // and deploy again — this applies only the new migration, since the
+    // first three are already recorded in Prisma's own migration history
+    // table for this database.
+    cpSync(
+      join(REAL_MIGRATIONS_DIR, DISPLAY_NAME_MIGRATION),
+      join(tempMigrationsDir, DISPLAY_NAME_MIGRATION),
+      { recursive: true },
+    );
+    runMigrateDeploy(join(tempDir, 'schema.prisma'), connectionString);
+  }, 180000);
 
   afterAll(async () => {
     await prisma.$disconnect();
     await container.stop();
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('records all four migrations, including add_display_name, in the Prisma migration history table', async () => {
+    type SchemaLookupRow = { table_schema: string };
+    const schemaLookupRows = await prisma.$queryRawUnsafe<SchemaLookupRow[]>(
+      "SELECT table_schema FROM information_schema.tables WHERE table_name = '_prisma_migrations'",
+    );
+    const migrationsTableSchema = schemaLookupRows[0].table_schema;
+
+    type MigrationRow = { migration_name: string };
+    const rows = await prisma.$queryRawUnsafe<MigrationRow[]>(
+      `SELECT migration_name FROM "${migrationsTableSchema}"._prisma_migrations ORDER BY finished_at ASC`,
+    );
+
+    expect(rows.map((r) => r.migration_name)).toEqual([
+      ...PRE_EXISTING_MIGRATIONS,
+      DISPLAY_NAME_MIGRATION,
+    ]);
   });
 
   it('backfills a valid non-null display name for a pre-existing credential user', async () => {
