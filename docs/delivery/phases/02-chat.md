@@ -1,6 +1,6 @@
 # Phase 2 — Contacts and Chat
 
-Status: Ready after documentation migration  
+Status: In progress — Identity displayName implemented; Contacts and Chat not yet started
 Depends on: Phase 1 — Identity  
 Next gate: Phase 2.5 — CI/CD and Deployment Foundation
 

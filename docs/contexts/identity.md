@@ -1,7 +1,7 @@
 # Identity Context
 
-Status: Phase 1 implemented; Phase 2 integration additions accepted  
-Last reviewed: 2026-08-07
+Status: Phase 1 implemented; Phase 2 display-name implemented; Phase 2 Public APIs (Authentication, Directory, Profile Query) still planned  
+Last reviewed: 2026-08-13
 
 ## Responsibility
 
@@ -40,7 +40,7 @@ Identity does not own:
 | Google OAuth login        | Implemented in Phase 1 |
 | GitHub OAuth login        | Implemented in Phase 1 |
 | Access and refresh tokens | Implemented in Phase 1 |
-| `displayName`             | Phase 2 addition       |
+| `displayName`             | Implemented in Phase 2 |
 | Authentication Public API | Phase 2 addition       |
 | Directory Public API      | Phase 2 addition       |
 | Profile Query Public API  | Phase 2 addition       |
