@@ -26,7 +26,8 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     _refreshToken: string,
     profile: Profile,
   ): Promise<User> {
-    const { providerId, email, emailVerified } = mapGoogleProfile(profile);
+    const { providerId, email, emailVerified, displayName } =
+      mapGoogleProfile(profile);
 
     try {
       return await this.oauthLoginUseCase.execute({
@@ -34,6 +35,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         providerId,
         email,
         emailVerifiedByProvider: emailVerified,
+        displayName,
       });
     } catch (error) {
       if (error instanceof DomainError) {

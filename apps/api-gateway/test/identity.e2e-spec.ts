@@ -13,6 +13,7 @@ import { AppModule } from '../src/app.module';
 interface RegisterResponseBody {
   id: string;
   email: string;
+  displayName: string;
   verificationToken: string;
 }
 
@@ -68,11 +69,14 @@ describe('Identity (e2e)', () => {
 
       const registerRes = await request(app.getHttpServer())
         .post('/auth/register')
-        .send({ email, password })
+        .send({ email, password, displayName: 'Ada Lovelace' })
         .expect(201);
       const registerBody = registerRes.body as RegisterResponseBody;
 
-      expect(registerBody).toMatchObject({ email });
+      expect(registerBody).toMatchObject({
+        email,
+        displayName: 'Ada Lovelace',
+      });
       expect(registerBody.verificationToken).toEqual(expect.any(String));
       expect(registerBody.verificationToken.length).toBeGreaterThan(0);
 
@@ -100,12 +104,12 @@ describe('Identity (e2e)', () => {
 
       await request(app.getHttpServer())
         .post('/auth/register')
-        .send({ email, password })
+        .send({ email, password, displayName: 'Ada Lovelace' })
         .expect(201);
 
       await request(app.getHttpServer())
         .post('/auth/register')
-        .send({ email, password })
+        .send({ email, password, displayName: 'Ada Lovelace' })
         .expect(409);
     });
   });
@@ -114,8 +118,95 @@ describe('Identity (e2e)', () => {
     it('rejects a malformed email with 400, proving ValidationPipe is wired', async () => {
       await request(app.getHttpServer())
         .post('/auth/register')
-        .send({ email: 'not-an-email', password: 'correct-horse-battery' })
+        .send({
+          email: 'not-an-email',
+          password: 'correct-horse-battery',
+          displayName: 'Ada Lovelace',
+        })
         .expect(400);
+    });
+
+    it('rejects a missing display name with 400', async () => {
+      const email = `e2e-missing-name-${Date.now()}@example.com`;
+
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ email, password: 'correct-horse-battery' })
+        .expect(400);
+    });
+
+    it('rejects a non-string display name with 400', async () => {
+      const email = `e2e-non-string-name-${Date.now()}@example.com`;
+
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email,
+          password: 'correct-horse-battery',
+          displayName: 12345,
+        })
+        .expect(400);
+    });
+
+    it('rejects a whitespace-only display name with 400', async () => {
+      const email = `e2e-blank-name-${Date.now()}@example.com`;
+
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email,
+          password: 'correct-horse-battery',
+          displayName: '   ',
+        })
+        .expect(400);
+    });
+
+    it('rejects a display name over 50 characters with 400', async () => {
+      const email = `e2e-long-name-${Date.now()}@example.com`;
+
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email,
+          password: 'correct-horse-battery',
+          displayName: 'A'.repeat(51),
+        })
+        .expect(400);
+    });
+
+    it('accepts a display name padded with whitespace that trims to exactly 50 characters', async () => {
+      const email = `e2e-padded-name-${Date.now()}@example.com`;
+      const paddedName = `  ${'A'.repeat(50)}  `;
+
+      const registerRes = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email,
+          password: 'correct-horse-battery',
+          displayName: paddedName,
+        })
+        .expect(201);
+      const registerBody = registerRes.body as RegisterResponseBody;
+
+      expect(registerBody.displayName).toBe('A'.repeat(50));
+    });
+
+    it('accepts exactly 50 astral-plane (surrogate-pair) code points as a display name', async () => {
+      const email = `e2e-astral-name-${Date.now()}@example.com`;
+      const astralChar = String.fromCodePoint(0x1f600); // 😀
+      const fiftyAstralChars = astralChar.repeat(50);
+
+      const registerRes = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email,
+          password: 'correct-horse-battery',
+          displayName: fiftyAstralChars,
+        })
+        .expect(201);
+      const registerBody = registerRes.body as RegisterResponseBody;
+
+      expect(registerBody.displayName).toBe(fiftyAstralChars);
     });
   });
 });

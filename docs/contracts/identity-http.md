@@ -1,7 +1,7 @@
 # Identity HTTP Contract
 
 Status: Implemented with documented transitional behavior  
-Last verified against source: 2026-08-07
+Last verified against source: 2026-08-13
 
 ## Purpose
 
@@ -58,16 +58,18 @@ Request:
 ```json
 {
   "email": "ada@example.com",
-  "password": "correct-horse-battery"
+  "password": "correct-horse-battery",
+  "displayName": "Ada Lovelace"
 }
 ```
 
 Validation:
 
-| Field      | Requirement                       |
-| ---------- | --------------------------------- |
-| `email`    | Valid email                       |
-| `password` | String with a minimum length of 8 |
+| Field         | Requirement                                         |
+| ------------- | --------------------------------------------------- |
+| `email`       | Valid email                                         |
+| `password`    | String with a minimum length of 8                   |
+| `displayName` | String, trimmed non-blank, 1–50 Unicode code points |
 
 Current success:
 
@@ -81,6 +83,7 @@ Current response:
 {
   "id": "user-id",
   "email": "ada@example.com",
+  "displayName": "Ada Lovelace",
   "verificationToken": "verification-token"
 }
 ```
@@ -100,8 +103,6 @@ Returning `verificationToken` is an explicit temporary Phase 1 behavior that sta
 It must be removed from the public response when real verification Email delivery exists.
 
 The final intended response must not expose the verification token.
-
-Phase 2 also adds the required `displayName` field defined by the Identity Context. The request and response contract must be updated with that implementation.
 
 ## Verify Email
 

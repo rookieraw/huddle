@@ -1,5 +1,6 @@
 import { DomainError } from '@huddle/shared-kernel';
 import { User } from '../../domain/user.entity';
+import { DisplayName } from '../../domain/value-objects/display-name.vo';
 import { InMemoryUserRepository } from '../../test-support/in-memory-user.repository';
 import { OAuthLoginUseCase } from './oauth-login.use-case';
 
@@ -80,6 +81,7 @@ describe('OAuthLoginUseCase', () => {
     const { user: existing } = await User.register(
       'ada@example.com',
       'correct-horse-battery',
+      DisplayName.create('Ada Lovelace'),
     );
     existing.verifyEmail(); // account must already be verified for linking to be trustworthy
     await repository.save(existing);
@@ -124,6 +126,7 @@ describe('OAuthLoginUseCase', () => {
     const { user: existing } = await User.register(
       'ada@example.com',
       'correct-horse-battery',
+      DisplayName.create('Ada Lovelace'),
     );
     await repository.save(existing);
     const useCase = new OAuthLoginUseCase(repository);
@@ -143,6 +146,7 @@ describe('OAuthLoginUseCase', () => {
     const { user: existing } = await User.register(
       'ada@example.com',
       'correct-horse-battery',
+      DisplayName.create('Ada Lovelace'),
     );
     // deliberately not verified — guards against pre-hijacking: an attacker
     // registering a victim's email with a password they never verify
@@ -164,6 +168,7 @@ describe('OAuthLoginUseCase', () => {
     const { user: existing } = await User.register(
       'ada@example.com',
       'correct-horse-battery',
+      DisplayName.create('Ada Lovelace'),
     );
     await repository.save(existing);
     const useCase = new OAuthLoginUseCase(repository);
@@ -185,6 +190,7 @@ describe('OAuthLoginUseCase', () => {
     const { user: existing } = await User.register(
       'ada@example.com',
       'correct-horse-battery',
+      DisplayName.create('Ada Lovelace'),
     );
     await repository.save(existing);
     const useCase = new OAuthLoginUseCase(repository);
@@ -219,5 +225,108 @@ describe('OAuthLoginUseCase', () => {
         emailVerifiedByProvider: true,
       }),
     ).rejects.toThrow(DomainError);
+  });
+
+  describe('display name', () => {
+    it('uses the provider-supplied display name when present', async () => {
+      const repository = new InMemoryUserRepository();
+      const useCase = new OAuthLoginUseCase(repository);
+
+      const user = await useCase.execute({
+        provider: 'google',
+        providerId: 'google-sub-123',
+        email: 'ada@example.com',
+        emailVerifiedByProvider: true,
+        displayName: 'Ada Lovelace',
+      });
+
+      expect(user.getDisplayName()).toBe('Ada Lovelace');
+    });
+
+    it('generates a fallback display name derived from the new user id when the provider gives no name', async () => {
+      const repository = new InMemoryUserRepository();
+      const useCase = new OAuthLoginUseCase(repository);
+
+      const user = await useCase.execute({
+        provider: 'google',
+        providerId: 'google-sub-123',
+        email: 'ada@example.com',
+        emailVerifiedByProvider: true,
+      });
+
+      expect(user.getDisplayName()).toContain(user.id.slice(0, 8));
+    });
+
+    it('does not derive the fallback display name from the email local part', async () => {
+      const repository = new InMemoryUserRepository();
+      const useCase = new OAuthLoginUseCase(repository);
+
+      const user = await useCase.execute({
+        provider: 'google',
+        providerId: 'google-sub-123',
+        email: 'ada.lovelace.unique@example.com',
+        emailVerifiedByProvider: true,
+      });
+
+      expect(user.getDisplayName()).not.toContain('ada.lovelace.unique');
+    });
+
+    it('produces a fallback display name that is itself a valid DisplayName', async () => {
+      const repository = new InMemoryUserRepository();
+      const useCase = new OAuthLoginUseCase(repository);
+
+      const user = await useCase.execute({
+        provider: 'google',
+        providerId: 'google-sub-123',
+        email: 'ada@example.com',
+        emailVerifiedByProvider: true,
+      });
+
+      expect(() => DisplayName.create(user.getDisplayName())).not.toThrow();
+    });
+
+    it('does not overwrite an existing display name on repeat login with the same provider identity', async () => {
+      const repository = new InMemoryUserRepository();
+      const useCase = new OAuthLoginUseCase(repository);
+      const firstLogin = await useCase.execute({
+        provider: 'google',
+        providerId: 'google-sub-123',
+        email: 'ada@example.com',
+        emailVerifiedByProvider: true,
+        displayName: 'Ada Lovelace',
+      });
+
+      const secondLogin = await useCase.execute({
+        provider: 'google',
+        providerId: 'google-sub-123',
+        email: 'ada@example.com',
+        emailVerifiedByProvider: true,
+        displayName: 'Someone Else Entirely',
+      });
+
+      expect(secondLogin.getDisplayName()).toBe(firstLogin.getDisplayName());
+    });
+
+    it('does not overwrite an existing display name when linking a new provider to an existing account', async () => {
+      const repository = new InMemoryUserRepository();
+      const { user: existing } = await User.register(
+        'ada@example.com',
+        'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
+      );
+      existing.verifyEmail();
+      await repository.save(existing);
+      const useCase = new OAuthLoginUseCase(repository);
+
+      const user = await useCase.execute({
+        provider: 'google',
+        providerId: 'google-sub-123',
+        email: 'ada@example.com',
+        emailVerifiedByProvider: true,
+        displayName: 'Some Google Name',
+      });
+
+      expect(user.getDisplayName()).toBe('Ada Lovelace');
+    });
   });
 });

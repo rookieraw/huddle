@@ -1,8 +1,8 @@
 # Project Status
 
-Last updated: 2026-08-07  
+Last updated: 2026-08-13  
 Current implementation phase: Phase 2 — Contacts and Chat  
-Current activity: Public documentation restructure before Phase 2 implementation  
+Current activity: Identity `displayName` implemented; Contacts and Chat implementation not yet started
 Portfolio Release target: End of Phase 4
 
 ## Purpose
@@ -21,21 +21,21 @@ It does not define target architecture, detailed Phase scope, or task-level work
 
 ## Status Summary
 
-| Area                        | Status      |
-| --------------------------- | ----------- |
-| Phase 1 Identity            | Completed   |
-| Phase 2 Identity additions  | Not started |
-| Contacts                    | Not started |
-| Direct and Group Chat       | Not started |
-| MongoDB Message persistence | Not started |
-| Realtime Chat               | Not started |
-| Deployment foundation       | Planned     |
-| Voice and Video Calling     | Planned     |
-| Billing                     | Planned     |
-| First Portfolio Release     | Planned     |
-| Meetings                    | Later       |
-| Notification                | Later       |
-| Hardening                   | Later       |
+| Area                        | Status                                                                  |
+| --------------------------- | ----------------------------------------------------------------------- |
+| Phase 1 Identity            | Completed                                                               |
+| Phase 2 Identity additions  | `displayName` implemented; directory and profile-query APIs not started |
+| Contacts                    | Not started                                                             |
+| Direct and Group Chat       | Not started                                                             |
+| MongoDB Message persistence | Not started                                                             |
+| Realtime Chat               | Not started                                                             |
+| Deployment foundation       | Planned                                                                 |
+| Voice and Video Calling     | Planned                                                                 |
+| Billing                     | Planned                                                                 |
+| First Portfolio Release     | Planned                                                                 |
+| Meetings                    | Later                                                                   |
+| Notification                | Later                                                                   |
+| Hardening                   | Later                                                                   |
 
 `Planned` and `Later` do not mean implemented.
 
@@ -64,35 +64,46 @@ Its historical boundary is recorded in:
 
 [`phases/01-identity.md`](phases/01-identity.md)
 
+### Phase 2 — Identity `displayName`
+
+The completed implementation includes:
+
+- a validated, trimmed Unicode `displayName` on every credential and OAuth User;
+- a required, validated `displayName` field on credential registration;
+- provider display-name capture for Google and GitHub OAuth, with a non-sensitive, id-derived fallback when absent;
+- preservation of an existing User's display name across repeat login and provider linking;
+- a PostgreSQL migration that backfilled every existing Phase 1 User with a valid display name before enforcing the required constraint.
+
+Its detailed boundary is recorded in:
+
+[`../contexts/identity.md`](../contexts/identity.md)  
+[`../contracts/identity-http.md`](../contracts/identity-http.md)
+
+Phase 2's remaining Identity work — the Authentication, Directory, and Profile Query Public APIs required by Chat — has not started.
+
 ## Current Activity
 
-The project is restructuring its public documentation before Phase 2 implementation begins.
+Phase 2 implementation has begun. Identity's `displayName` capability — the first required Phase 2 Identity addition — is implemented and verified.
 
-The current migration establishes authoritative documents for:
+Remaining Phase 2 work has not started:
 
-- Product scope;
-- subscription tiers;
-- system architecture;
-- Context boundaries;
-- Architecture Decisions;
-- delivery phases;
-- contracts;
-- engineering guidance;
-- deployment and operations.
+- the Authentication, Directory, and Profile Query Public APIs required by Chat;
+- Contacts;
+- Direct and Group Conversations;
+- MongoDB Message persistence;
+- authenticated realtime Chat;
+- concurrency-safe quota enforcement.
 
-The migration also removes duplicate rules so that Product, Context, ADR, Phase, Contract, and Operations documents each have one clear responsibility.
-
-The documentation restructure does not make a planned product capability implemented.
+Accepted target documentation is not evidence of implementation for the remaining items above.
 
 ## Next Implementation Work
 
-After the documentation gate is complete, the next implementation Phase is:
+The next Phase 2 Identity work is the Authentication, Directory, and Profile Query Public APIs required by Chat, followed by:
 
 [`phases/02-chat.md`](phases/02-chat.md)
 
-Its high-level outcome is:
+Its remaining high-level outcome is:
 
-- the required Phase 2 Identity additions;
 - Contacts;
 - Direct Conversations;
 - Group Conversations;
@@ -106,9 +117,9 @@ The Phase file is authoritative for the detailed implementation boundary.
 
 ## Current Blockers
 
-There are no known product or architecture blockers preventing Phase 2 implementation after the documentation restructure is completed.
+There are no known product or architecture blockers preventing continued Phase 2 implementation.
 
-The documentation restructure is a planned entry gate, not an unresolved product blocker.
+The public documentation restructure that previously gated Phase 2 is complete.
 
 ## Future Validation Gates
 
@@ -132,7 +143,6 @@ Failure at a future gate must be recorded when discovered. It must not be report
 
 Do not currently assume the existence of:
 
-- Phase 2 `displayName` migration;
 - cross-context Identity Public APIs;
 - Contact management;
 - Direct or Group Chat;

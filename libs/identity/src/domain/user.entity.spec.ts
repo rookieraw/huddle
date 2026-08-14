@@ -1,6 +1,7 @@
 import { DomainError } from '@huddle/shared-kernel';
 import { User } from './user.entity';
 import { PasswordHash } from './value-objects/password-hash.vo';
+import { DisplayName } from './value-objects/display-name.vo';
 
 describe('User', () => {
   describe('register', () => {
@@ -8,6 +9,7 @@ describe('User', () => {
       const { user } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
 
       expect(user.isEmailVerified()).toBe(false);
@@ -17,6 +19,7 @@ describe('User', () => {
       const { user } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
 
       expect(user.getOAuthProviders()).toEqual([]);
@@ -26,10 +29,12 @@ describe('User', () => {
       const { user: first } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
       const { user: second } = await User.register(
         'grace@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
 
       expect(first.id).not.toBe(second.id);
@@ -39,6 +44,7 @@ describe('User', () => {
       const { user, event } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
 
       expect(event.userId).toBe(user.id);
@@ -46,15 +52,20 @@ describe('User', () => {
     });
 
     it('propagates the password-too-short rule from PasswordHash', async () => {
-      await expect(User.register('ada@example.com', 'short')).rejects.toThrow(
-        DomainError,
-      );
+      await expect(
+        User.register(
+          'ada@example.com',
+          'short',
+          DisplayName.create('Ada Lovelace'),
+        ),
+      ).rejects.toThrow(DomainError);
     });
 
     it('returns the email the user registered with', async () => {
       const { user } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
 
       expect(user.getEmail()).toBe('ada@example.com');
@@ -64,6 +75,7 @@ describe('User', () => {
       const { user } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
 
       expect(user.getVerificationToken()).not.toBeNull();
@@ -73,6 +85,16 @@ describe('User', () => {
       expect(expiresAt!.getTime()).toBeLessThanOrEqual(
         Date.now() + 24 * 60 * 60 * 1000,
       );
+    });
+
+    it('stores the provided display name', async () => {
+      const { user } = await User.register(
+        'ada@example.com',
+        'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
+      );
+
+      expect(user.getDisplayName()).toBe('Ada Lovelace');
     });
   });
 
@@ -121,6 +143,47 @@ describe('User', () => {
       expect(user.getVerificationToken()).toBeNull();
       expect(user.getVerificationTokenExpiresAt()).toBeNull();
     });
+
+    it('generates a fallback display name derived from the new user id when none is provided', () => {
+      const { user } = User.registerViaOAuth(
+        'ada@example.com',
+        'google',
+        'google-sub-123',
+      );
+
+      expect(user.getDisplayName()).toContain(user.id.slice(0, 8));
+    });
+
+    it('does not derive the fallback display name from the email local part', () => {
+      const { user } = User.registerViaOAuth(
+        'ada.lovelace.unique@example.com',
+        'google',
+        'google-sub-123',
+      );
+
+      expect(user.getDisplayName()).not.toContain('ada.lovelace.unique');
+    });
+
+    it('produces a fallback display name that is itself a valid DisplayName', () => {
+      const { user } = User.registerViaOAuth(
+        'ada@example.com',
+        'google',
+        'google-sub-123',
+      );
+
+      expect(() => DisplayName.create(user.getDisplayName())).not.toThrow();
+    });
+
+    it('uses the provider-supplied display name when given', () => {
+      const { user } = User.registerViaOAuth(
+        'ada@example.com',
+        'google',
+        'google-sub-123',
+        DisplayName.create('Ada From Google'),
+      );
+
+      expect(user.getDisplayName()).toBe('Ada From Google');
+    });
   });
 
   describe('getOAuthProviderId', () => {
@@ -128,6 +191,7 @@ describe('User', () => {
       const { user } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
 
       expect(user.getOAuthProviderId('google')).toBeNull();
@@ -145,11 +209,30 @@ describe('User', () => {
     });
   });
 
+  describe('getDisplayName', () => {
+    it('returns the display name for a reconstituted user', () => {
+      const user = User.reconstitute({
+        id: 'existing-id',
+        email: 'ada@example.com',
+        passwordHash: null,
+        emailVerified: true,
+        createdAt: new Date('2024-01-01T00:00:00.000Z'),
+        oauthProviders: [],
+        verificationToken: null,
+        verificationTokenExpiresAt: null,
+        displayName: 'Ada Lovelace',
+      });
+
+      expect(user.getDisplayName()).toBe('Ada Lovelace');
+    });
+  });
+
   describe('linkOAuthProvider', () => {
     it('attaches an OAuth provider to a password-registered user', async () => {
       const { user } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
 
       user.linkOAuthProvider('google', 'google-sub-123');
@@ -161,6 +244,7 @@ describe('User', () => {
       const { user } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
       const originalHash = user.getPasswordHash();
 
@@ -230,6 +314,7 @@ describe('User', () => {
       const { user } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
 
       expect(() => user.unlinkOAuthProvider('google')).toThrow(DomainError);
@@ -249,6 +334,7 @@ describe('User', () => {
       const { user } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
       user.linkOAuthProvider('google', 'google-sub-123');
 
@@ -270,6 +356,7 @@ describe('User', () => {
         oauthProviders: [],
         verificationToken: null,
         verificationTokenExpiresAt: null,
+        displayName: 'Ada Lovelace',
       });
 
       expect(user.id).toBe('existing-id');
@@ -291,6 +378,7 @@ describe('User', () => {
         ],
         verificationToken: null,
         verificationTokenExpiresAt: null,
+        displayName: 'Ada Lovelace',
       });
 
       expect(user.getPasswordHash()).toBeNull();
@@ -304,6 +392,7 @@ describe('User', () => {
       const { user } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
 
       user.verifyEmail();
@@ -315,6 +404,7 @@ describe('User', () => {
       const { user } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
 
       const event = user.verifyEmail();
@@ -342,6 +432,7 @@ describe('User', () => {
         oauthProviders: [],
         verificationToken: 'some-token',
         verificationTokenExpiresAt: new Date('2024-01-02T00:00:00.000Z'),
+        displayName: 'Ada Lovelace',
       });
 
       expect(() => user.verifyEmail()).toThrow(DomainError);
@@ -353,6 +444,7 @@ describe('User', () => {
       const { user } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
 
       await expect(user.verifyPassword('correct-horse-battery')).resolves.toBe(
@@ -364,6 +456,7 @@ describe('User', () => {
       const { user } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
 
       await expect(user.verifyPassword('wrong-password')).resolves.toBe(false);
@@ -395,6 +488,7 @@ describe('User', () => {
       const { user } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
 
       expect(user.getPasswordHash()).toBeInstanceOf(PasswordHash);
@@ -407,6 +501,7 @@ describe('User', () => {
       const { user } = await User.register(
         'ada@example.com',
         'correct-horse-battery',
+        DisplayName.create('Ada Lovelace'),
       );
       const after = Date.now();
 

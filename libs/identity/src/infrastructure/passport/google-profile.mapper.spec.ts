@@ -5,6 +5,7 @@ function buildProfile(overrides: Partial<Profile> = {}): Profile {
   return {
     provider: 'google',
     id: 'google-sub-123',
+    displayName: 'Ada Lovelace',
     profileUrl: 'https://plus.google.com/123',
     emails: [{ value: 'ada@example.com', verified: true }],
     _raw: '{}',
@@ -46,5 +47,51 @@ describe('mapGoogleProfile', () => {
     expect(() =>
       mapGoogleProfile(buildProfile({ emails: undefined })),
     ).toThrow();
+  });
+
+  it('extracts the provider display name when present', () => {
+    const result = mapGoogleProfile(
+      buildProfile({ displayName: 'Ada Lovelace' }),
+    );
+
+    expect(result.displayName).toBe('Ada Lovelace');
+  });
+
+  it('returns undefined display name when Google does not provide one', () => {
+    const result = mapGoogleProfile(buildProfile({ displayName: undefined }));
+
+    expect(result.displayName).toBeUndefined();
+  });
+
+  it('returns undefined display name when Google provides only whitespace', () => {
+    const result = mapGoogleProfile(buildProfile({ displayName: '   ' }));
+
+    expect(result.displayName).toBeUndefined();
+  });
+
+  it('returns undefined display name when Google provides a name over 50 characters', () => {
+    const result = mapGoogleProfile(
+      buildProfile({ displayName: 'A'.repeat(51) }),
+    );
+
+    expect(result.displayName).toBeUndefined();
+  });
+
+  it('accepts exactly 50 astral-plane (surrogate-pair) code points as a display name', () => {
+    const astralChar = String.fromCodePoint(0x1f600); // 😀
+    const result = mapGoogleProfile(
+      buildProfile({ displayName: astralChar.repeat(50) }),
+    );
+
+    expect(result.displayName).toBe(astralChar.repeat(50));
+  });
+
+  it('returns undefined display name when Google provides 51 astral-plane code points', () => {
+    const astralChar = String.fromCodePoint(0x1f600);
+    const result = mapGoogleProfile(
+      buildProfile({ displayName: astralChar.repeat(51) }),
+    );
+
+    expect(result.displayName).toBeUndefined();
   });
 });

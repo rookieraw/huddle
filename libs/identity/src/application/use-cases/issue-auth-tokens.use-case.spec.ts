@@ -1,5 +1,6 @@
 import { User } from '../../domain/user.entity';
 import { RefreshToken } from '../../domain/refresh-token.entity';
+import { DisplayName } from '../../domain/value-objects/display-name.vo';
 import { RefreshTokenRepository } from '../ports/refresh-token.repository.port';
 import { TokenIssuer, AccessTokenPayload } from '../ports/token-issuer.port';
 import { IssueRefreshTokenUseCase } from './issue-refresh-token.use-case';
@@ -42,7 +43,11 @@ describe('IssueAuthTokensUseCase', () => {
       tokenIssuer,
       issueRefreshTokenUseCase,
     );
-    const { user } = await User.register('ada@example.com', 'password123');
+    const { user } = await User.register(
+      'ada@example.com',
+      'password123',
+      DisplayName.create('Ada Lovelace'),
+    );
 
     const { accessToken } = await useCase.execute(user);
 
@@ -59,7 +64,11 @@ describe('IssueAuthTokensUseCase', () => {
       new FakeTokenIssuer(),
       new IssueRefreshTokenUseCase(refreshTokenRepository),
     );
-    const { user } = await User.register('ada@example.com', 'password123');
+    const { user } = await User.register(
+      'ada@example.com',
+      'password123',
+      DisplayName.create('Ada Lovelace'),
+    );
 
     const { refreshToken } = await useCase.execute(user);
 
@@ -75,8 +84,16 @@ describe('IssueAuthTokensUseCase', () => {
       new FakeTokenIssuer(),
       new IssueRefreshTokenUseCase(new InMemoryRefreshTokenRepository()),
     );
-    const { user: userA } = await User.register('a@example.com', 'password123');
-    const { user: userB } = await User.register('b@example.com', 'password123');
+    const { user: userA } = await User.register(
+      'a@example.com',
+      'password123',
+      DisplayName.create('User A'),
+    );
+    const { user: userB } = await User.register(
+      'b@example.com',
+      'password123',
+      DisplayName.create('User B'),
+    );
 
     const tokensA = await useCase.execute(userA);
     const tokensB = await useCase.execute(userB);

@@ -6,6 +6,7 @@ import {
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from './generated/client';
 import { User } from '../../domain/user.entity';
+import { DisplayName } from '../../domain/value-objects/display-name.vo';
 import { PrismaUserRepository } from './prisma-user.repository';
 
 describe('PrismaUserRepository (integration)', () => {
@@ -49,6 +50,7 @@ describe('PrismaUserRepository (integration)', () => {
     const { user } = await User.register(
       'ada@example.com',
       'correct-horse-battery',
+      DisplayName.create('Ada Lovelace'),
     );
 
     await repository.save(user);
@@ -59,10 +61,24 @@ describe('PrismaUserRepository (integration)', () => {
     expect(found?.isEmailVerified()).toBe(false);
   });
 
+  it('round-trips the display name so it survives persistence and reload', async () => {
+    const { user } = await User.register(
+      'ada@example.com',
+      'correct-horse-battery',
+      DisplayName.create('Ada Lovelace'),
+    );
+
+    await repository.save(user);
+    const found = await repository.findByEmail('ada@example.com');
+
+    expect(found?.getDisplayName()).toBe('Ada Lovelace');
+  });
+
   it('round-trips the password hash so verifyPassword still works after reload', async () => {
     const { user } = await User.register(
       'ada@example.com',
       'correct-horse-battery',
+      DisplayName.create('Ada Lovelace'),
     );
     await repository.save(user);
 
@@ -86,6 +102,19 @@ describe('PrismaUserRepository (integration)', () => {
     expect(found?.getPasswordHash()).toBeNull();
     expect(found?.getOAuthProviderId('google')).toBe('google-sub-789');
     expect(found?.isEmailVerified()).toBe(true);
+  });
+
+  it('round-trips the fallback display name for an OAuth-registered user with no provider name', async () => {
+    const { user } = User.registerViaOAuth(
+      'grace@example.com',
+      'google',
+      'google-sub-789',
+    );
+
+    await repository.save(user);
+    const found = await repository.findByEmail('grace@example.com');
+
+    expect(found?.getDisplayName()).toBe(user.getDisplayName());
   });
 
   it('round-trips multiple linked OAuth providers on the same user', async () => {

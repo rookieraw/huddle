@@ -42,6 +42,7 @@ describe('PrismaRefreshTokenRepository (integration)', () => {
       data: {
         email: `user-${Date.now()}-${Math.random()}@example.com`,
         emailVerified: true,
+        displayName: 'Test User',
       },
     });
     userId = user.id;

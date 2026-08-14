@@ -1,5 +1,6 @@
 import { DomainError } from '@huddle/shared-kernel';
 import { OAuthProviderName, User } from '../../domain/user.entity';
+import { DisplayName } from '../../domain/value-objects/display-name.vo';
 import { UserRepository } from '../ports/user.repository.port';
 
 export interface OAuthLoginInput {
@@ -7,13 +8,20 @@ export interface OAuthLoginInput {
   providerId: string;
   email: string;
   emailVerifiedByProvider: boolean;
+  displayName?: string;
 }
 
 export class OAuthLoginUseCase {
   constructor(private readonly userRepository: UserRepository) {}
 
   async execute(input: OAuthLoginInput): Promise<User> {
-    const { provider, providerId, email, emailVerifiedByProvider } = input;
+    const {
+      provider,
+      providerId,
+      email,
+      emailVerifiedByProvider,
+      displayName,
+    } = input;
 
     const existingByProvider = await this.userRepository.findByOAuthProvider(
       provider,
@@ -41,7 +49,15 @@ export class OAuthLoginUseCase {
       return existingByEmail;
     }
 
-    const { user } = User.registerViaOAuth(email, provider, providerId);
+    const resolvedDisplayName = displayName
+      ? DisplayName.create(displayName)
+      : undefined;
+    const { user } = User.registerViaOAuth(
+      email,
+      provider,
+      providerId,
+      resolvedDisplayName,
+    );
     await this.userRepository.save(user);
     return user;
   }

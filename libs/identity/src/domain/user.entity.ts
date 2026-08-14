@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { DomainError } from '@huddle/shared-kernel';
 import { PasswordHash } from './value-objects/password-hash.vo';
+import { DisplayName } from './value-objects/display-name.vo';
 import { UserCreatedEvent } from './events/user-created.event';
 import { UserVerifiedEvent } from './events/user-verified.event';
 
@@ -21,11 +22,13 @@ export class User {
     private oauthProviders: LinkedOAuthProvider[],
     private verificationToken: string | null,
     private verificationTokenExpiresAt: Date | null,
+    private displayName: DisplayName,
   ) {}
 
   static async register(
     email: string,
     plainPassword: string,
+    displayName: DisplayName,
   ): Promise<{ user: User; event: UserCreatedEvent }> {
     const hash = await PasswordHash.fromPlainText(plainPassword);
     const verificationTokenExpiresAt = new Date(
@@ -40,6 +43,7 @@ export class User {
       [],
       randomUUID(),
       verificationTokenExpiresAt,
+      displayName,
     );
     return { user, event: new UserCreatedEvent(user.id, user.email) };
   }
@@ -48,9 +52,14 @@ export class User {
     email: string,
     provider: OAuthProviderName,
     providerId: string,
+    displayName?: DisplayName,
   ): { user: User; event: UserCreatedEvent } {
+    const id = randomUUID();
+    const resolvedDisplayName =
+      displayName ?? DisplayName.create(`User-${id.slice(0, 8)}`);
+
     const user = new User(
-      randomUUID(),
+      id,
       email,
       null,
       true,
@@ -58,6 +67,7 @@ export class User {
       [{ provider, providerId }],
       null,
       null,
+      resolvedDisplayName,
     );
     return { user, event: new UserCreatedEvent(user.id, user.email) };
   }
@@ -71,6 +81,7 @@ export class User {
     oauthProviders: LinkedOAuthProvider[];
     verificationToken: string | null;
     verificationTokenExpiresAt: Date | null;
+    displayName: string;
   }): User {
     return new User(
       data.id,
@@ -81,6 +92,7 @@ export class User {
       data.oauthProviders,
       data.verificationToken,
       data.verificationTokenExpiresAt,
+      DisplayName.fromPersisted(data.displayName),
     );
   }
 
@@ -174,5 +186,9 @@ export class User {
 
   getVerificationTokenExpiresAt(): Date | null {
     return this.verificationTokenExpiresAt;
+  }
+
+  getDisplayName(): string {
+    return this.displayName.value;
   }
 }
