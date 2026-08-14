@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import {
   AuthenticatedPrincipal,
   AuthenticationApi,
+  ExpiredAccessTokenError,
   InvalidAccessTokenError,
 } from '../../application/public-api/authentication-api';
 
@@ -26,6 +27,10 @@ export class JwtAuthenticationApi implements AuthenticationApi {
           accessToken,
         );
     } catch (error) {
+      if (error instanceof Error && error.name === 'TokenExpiredError') {
+        throw new ExpiredAccessTokenError();
+      }
+
       if (error instanceof Error && error.name === 'JsonWebTokenError') {
         throw new InvalidAccessTokenError();
       }

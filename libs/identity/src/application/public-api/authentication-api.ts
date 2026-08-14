@@ -10,6 +10,13 @@ export class InvalidAccessTokenError extends Error {
   }
 }
 
+export class ExpiredAccessTokenError extends Error {
+  constructor() {
+    super('Expired access token');
+    this.name = 'ExpiredAccessTokenError';
+  }
+}
+
 export interface AuthenticationApi {
   verifyAccessToken(accessToken: string): Promise<AuthenticatedPrincipal>;
 }

@@ -1,5 +1,8 @@
 import { JwtService } from '@nestjs/jwt';
-import { InvalidAccessTokenError } from '../../application/public-api/authentication-api';
+import {
+  ExpiredAccessTokenError,
+  InvalidAccessTokenError,
+} from '../../application/public-api/authentication-api';
 import { JwtAuthenticationApi } from './jwt-authentication-api';
 
 describe('JwtAuthenticationApi', () => {
@@ -39,5 +42,21 @@ describe('JwtAuthenticationApi', () => {
     const verification = authenticationApi.verifyAccessToken(accessToken);
 
     await expect(verification).rejects.toBeInstanceOf(InvalidAccessTokenError);
+  });
+
+  it('rejects an expired token with a distinguishable expiration error', async () => {
+    const jwtService = new JwtService({
+      secret: 'authentication-api-test-secret',
+      signOptions: { expiresIn: -1 },
+    });
+    const authenticationApi = new JwtAuthenticationApi(jwtService);
+    const accessToken = await jwtService.signAsync({
+      sub: 'user-123',
+      tokenType: 'access',
+    });
+
+    const verification = authenticationApi.verifyAccessToken(accessToken);
+
+    await expect(verification).rejects.toBeInstanceOf(ExpiredAccessTokenError);
   });
 });
