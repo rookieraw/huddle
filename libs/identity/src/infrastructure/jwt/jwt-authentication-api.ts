@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import {
   AuthenticatedPrincipal,
   AuthenticationApi,
+  InvalidAccessTokenError,
 } from '../../application/public-api/authentication-api';
 
 interface VerifiedAccessTokenPayload {
@@ -17,10 +18,20 @@ export class JwtAuthenticationApi implements AuthenticationApi {
   async verifyAccessToken(
     accessToken: string,
   ): Promise<AuthenticatedPrincipal> {
-    const payload =
-      await this.jwtService.verifyAsync<VerifiedAccessTokenPayload>(
-        accessToken,
-      );
+    let payload: VerifiedAccessTokenPayload;
+
+    try {
+      payload =
+        await this.jwtService.verifyAsync<VerifiedAccessTokenPayload>(
+          accessToken,
+        );
+    } catch (error) {
+      if (error instanceof Error && error.name === 'JsonWebTokenError') {
+        throw new InvalidAccessTokenError();
+      }
+
+      throw error;
+    }
 
     return {
       userId: payload.sub,

@@ -1,4 +1,5 @@
 import { JwtService } from '@nestjs/jwt';
+import { InvalidAccessTokenError } from '../../application/public-api/authentication-api';
 import { JwtAuthenticationApi } from './jwt-authentication-api';
 
 describe('JwtAuthenticationApi', () => {
@@ -21,5 +22,22 @@ describe('JwtAuthenticationApi', () => {
       userId: 'user-123',
       expiresAt: new Date(decoded.exp * 1000),
     });
+  });
+
+  it('rejects a token signed with a different secret as an invalid access token', async () => {
+    const jwtService = new JwtService({
+      secret: 'authentication-api-test-secret',
+    });
+    const authenticationApi = new JwtAuthenticationApi(jwtService);
+    const accessToken = await new JwtService({
+      secret: 'attacker-controlled-secret',
+    }).signAsync({
+      sub: 'user-123',
+      tokenType: 'access',
+    });
+
+    const verification = authenticationApi.verifyAccessToken(accessToken);
+
+    await expect(verification).rejects.toBeInstanceOf(InvalidAccessTokenError);
   });
 });
