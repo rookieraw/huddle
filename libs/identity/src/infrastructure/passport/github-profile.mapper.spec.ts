@@ -105,4 +105,22 @@ describe('mapGithubProfile', () => {
 
     expect(result.displayName).toBeUndefined();
   });
+
+  it('accepts exactly 50 astral-plane (surrogate-pair) code points as a display name', () => {
+    const astralChar = String.fromCodePoint(0x1f600);
+    const result = mapGithubProfile(
+      buildProfile({ displayName: astralChar.repeat(50), username: undefined }),
+    );
+
+    expect(result.displayName).toBe(astralChar.repeat(50));
+  });
+
+  it('returns undefined display name when the provided name has 51 astral-plane code points', () => {
+    const astralChar = String.fromCodePoint(0x1f600);
+    const result = mapGithubProfile(
+      buildProfile({ displayName: astralChar.repeat(51), username: undefined }),
+    );
+
+    expect(result.displayName).toBeUndefined();
+  });
 });
