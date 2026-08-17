@@ -1,3 +1,4 @@
+import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './jwt.strategy';
 
@@ -25,5 +26,18 @@ describe('JwtStrategy', () => {
     new JwtStrategy(configService);
 
     expect(configService.get).toHaveBeenCalledWith('JWT_SECRET');
+  });
+
+  it('rejects a decoded payload with an unsupported token type', async () => {
+    const strategy = new JwtStrategy(buildConfigService());
+    const unsupportedPayload = {
+      sub: 'user-123',
+      email: 'ada@example.com',
+      tokenType: 'refresh',
+    };
+
+    const validation = strategy.validate(unsupportedPayload);
+
+    await expect(validation).rejects.toBeInstanceOf(UnauthorizedException);
   });
 });
