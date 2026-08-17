@@ -3,24 +3,27 @@ import { ConfigModule } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   AUTHENTICATION_API,
+  DIRECTORY_API,
   IdentityModule,
   InvalidAccessTokenError,
 } from '@huddle/identity';
-import type { AuthenticationApi } from '@huddle/identity';
+import type { AuthenticationApi, DirectoryApi } from '@huddle/identity';
 
 @Injectable()
-class AuthenticationApiConsumer {
+class IdentityPublicApiConsumer {
   constructor(
     @Inject(AUTHENTICATION_API)
     readonly authenticationApi: AuthenticationApi,
+    @Inject(DIRECTORY_API)
+    readonly directoryApi: DirectoryApi,
   ) {}
 }
 
 @Module({
   imports: [IdentityModule],
-  providers: [AuthenticationApiConsumer],
+  providers: [IdentityPublicApiConsumer],
 })
-class AuthenticationApiConsumerModule {}
+class IdentityPublicApiConsumerModule {}
 
 describe('IdentityModule public provider exports', () => {
   let testingModule: TestingModule;
@@ -29,7 +32,7 @@ describe('IdentityModule public provider exports', () => {
     await testingModule?.close();
   });
 
-  it('allows a consumer module to inject the Authentication API token', async () => {
+  it('allows a consumer module to inject the Authentication and Directory API tokens', async () => {
     testingModule = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({
@@ -49,14 +52,15 @@ describe('IdentityModule public provider exports', () => {
             }),
           ],
         }),
-        AuthenticationApiConsumerModule,
+        IdentityPublicApiConsumerModule,
       ],
     }).compile();
 
-    const consumer = testingModule.get(AuthenticationApiConsumer);
+    const consumer = testingModule.get(IdentityPublicApiConsumer);
 
     await expect(
       consumer.authenticationApi.verifyAccessToken('invalid-token'),
     ).rejects.toBeInstanceOf(InvalidAccessTokenError);
+    expect(consumer.directoryApi).toBeDefined();
   });
 });
