@@ -23,4 +23,12 @@ describe('UserDirectoryApi', () => {
 
     expect(exists).toBe(true);
   });
+
+  it('confirms that a missing Identity user does not exist', async () => {
+    const directoryApi = new UserDirectoryApi(new InMemoryUserRepository());
+
+    const exists = await directoryApi.userExists('missing-user');
+
+    expect(exists).toBe(false);
+  });
 });
