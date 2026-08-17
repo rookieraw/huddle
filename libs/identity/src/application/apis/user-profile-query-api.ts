@@ -8,15 +8,16 @@ export class UserProfileQueryApi implements ProfileQueryApi {
   constructor(private readonly userRepository: UserRepository) {}
 
   async getProfiles(userIds: string[]): Promise<ProfileQueryResult> {
+    const normalizedUserIds = [...new Set(userIds)];
     const users = await Promise.all(
-      userIds.map((userId) => this.userRepository.findById(userId)),
+      normalizedUserIds.map((userId) => this.userRepository.findById(userId)),
     );
     const profiles: ProfileQueryResult['profiles'] = [];
     const missingUserIds: string[] = [];
 
     users.forEach((user, index) => {
       if (!user) {
-        missingUserIds.push(userIds[index]);
+        missingUserIds.push(normalizedUserIds[index]);
         return;
       }
 
