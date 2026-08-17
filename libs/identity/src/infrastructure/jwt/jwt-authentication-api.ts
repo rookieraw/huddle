@@ -49,6 +49,10 @@ export class JwtAuthenticationApi implements AuthenticationApi {
       throw new UnsupportedAccessTokenTypeError();
     }
 
+    if (payload.sub === undefined) {
+      throw new InvalidAccessTokenError();
+    }
+
     return {
       userId: payload.sub,
       expiresAt: new Date(payload.exp * 1000),

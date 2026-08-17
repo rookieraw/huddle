@@ -93,4 +93,20 @@ describe('JwtAuthenticationApi', () => {
 
     await expect(verification).rejects.toBeInstanceOf(InvalidAccessTokenError);
   });
+
+  it('rejects a validly signed access token that is missing its subject', async () => {
+    const jwtService = new JwtService({
+      secret: 'authentication-api-test-secret',
+      signOptions: { expiresIn: '15m' },
+    });
+    const authenticationApi = new JwtAuthenticationApi(jwtService);
+    const tokenWithoutSubject = await jwtService.signAsync({
+      tokenType: 'access',
+    });
+
+    const verification =
+      authenticationApi.verifyAccessToken(tokenWithoutSubject);
+
+    await expect(verification).rejects.toBeInstanceOf(InvalidAccessTokenError);
+  });
 });
