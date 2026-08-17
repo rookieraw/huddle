@@ -109,4 +109,21 @@ describe('JwtAuthenticationApi', () => {
 
     await expect(verification).rejects.toBeInstanceOf(InvalidAccessTokenError);
   });
+
+  it('rejects a validly signed access token that is missing its expiration', async () => {
+    const jwtService = new JwtService({
+      secret: 'authentication-api-test-secret',
+    });
+    const authenticationApi = new JwtAuthenticationApi(jwtService);
+    const tokenWithoutExpiration = await jwtService.signAsync({
+      sub: 'user-123',
+      tokenType: 'access',
+    });
+
+    const verification = authenticationApi.verifyAccessToken(
+      tokenWithoutExpiration,
+    );
+
+    await expect(verification).rejects.toBeInstanceOf(InvalidAccessTokenError);
+  });
 });

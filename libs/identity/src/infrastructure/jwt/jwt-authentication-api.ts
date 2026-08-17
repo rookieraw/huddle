@@ -53,6 +53,10 @@ export class JwtAuthenticationApi implements AuthenticationApi {
       throw new InvalidAccessTokenError();
     }
 
+    if (payload.exp === undefined) {
+      throw new InvalidAccessTokenError();
+    }
+
     return {
       userId: payload.sub,
       expiresAt: new Date(payload.exp * 1000),
