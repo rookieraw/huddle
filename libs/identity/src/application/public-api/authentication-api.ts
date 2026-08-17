@@ -1,3 +1,5 @@
+export const AUTHENTICATION_API = Symbol('AUTHENTICATION_API');
+
 export interface AuthenticatedPrincipal {
   userId: string;
   expiresAt: Date;
