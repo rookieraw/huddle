@@ -31,4 +31,17 @@ describe('UserDirectoryApi', () => {
 
     expect(exists).toBe(false);
   });
+
+  it('does not translate a repository failure into a missing user', async () => {
+    const userRepository = new InMemoryUserRepository();
+    const persistenceFailure = new Error('Identity persistence unavailable');
+    jest
+      .spyOn(userRepository, 'findById')
+      .mockRejectedValue(persistenceFailure);
+    const directoryApi = new UserDirectoryApi(userRepository);
+
+    const lookup = directoryApi.userExists('user-123');
+
+    await expect(lookup).rejects.toBe(persistenceFailure);
+  });
 });
