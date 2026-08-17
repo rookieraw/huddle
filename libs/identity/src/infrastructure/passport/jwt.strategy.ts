@@ -11,7 +11,7 @@ export interface AuthenticatedUser {
 
 interface JwtPayload {
   sub?: string;
-  email: string;
+  email?: string;
   tokenType?: string;
 }
 
@@ -31,6 +31,10 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     }
 
     if (payload.sub === undefined) {
+      throw new UnauthorizedException();
+    }
+
+    if (payload.email === undefined) {
       throw new UnauthorizedException();
     }
 

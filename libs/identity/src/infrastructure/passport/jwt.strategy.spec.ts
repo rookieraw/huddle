@@ -65,4 +65,16 @@ describe('JwtStrategy', () => {
 
     await expect(validation).rejects.toBeInstanceOf(UnauthorizedException);
   });
+
+  it('rejects a decoded access-token payload that is missing its email', async () => {
+    const strategy = new JwtStrategy(buildConfigService());
+    const payloadWithoutEmail = {
+      sub: 'user-123',
+      tokenType: 'access',
+    };
+
+    const validation = strategy.validate(payloadWithoutEmail);
+
+    await expect(validation).rejects.toBeInstanceOf(UnauthorizedException);
+  });
 });
