@@ -26,10 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
-    if (
-      payload.tokenType !== undefined &&
-      payload.tokenType !== ACCESS_TOKEN_TYPE
-    ) {
+    if (payload.tokenType !== ACCESS_TOKEN_TYPE) {
       throw new UnauthorizedException();
     }
 

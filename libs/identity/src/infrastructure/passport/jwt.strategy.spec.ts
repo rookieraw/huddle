@@ -15,6 +15,7 @@ describe('JwtStrategy', () => {
     const result = await strategy.validate({
       sub: 'user-123',
       email: 'ada@example.com',
+      tokenType: 'access',
     });
 
     expect(result).toEqual({ id: 'user-123', email: 'ada@example.com' });
@@ -37,6 +38,18 @@ describe('JwtStrategy', () => {
     };
 
     const validation = strategy.validate(unsupportedPayload);
+
+    await expect(validation).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('rejects a decoded payload that is missing its token type', async () => {
+    const strategy = new JwtStrategy(buildConfigService());
+    const payloadWithoutType = {
+      sub: 'user-123',
+      email: 'ada@example.com',
+    };
+
+    const validation = strategy.validate(payloadWithoutType);
 
     await expect(validation).rejects.toBeInstanceOf(UnauthorizedException);
   });
