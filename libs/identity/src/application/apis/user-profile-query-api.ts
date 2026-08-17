@@ -11,13 +11,24 @@ export class UserProfileQueryApi implements ProfileQueryApi {
     const users = await Promise.all(
       userIds.map((userId) => this.userRepository.findById(userId)),
     );
+    const profiles: ProfileQueryResult['profiles'] = [];
+    const missingUserIds: string[] = [];
+
+    users.forEach((user, index) => {
+      if (!user) {
+        missingUserIds.push(userIds[index]);
+        return;
+      }
+
+      profiles.push({
+        userId: user.id,
+        displayName: user.getDisplayName(),
+      });
+    });
 
     return {
-      profiles: users.map((user) => ({
-        userId: user!.id,
-        displayName: user!.getDisplayName(),
-      })),
-      missingUserIds: [],
+      profiles,
+      missingUserIds,
     };
   }
 }

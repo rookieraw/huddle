@@ -26,4 +26,17 @@ describe('UserProfileQueryApi', () => {
       missingUserIds: [],
     });
   });
+
+  it('distinguishes a missing Identity user from returned profiles', async () => {
+    const profileQueryApi = new UserProfileQueryApi(
+      new InMemoryUserRepository(),
+    );
+
+    const result = await profileQueryApi.getProfiles(['missing-user']);
+
+    expect(result).toEqual({
+      profiles: [],
+      missingUserIds: ['missing-user'],
+    });
+  });
 });
