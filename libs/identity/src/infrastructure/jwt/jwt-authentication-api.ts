@@ -41,10 +41,11 @@ export class JwtAuthenticationApi implements AuthenticationApi {
       throw error;
     }
 
-    if (
-      payload.tokenType !== undefined &&
-      payload.tokenType !== ACCESS_TOKEN_TYPE
-    ) {
+    if (payload.tokenType === undefined) {
+      throw new InvalidAccessTokenError();
+    }
+
+    if (payload.tokenType !== ACCESS_TOKEN_TYPE) {
       throw new UnsupportedAccessTokenTypeError();
     }
 

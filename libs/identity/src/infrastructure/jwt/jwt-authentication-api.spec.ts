@@ -78,4 +78,19 @@ describe('JwtAuthenticationApi', () => {
       UnsupportedAccessTokenTypeError,
     );
   });
+
+  it('rejects a validly signed token that is missing its token type', async () => {
+    const jwtService = new JwtService({
+      secret: 'authentication-api-test-secret',
+      signOptions: { expiresIn: '15m' },
+    });
+    const authenticationApi = new JwtAuthenticationApi(jwtService);
+    const tokenWithoutType = await jwtService.signAsync({
+      sub: 'user-123',
+    });
+
+    const verification = authenticationApi.verifyAccessToken(tokenWithoutType);
+
+    await expect(verification).rejects.toBeInstanceOf(InvalidAccessTokenError);
+  });
 });
