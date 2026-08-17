@@ -2,6 +2,7 @@ import { JwtService } from '@nestjs/jwt';
 import {
   ExpiredAccessTokenError,
   InvalidAccessTokenError,
+  UnsupportedAccessTokenTypeError,
 } from '../../application/public-api/authentication-api';
 import { JwtAuthenticationApi } from './jwt-authentication-api';
 
@@ -58,5 +59,23 @@ describe('JwtAuthenticationApi', () => {
     const verification = authenticationApi.verifyAccessToken(accessToken);
 
     await expect(verification).rejects.toBeInstanceOf(ExpiredAccessTokenError);
+  });
+
+  it('rejects a validly signed token with an unsupported token type', async () => {
+    const jwtService = new JwtService({
+      secret: 'authentication-api-test-secret',
+      signOptions: { expiresIn: '15m' },
+    });
+    const authenticationApi = new JwtAuthenticationApi(jwtService);
+    const unsupportedToken = await jwtService.signAsync({
+      sub: 'user-123',
+      tokenType: 'refresh',
+    });
+
+    const verification = authenticationApi.verifyAccessToken(unsupportedToken);
+
+    await expect(verification).rejects.toBeInstanceOf(
+      UnsupportedAccessTokenTypeError,
+    );
   });
 });

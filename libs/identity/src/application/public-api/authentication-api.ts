@@ -17,6 +17,13 @@ export class ExpiredAccessTokenError extends Error {
   }
 }
 
+export class UnsupportedAccessTokenTypeError extends Error {
+  constructor() {
+    super('Unsupported access token type');
+    this.name = 'UnsupportedAccessTokenTypeError';
+  }
+}
+
 export interface AuthenticationApi {
   verifyAccessToken(accessToken: string): Promise<AuthenticatedPrincipal>;
 }

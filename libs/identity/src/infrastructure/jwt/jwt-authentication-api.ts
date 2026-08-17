@@ -5,11 +5,14 @@ import {
   AuthenticationApi,
   ExpiredAccessTokenError,
   InvalidAccessTokenError,
+  UnsupportedAccessTokenTypeError,
 } from '../../application/public-api/authentication-api';
+import { ACCESS_TOKEN_TYPE } from './access-token-policy';
 
 interface VerifiedAccessTokenPayload {
   sub: string;
   exp: number;
+  tokenType?: string;
 }
 
 @Injectable()
@@ -36,6 +39,13 @@ export class JwtAuthenticationApi implements AuthenticationApi {
       }
 
       throw error;
+    }
+
+    if (
+      payload.tokenType !== undefined &&
+      payload.tokenType !== ACCESS_TOKEN_TYPE
+    ) {
+      throw new UnsupportedAccessTokenTypeError();
     }
 
     return {
