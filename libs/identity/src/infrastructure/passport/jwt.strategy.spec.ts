@@ -53,4 +53,16 @@ describe('JwtStrategy', () => {
 
     await expect(validation).rejects.toBeInstanceOf(UnauthorizedException);
   });
+
+  it('rejects a decoded access-token payload that is missing its subject', async () => {
+    const strategy = new JwtStrategy(buildConfigService());
+    const payloadWithoutSubject = {
+      email: 'ada@example.com',
+      tokenType: 'access',
+    };
+
+    const validation = strategy.validate(payloadWithoutSubject);
+
+    await expect(validation).rejects.toBeInstanceOf(UnauthorizedException);
+  });
 });

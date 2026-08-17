@@ -10,7 +10,7 @@ export interface AuthenticatedUser {
 }
 
 interface JwtPayload {
-  sub: string;
+  sub?: string;
   email: string;
   tokenType?: string;
 }
@@ -27,6 +27,10 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
   async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
     if (payload.tokenType !== ACCESS_TOKEN_TYPE) {
+      throw new UnauthorizedException();
+    }
+
+    if (payload.sub === undefined) {
       throw new UnauthorizedException();
     }
 
