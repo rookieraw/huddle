@@ -76,4 +76,29 @@ describe('UserProfileQueryApi', () => {
     expect(findById).not.toHaveBeenCalled();
     expect(result).toEqual({ profiles: [], missingUserIds: [] });
   });
+
+  it('rejects more than 50 input identifiers before normalization and persistence lookup', async () => {
+    const userRepository = new InMemoryUserRepository();
+    const findById = jest.spyOn(userRepository, 'findById');
+    const profileQueryApi = new UserProfileQueryApi(userRepository);
+    const userIds = Array.from({ length: 51 }, () => 'user-123');
+
+    const query = profileQueryApi.getProfiles(userIds);
+
+    await expect(query).rejects.toThrow(
+      'Profile query accepts at most 50 user identifiers',
+    );
+    expect(findById).not.toHaveBeenCalled();
+  });
+
+  it('accepts exactly 50 identifiers', async () => {
+    const profileQueryApi = new UserProfileQueryApi(
+      new InMemoryUserRepository(),
+    );
+    const userIds = Array.from({ length: 50 }, (_, index) => `user-${index}`);
+
+    const result = await profileQueryApi.getProfiles(userIds);
+
+    expect(result).toEqual({ profiles: [], missingUserIds: userIds });
+  });
 });
