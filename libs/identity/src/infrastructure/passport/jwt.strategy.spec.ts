@@ -90,4 +90,17 @@ describe('JwtStrategy', () => {
 
     await expect(validation).rejects.toBeInstanceOf(UnauthorizedException);
   });
+
+  it('rejects a decoded access-token payload with a non-string email', async () => {
+    const strategy = new JwtStrategy(buildConfigService());
+    const payloadWithInvalidEmail = {
+      sub: 'user-123',
+      email: 123,
+      tokenType: 'access',
+    } as unknown as Parameters<JwtStrategy['validate']>[0];
+
+    const validation = strategy.validate(payloadWithInvalidEmail);
+
+    await expect(validation).rejects.toBeInstanceOf(UnauthorizedException);
+  });
 });
