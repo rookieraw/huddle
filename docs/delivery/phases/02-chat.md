@@ -1,6 +1,6 @@
 # Phase 2 — Contacts and Chat
 
-Status: In progress — Identity displayName implemented; Contacts and Chat not yet started
+Status: In progress — minimum Identity support implemented; Contacts and Chat not yet started
 Depends on: Phase 1 — Identity  
 Next gate: Phase 2.5 — CI/CD and Deployment Foundation
 
@@ -76,12 +76,13 @@ ADR 0003 is needed when working on the persistence strategy or its implementatio
 
 Phase 2 may extend Identity only as required by Chat.
 
-Implement:
+The minimum Identity support for Phase 2 is implemented and verified:
 
 - the accepted `displayName` model;
 - valid `displayName` population for new credential registrations;
 - valid `displayName` population for first-time OAuth users;
 - an explicit migration or population strategy for existing Phase 1 users;
+- a minimal access-token authentication capability;
 - a minimal directory-existence capability;
 - a minimal batched profile-query capability;
 - intentional NestJS provider exports for those public capabilities.
