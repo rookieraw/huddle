@@ -54,32 +54,40 @@ describe('UserProfileQueryApi', () => {
       displayName: 'Ada Lovelace',
     });
     await userRepository.save(user);
-    const findById = jest.spyOn(userRepository, 'findById');
+    const findProfilesByIds = jest.spyOn(userRepository, 'findProfilesByIds');
     const profileQueryApi = new UserProfileQueryApi(userRepository);
 
-    const result = await profileQueryApi.getProfiles(['user-123', 'user-123']);
+    const result = await profileQueryApi.getProfiles([
+      'user-123',
+      'missing-user',
+      'user-123',
+    ]);
 
-    expect(findById).toHaveBeenCalledTimes(1);
+    expect(findProfilesByIds).toHaveBeenCalledTimes(1);
+    expect(findProfilesByIds).toHaveBeenCalledWith([
+      'user-123',
+      'missing-user',
+    ]);
     expect(result).toEqual({
       profiles: [{ userId: 'user-123', displayName: 'Ada Lovelace' }],
-      missingUserIds: [],
+      missingUserIds: ['missing-user'],
     });
   });
 
   it('returns an explicit empty result without a persistence lookup', async () => {
     const userRepository = new InMemoryUserRepository();
-    const findById = jest.spyOn(userRepository, 'findById');
+    const findProfilesByIds = jest.spyOn(userRepository, 'findProfilesByIds');
     const profileQueryApi = new UserProfileQueryApi(userRepository);
 
     const result = await profileQueryApi.getProfiles([]);
 
-    expect(findById).not.toHaveBeenCalled();
+    expect(findProfilesByIds).not.toHaveBeenCalled();
     expect(result).toEqual({ profiles: [], missingUserIds: [] });
   });
 
   it('rejects more than 50 input identifiers before normalization and persistence lookup', async () => {
     const userRepository = new InMemoryUserRepository();
-    const findById = jest.spyOn(userRepository, 'findById');
+    const findProfilesByIds = jest.spyOn(userRepository, 'findProfilesByIds');
     const profileQueryApi = new UserProfileQueryApi(userRepository);
     const userIds = Array.from({ length: 51 }, () => 'user-123');
 
@@ -88,7 +96,7 @@ describe('UserProfileQueryApi', () => {
     await expect(query).rejects.toThrow(
       'Profile query accepts at most 50 user identifiers',
     );
-    expect(findById).not.toHaveBeenCalled();
+    expect(findProfilesByIds).not.toHaveBeenCalled();
   });
 
   it('accepts exactly 50 identifiers', async () => {

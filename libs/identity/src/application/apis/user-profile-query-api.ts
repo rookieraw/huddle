@@ -17,23 +17,16 @@ export class UserProfileQueryApi implements ProfileQueryApi {
     }
 
     const normalizedUserIds = [...new Set(userIds)];
-    const users = await Promise.all(
-      normalizedUserIds.map((userId) => this.userRepository.findById(userId)),
+    if (normalizedUserIds.length === 0) {
+      return { profiles: [], missingUserIds: [] };
+    }
+
+    const profiles =
+      await this.userRepository.findProfilesByIds(normalizedUserIds);
+    const resolvedUserIds = new Set(profiles.map((profile) => profile.userId));
+    const missingUserIds = normalizedUserIds.filter(
+      (userId) => !resolvedUserIds.has(userId),
     );
-    const profiles: ProfileQueryResult['profiles'] = [];
-    const missingUserIds: string[] = [];
-
-    users.forEach((user, index) => {
-      if (!user) {
-        missingUserIds.push(normalizedUserIds[index]);
-        return;
-      }
-
-      profiles.push({
-        userId: user.id,
-        displayName: user.getDisplayName(),
-      });
-    });
 
     return {
       profiles,
