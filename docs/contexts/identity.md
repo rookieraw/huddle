@@ -1,7 +1,7 @@
 # Identity Context
 
-Status: Phase 1 implemented; Phase 2 display-name implemented; Phase 2 Public APIs (Authentication, Directory, Profile Query) still planned  
-Last reviewed: 2026-08-13
+Status: Phase 1 implemented; Phase 2 display-name and Public APIs (Authentication, Directory, Profile Query) implemented  
+Last reviewed: 2026-08-18
 
 ## Responsibility
 
@@ -41,9 +41,9 @@ Identity does not own:
 | GitHub OAuth login        | Implemented in Phase 1 |
 | Access and refresh tokens | Implemented in Phase 1 |
 | `displayName`             | Implemented in Phase 2 |
-| Authentication Public API | Phase 2 addition       |
-| Directory Public API      | Phase 2 addition       |
-| Profile Query Public API  | Phase 2 addition       |
+| Authentication Public API | Implemented in Phase 2 |
+| Directory Public API      | Implemented in Phase 2 |
+| Profile Query Public API  | Implemented in Phase 2 |
 | Avatar                    | Deferred               |
 | Account suspension state  | Not modeled            |
 | Enterprise SSO            | Deferred               |
@@ -236,11 +236,11 @@ The frontend may create initials or placeholder avatars from `displayName`.
 
 Identity’s NestJS module exports only intentionally supported provider tokens.
 
-Expected capability categories:
+Implemented capability tokens:
 
-- Authentication API
-- Directory API
-- Profile Query API
+- Authentication API (`AUTHENTICATION_API`)
+- Directory API (`DIRECTORY_API`)
+- Profile Query API (`PROFILE_QUERY_API`)
 
 A provider token should use a stable Symbol or equivalent explicit token.
 
@@ -253,6 +253,8 @@ export class IdentityModule {}
 does not automatically export internal NestJS providers.
 
 The module’s NestJS `exports` metadata must expose the intended public provider token.
+
+The Identity package entrypoint exports the supported public contracts and tokens, while implementations, repositories, entities, controllers, ORM models, and provider SDK types remain internal.
 
 The TypeScript `esModuleInterop` setting does not affect NestJS provider visibility.
 

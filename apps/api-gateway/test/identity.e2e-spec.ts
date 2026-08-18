@@ -28,6 +28,12 @@ interface LoginResponseBody {
   refreshToken: string;
 }
 
+interface CurrentUserResponseBody {
+  id: string;
+  email: string;
+  tier: string;
+}
+
 describe('Identity (e2e)', () => {
   let container: StartedPostgreSqlContainer;
   let app: INestApplication<App>;
@@ -63,7 +69,7 @@ describe('Identity (e2e)', () => {
   });
 
   describe('register → verify → login', () => {
-    it('registers, verifies, and logs in, returning a JWT pair', async () => {
+    it('registers, verifies, logs in, and authenticates the current-user request', async () => {
       const email = `e2e-${Date.now()}@example.com`;
       const password = 'correct-horse-battery';
 
@@ -96,6 +102,18 @@ describe('Identity (e2e)', () => {
 
       expect(loginBody.accessToken).toMatch(/^[\w-]+\.[\w-]+\.[\w-]+$/);
       expect(loginBody.refreshToken.length).toBeGreaterThan(0);
+
+      const currentUserRes = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', `Bearer ${loginBody.accessToken}`)
+        .expect(200);
+      const currentUserBody = currentUserRes.body as CurrentUserResponseBody;
+
+      expect(currentUserBody).toEqual({
+        id: registerBody.id,
+        email,
+        tier: 'free',
+      });
     });
 
     it('rejects registering the same email twice', async () => {

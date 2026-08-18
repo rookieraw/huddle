@@ -1,8 +1,8 @@
 # Project Status
 
-Last updated: 2026-08-13  
+Last updated: 2026-08-18  
 Current implementation phase: Phase 2 — Contacts and Chat  
-Current activity: Identity `displayName` implemented; Contacts and Chat implementation not yet started
+Current activity: Minimum Phase 2 Identity support implemented; Contacts implementation is next
 Portfolio Release target: End of Phase 4
 
 ## Purpose
@@ -21,21 +21,21 @@ It does not define target architecture, detailed Phase scope, or task-level work
 
 ## Status Summary
 
-| Area                        | Status                                                                  |
-| --------------------------- | ----------------------------------------------------------------------- |
-| Phase 1 Identity            | Completed                                                               |
-| Phase 2 Identity additions  | `displayName` implemented; directory and profile-query APIs not started |
-| Contacts                    | Not started                                                             |
-| Direct and Group Chat       | Not started                                                             |
-| MongoDB Message persistence | Not started                                                             |
-| Realtime Chat               | Not started                                                             |
-| Deployment foundation       | Planned                                                                 |
-| Voice and Video Calling     | Planned                                                                 |
-| Billing                     | Planned                                                                 |
-| First Portfolio Release     | Planned                                                                 |
-| Meetings                    | Later                                                                   |
-| Notification                | Later                                                                   |
-| Hardening                   | Later                                                                   |
+| Area                        | Status                                                          |
+| --------------------------- | --------------------------------------------------------------- |
+| Phase 1 Identity            | Completed                                                       |
+| Phase 2 Identity additions  | `displayName` and the three public application APIs implemented |
+| Contacts                    | Not started                                                     |
+| Direct and Group Chat       | Not started                                                     |
+| MongoDB Message persistence | Not started                                                     |
+| Realtime Chat               | Not started                                                     |
+| Deployment foundation       | Planned                                                         |
+| Voice and Video Calling     | Planned                                                         |
+| Billing                     | Planned                                                         |
+| First Portfolio Release     | Planned                                                         |
+| Meetings                    | Later                                                           |
+| Notification                | Later                                                           |
+| Hardening                   | Later                                                           |
 
 `Planned` and `Later` do not mean implemented.
 
@@ -79,15 +79,25 @@ Its detailed boundary is recorded in:
 [`../contexts/identity.md`](../contexts/identity.md)  
 [`../contracts/identity-http.md`](../contracts/identity-http.md)
 
-Phase 2's remaining Identity work — the Authentication, Directory, and Profile Query Public APIs required by Chat — has not started.
+### Phase 2 — Identity Public APIs
+
+The completed implementation includes:
+
+- an Authentication API that verifies access-token signature, expiration, supported token type, and required claims, returning only the trusted user identifier and expiration;
+- a Directory API that distinguishes an existing user from a missing user without exposing Identity internals;
+- a bounded Profile Query API that normalizes duplicate identifiers, distinguishes missing profiles, and returns only `userId` and `displayName`;
+- a single batched PostgreSQL profile lookup for at most 50 input identifiers;
+- intentional NestJS provider tokens and package-entrypoint exports for all three capabilities;
+- compatibility coverage for the existing Passport-protected HTTP path.
+
+The public boundary does not add Chat production adapters, directory or profile HTTP endpoints, Identity Integration Events, an Outbox, profile projections, or caches.
 
 ## Current Activity
 
-Phase 2 implementation has begun. Identity's `displayName` capability — the first required Phase 2 Identity addition — is implemented and verified.
+The minimum Identity support required by Phase 2 is implemented and verified: `displayName`, Authentication, Directory, and Profile Query.
 
-Remaining Phase 2 work has not started:
+The remaining Phase 2 implementation has not started:
 
-- the Authentication, Directory, and Profile Query Public APIs required by Chat;
 - Contacts;
 - Direct and Group Conversations;
 - MongoDB Message persistence;
@@ -98,7 +108,7 @@ Accepted target documentation is not evidence of implementation for the remainin
 
 ## Next Implementation Work
 
-The next Phase 2 Identity work is the Authentication, Directory, and Profile Query Public APIs required by Chat, followed by:
+The next Phase 2 implementation work is Contacts, followed by the remaining Chat capabilities in:
 
 [`phases/02-chat.md`](phases/02-chat.md)
 
@@ -143,7 +153,6 @@ Failure at a future gate must be recorded when discovered. It must not be report
 
 Do not currently assume the existence of:
 
-- cross-context Identity Public APIs;
 - Contact management;
 - Direct or Group Chat;
 - MongoDB Message persistence;

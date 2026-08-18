@@ -26,6 +26,12 @@ import { PrismaUserRepository } from './infrastructure/prisma/prisma-user.reposi
 import { PrismaRefreshTokenRepository } from './infrastructure/prisma/prisma-refresh-token.repository';
 import { prismaClientProvider } from './infrastructure/prisma/prisma-client.provider';
 import { JwtTokenIssuer } from './infrastructure/jwt/jwt-token-issuer';
+import { JwtAuthenticationApi } from './infrastructure/jwt/jwt-authentication-api';
+import { AUTHENTICATION_API } from './application/public-api/authentication-api';
+import { DIRECTORY_API } from './application/public-api/directory-api';
+import { UserDirectoryApi } from './application/apis/user-directory-api';
+import { PROFILE_QUERY_API } from './application/public-api/profile-query-api';
+import { UserProfileQueryApi } from './application/apis/user-profile-query-api';
 import { GoogleStrategy } from './infrastructure/passport/google.strategy';
 import { GithubStrategy } from './infrastructure/passport/github.strategy';
 import { JwtStrategy } from './infrastructure/passport/jwt.strategy';
@@ -56,6 +62,20 @@ import { UsersController } from './interface/http/users.controller';
       useClass: PrismaRefreshTokenRepository,
     },
     { provide: TOKEN_ISSUER, useClass: JwtTokenIssuer },
+    {
+      provide: AUTHENTICATION_API,
+      useClass: JwtAuthenticationApi,
+    },
+    {
+      provide: DIRECTORY_API,
+      useFactory: (repo: UserRepository) => new UserDirectoryApi(repo),
+      inject: [USER_REPOSITORY],
+    },
+    {
+      provide: PROFILE_QUERY_API,
+      useFactory: (repo: UserRepository) => new UserProfileQueryApi(repo),
+      inject: [USER_REPOSITORY],
+    },
     {
       provide: RegisterUserUseCase,
       useFactory: (repo: UserRepository) => new RegisterUserUseCase(repo),
@@ -121,5 +141,6 @@ import { UsersController } from './interface/http/users.controller';
     GithubAuthGuard,
     JwtAuthGuard,
   ],
+  exports: [AUTHENTICATION_API, DIRECTORY_API, PROFILE_QUERY_API],
 })
 export class IdentityModule {}

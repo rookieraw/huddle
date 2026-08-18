@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, PrismaClient } from './generated/client';
 import { User, LinkedOAuthProvider } from '../../domain/user.entity';
-import { UserRepository } from '../../application/ports/user.repository.port';
+import type {
+  UserProfileProjection,
+  UserRepository,
+} from '../../application/ports/user.repository.port';
 
 type UserWithOAuthProviders = Prisma.UserGetPayload<{
   include: { oauthProviders: true };
@@ -48,6 +51,18 @@ export class PrismaUserRepository implements UserRepository {
     }
 
     return this.toDomain(record);
+  }
+
+  async findProfilesByIds(userIds: string[]): Promise<UserProfileProjection[]> {
+    const records = await this.prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, displayName: true },
+    });
+
+    return records.map((record) => ({
+      userId: record.id,
+      displayName: record.displayName,
+    }));
   }
 
   async findByOAuthProvider(

@@ -1,0 +1,47 @@
+import { User } from '../../domain/user.entity';
+import { InMemoryUserRepository } from '../../test-support/in-memory-user.repository';
+import { UserDirectoryApi } from './user-directory-api';
+
+describe('UserDirectoryApi', () => {
+  it('confirms that an existing Identity user exists', async () => {
+    const userRepository = new InMemoryUserRepository();
+    const directoryApi = new UserDirectoryApi(userRepository);
+    const user = User.reconstitute({
+      id: 'user-123',
+      email: 'ada@example.com',
+      passwordHash: null,
+      emailVerified: true,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      oauthProviders: [],
+      verificationToken: null,
+      verificationTokenExpiresAt: null,
+      displayName: 'Ada Lovelace',
+    });
+    await userRepository.save(user);
+
+    const exists = await directoryApi.userExists('user-123');
+
+    expect(exists).toBe(true);
+  });
+
+  it('confirms that a missing Identity user does not exist', async () => {
+    const directoryApi = new UserDirectoryApi(new InMemoryUserRepository());
+
+    const exists = await directoryApi.userExists('missing-user');
+
+    expect(exists).toBe(false);
+  });
+
+  it('does not translate a repository failure into a missing user', async () => {
+    const userRepository = new InMemoryUserRepository();
+    const persistenceFailure = new Error('Identity persistence unavailable');
+    jest
+      .spyOn(userRepository, 'findById')
+      .mockRejectedValue(persistenceFailure);
+    const directoryApi = new UserDirectoryApi(userRepository);
+
+    const lookup = directoryApi.userExists('user-123');
+
+    await expect(lookup).rejects.toBe(persistenceFailure);
+  });
+});

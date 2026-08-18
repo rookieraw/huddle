@@ -7,6 +7,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from './generated/client';
 import { User } from '../../domain/user.entity';
 import { DisplayName } from '../../domain/value-objects/display-name.vo';
+import { UserDirectoryApi } from '../../application/apis/user-directory-api';
 import { PrismaUserRepository } from './prisma-user.repository';
 
 describe('PrismaUserRepository (integration)', () => {
@@ -178,5 +179,66 @@ describe('PrismaUserRepository (integration)', () => {
     );
 
     expect(found).toBeNull();
+  });
+
+  it('returns minimal profile projections for requested existing users in a batch lookup', async () => {
+    const ada = User.reconstitute({
+      id: 'user-ada',
+      email: 'ada@example.com',
+      passwordHash: null,
+      emailVerified: true,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      oauthProviders: [],
+      verificationToken: null,
+      verificationTokenExpiresAt: null,
+      displayName: 'Ada Lovelace',
+    });
+    const grace = User.reconstitute({
+      id: 'user-grace',
+      email: 'grace@example.com',
+      passwordHash: null,
+      emailVerified: true,
+      createdAt: new Date('2026-01-02T00:00:00.000Z'),
+      oauthProviders: [],
+      verificationToken: null,
+      verificationTokenExpiresAt: null,
+      displayName: 'Grace Hopper',
+    });
+    await repository.save(ada);
+    await repository.save(grace);
+
+    const profiles = await repository.findProfilesByIds([
+      'user-ada',
+      'missing-user',
+      'user-grace',
+    ]);
+    const byUserId = (a: { userId: string }, b: { userId: string }) =>
+      a.userId.localeCompare(b.userId);
+
+    expect(profiles.sort(byUserId)).toEqual(
+      [
+        { userId: 'user-ada', displayName: 'Ada Lovelace' },
+        { userId: 'user-grace', displayName: 'Grace Hopper' },
+      ].sort(byUserId),
+    );
+  });
+
+  it('supports directory existence checks against persisted users', async () => {
+    const user = User.reconstitute({
+      id: 'user-123',
+      email: 'ada@example.com',
+      passwordHash: null,
+      emailVerified: true,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      oauthProviders: [],
+      verificationToken: null,
+      verificationTokenExpiresAt: null,
+      displayName: 'Ada Lovelace',
+    });
+    await repository.save(user);
+    const directoryApi = new UserDirectoryApi(repository);
+
+    await expect(directoryApi.userExists('user-123')).resolves.toBe(true);
+    await expect(directoryApi.userExists('missing-user')).resolves.toBe(false);
   });
 });
