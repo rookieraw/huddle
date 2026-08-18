@@ -153,7 +153,6 @@ Failure at a future gate must be recorded when discovered. It must not be report
 
 Do not currently assume the existence of:
 
-- cross-context Identity Public APIs;
 - Contact management;
 - Direct or Group Chat;
 - MongoDB Message persistence;
