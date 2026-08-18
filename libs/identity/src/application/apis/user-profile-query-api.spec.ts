@@ -109,4 +109,17 @@ describe('UserProfileQueryApi', () => {
 
     expect(result).toEqual({ profiles: [], missingUserIds: userIds });
   });
+
+  it('does not translate a persistence failure into an empty result', async () => {
+    const userRepository = new InMemoryUserRepository();
+    const persistenceFailure = new Error('Identity persistence unavailable');
+    jest
+      .spyOn(userRepository, 'findProfilesByIds')
+      .mockRejectedValue(persistenceFailure);
+    const profileQueryApi = new UserProfileQueryApi(userRepository);
+
+    const query = profileQueryApi.getProfiles(['user-123']);
+
+    await expect(query).rejects.toBe(persistenceFailure);
+  });
 });
