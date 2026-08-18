@@ -1,5 +1,8 @@
 import { User } from '../domain/user.entity';
-import { UserRepository } from '../application/ports/user.repository.port';
+import type {
+  UserProfileProjection,
+  UserRepository,
+} from '../application/ports/user.repository.port';
 
 export class InMemoryUserRepository implements UserRepository {
   private readonly usersByEmail = new Map<string, User>();
@@ -24,6 +27,17 @@ export class InMemoryUserRepository implements UserRepository {
       }
     }
     return null;
+  }
+
+  async findProfilesByIds(userIds: string[]): Promise<UserProfileProjection[]> {
+    const requestedUserIds = new Set(userIds);
+
+    return [...this.usersByEmail.values()]
+      .filter((user) => requestedUserIds.has(user.id))
+      .map((user) => ({
+        userId: user.id,
+        displayName: user.getDisplayName(),
+      }));
   }
 
   async findByOAuthProvider(
