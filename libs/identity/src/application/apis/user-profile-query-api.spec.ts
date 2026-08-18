@@ -65,4 +65,15 @@ describe('UserProfileQueryApi', () => {
       missingUserIds: [],
     });
   });
+
+  it('returns an explicit empty result without a persistence lookup', async () => {
+    const userRepository = new InMemoryUserRepository();
+    const findById = jest.spyOn(userRepository, 'findById');
+    const profileQueryApi = new UserProfileQueryApi(userRepository);
+
+    const result = await profileQueryApi.getProfiles([]);
+
+    expect(findById).not.toHaveBeenCalled();
+    expect(result).toEqual({ profiles: [], missingUserIds: [] });
+  });
 });
