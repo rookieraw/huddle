@@ -30,6 +30,8 @@ import { JwtAuthenticationApi } from './infrastructure/jwt/jwt-authentication-ap
 import { AUTHENTICATION_API } from './application/public-api/authentication-api';
 import { DIRECTORY_API } from './application/public-api/directory-api';
 import { UserDirectoryApi } from './application/apis/user-directory-api';
+import { PROFILE_QUERY_API } from './application/public-api/profile-query-api';
+import { UserProfileQueryApi } from './application/apis/user-profile-query-api';
 import { GoogleStrategy } from './infrastructure/passport/google.strategy';
 import { GithubStrategy } from './infrastructure/passport/github.strategy';
 import { JwtStrategy } from './infrastructure/passport/jwt.strategy';
@@ -67,6 +69,11 @@ import { UsersController } from './interface/http/users.controller';
     {
       provide: DIRECTORY_API,
       useFactory: (repo: UserRepository) => new UserDirectoryApi(repo),
+      inject: [USER_REPOSITORY],
+    },
+    {
+      provide: PROFILE_QUERY_API,
+      useFactory: (repo: UserRepository) => new UserProfileQueryApi(repo),
       inject: [USER_REPOSITORY],
     },
     {
@@ -134,6 +141,6 @@ import { UsersController } from './interface/http/users.controller';
     GithubAuthGuard,
     JwtAuthGuard,
   ],
-  exports: [AUTHENTICATION_API, DIRECTORY_API],
+  exports: [AUTHENTICATION_API, DIRECTORY_API, PROFILE_QUERY_API],
 })
 export class IdentityModule {}

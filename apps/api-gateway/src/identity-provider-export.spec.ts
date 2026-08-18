@@ -6,8 +6,13 @@ import {
   DIRECTORY_API,
   IdentityModule,
   InvalidAccessTokenError,
+  PROFILE_QUERY_API,
 } from '@huddle/identity';
-import type { AuthenticationApi, DirectoryApi } from '@huddle/identity';
+import type {
+  AuthenticationApi,
+  DirectoryApi,
+  ProfileQueryApi,
+} from '@huddle/identity';
 
 @Injectable()
 class IdentityPublicApiConsumer {
@@ -16,6 +21,8 @@ class IdentityPublicApiConsumer {
     readonly authenticationApi: AuthenticationApi,
     @Inject(DIRECTORY_API)
     readonly directoryApi: DirectoryApi,
+    @Inject(PROFILE_QUERY_API)
+    readonly profileQueryApi: ProfileQueryApi,
   ) {}
 }
 
@@ -32,7 +39,7 @@ describe('IdentityModule public provider exports', () => {
     await testingModule?.close();
   });
 
-  it('allows a consumer module to inject the Authentication and Directory API tokens', async () => {
+  it('allows a consumer module to inject all public Identity API tokens', async () => {
     testingModule = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({
@@ -62,5 +69,6 @@ describe('IdentityModule public provider exports', () => {
       consumer.authenticationApi.verifyAccessToken('invalid-token'),
     ).rejects.toBeInstanceOf(InvalidAccessTokenError);
     expect(consumer.directoryApi).toBeDefined();
+    expect(consumer.profileQueryApi).toBeDefined();
   });
 });
