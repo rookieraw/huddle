@@ -366,6 +366,8 @@ When changing documentation, verify:
 - current status remains in `delivery/status.md`;
 - future work remains constrained by its Phase;
 - public contracts match implementation where implemented;
+- an implementation-status change is followed by a search for stale planned, deferred, not-implemented, and current-activity statements in every affected owning document;
+- no affected document contains internally contradictory implementation-state statements;
 - relative links resolve;
 - superseded ADR status is correct;
 - obsolete paths are not reintroduced.

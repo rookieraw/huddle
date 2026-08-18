@@ -33,6 +33,8 @@ Huddle follows these principles:
 10. Time-dependent tests use an injected clock.
 11. Coverage is evidence, not the objective.
 12. Capacity claims require measured target-environment evidence.
+13. A failing test is RED evidence only when it fails because the intended behavior is absent or incorrect.
+14. Boundary claims require evidence from every translation, persistence, wiring, or compatibility layer that can violate them.
 
 ## Sources of Testing Authority
 
@@ -49,6 +51,37 @@ Huddle follows these principles:
 | Current implementation status      | `delivery/status.md`            |
 
 A test example in archived documentation is not current implementation authority.
+
+## Test-Driven Change Evidence
+
+A TDD cycle proves one observable behavior at a time.
+
+### RED Evidence
+
+RED is established only when:
+
+- the new or changed test has been executed;
+- the test reaches the intended assertion or observable failure;
+- the failure is caused by the absent or incorrect behavior;
+- unrelated existing failures are distinguished from the intended RED.
+
+Compilation errors, test-discovery failures, invalid configuration, unavailable infrastructure, and unrelated assertion failures do not prove RED.
+
+### GREEN Evidence
+
+GREEN is established only when:
+
+- the previously failing test passes;
+- the smallest directly affected regression set passes;
+- required higher-layer evidence is not replaced by a lower-layer fake or mock.
+
+Passing one focused test does not prove persistence, dependency-injection wiring, transport compatibility, or complete application composition unless that test actually exercises the claimed layer.
+
+### REFACTOR Evidence
+
+A refactor must preserve observable behavior.
+
+Run the focused behavior tests and verification for every layer structurally affected by the refactor. A refactor that adds a new behavior begins a new TDD cycle.
 
 ## Test Layers
 
@@ -175,6 +208,33 @@ Examples include:
 E2E suites remain intentionally smaller than Domain and integration suites.
 
 Do not repeat every validation edge case through full application bootstrap when a lower layer already proves it adequately.
+
+## Boundary and Compatibility Verification
+
+Every translation boundary must validate the runtime data it receives.
+
+For untyped or externally decoded values:
+
+- test missing required values;
+- test values of the wrong runtime type;
+- test malformed values relevant to the contract;
+- do not treat a TypeScript annotation or generic decoder parameter as runtime validation.
+
+Different boundary claims require different evidence:
+
+| Claim                                                   | Required evidence                                        |
+| ------------------------------------------------------- | -------------------------------------------------------- |
+| Application orchestration and outcome translation       | Application test through the owned port                  |
+| Repository mapping or persisted result                  | Real persistence integration test                        |
+| Exact adapter query shape or batching call count        | Focused adapter test                                     |
+| Package entrypoint exposure                             | Import or compilation evidence                           |
+| NestJS provider exposure                                | Consumer-module resolution test through the public token |
+| Existing HTTP or realtime path remains compatible       | Representative interface or end-to-end test              |
+| Missing result remains distinct from dependency failure | Success, missing-result, and failure-path tests          |
+
+One test may prove more than one claim only when it actually crosses all relevant boundaries.
+
+A fake repository can prove that an application service calls one port operation. It cannot prove the datastore query, persistence mapping, provider export, or application composition behind that port.
 
 ## Risk-Based Test Depth
 
@@ -738,6 +798,7 @@ Update this document when:
 - a new datastore or external-provider category is introduced;
 - media validation strategy changes;
 - a recurring reliability problem requires a new policy.
+- a recurring boundary-validation or compatibility gap requires a new policy.
 
 Do not update this document for every individual test case.
 
@@ -748,6 +809,8 @@ Context-specific tests belong to the Context and active Phase documents.
 This document is the source of truth for:
 
 - test-layer responsibilities;
+- TDD evidence requirements;
+- boundary and compatibility verification;
 - risk-based testing;
 - coverage-ratchet policy;
 - Testcontainers policy;
