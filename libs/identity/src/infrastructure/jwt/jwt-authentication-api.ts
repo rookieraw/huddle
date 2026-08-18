@@ -10,7 +10,7 @@ import {
 import { ACCESS_TOKEN_TYPE } from './access-token-policy';
 
 interface VerifiedAccessTokenPayload {
-  sub: string;
+  sub?: unknown;
   exp: number;
   tokenType?: string;
 }
@@ -49,7 +49,7 @@ export class JwtAuthenticationApi implements AuthenticationApi {
       throw new UnsupportedAccessTokenTypeError();
     }
 
-    if (payload.sub === undefined) {
+    if (typeof payload.sub !== 'string') {
       throw new InvalidAccessTokenError();
     }
 
