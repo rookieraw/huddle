@@ -1,3 +1,5 @@
+import { DomainError } from '@huddle/shared-kernel';
+
 type ContactRelationshipStatus = 'pending';
 
 type CreateContactRelationshipInput = {
@@ -13,6 +15,10 @@ export class ContactRelationship {
   ) {}
 
   static create(input: CreateContactRelationshipInput): ContactRelationship {
+    if (input.requesterId === input.recipientId) {
+      throw new DomainError('A user cannot contact themselves.');
+    }
+
     return new ContactRelationship(
       input.requesterId,
       input.recipientId,
