@@ -29,6 +29,16 @@ export class SendContactRequestUseCase {
       throw new ContactTargetNotFoundError();
     }
 
+    const currentRelationship =
+      await this.contactRelationshipRepository.findCurrentByUserPair(
+        input.requesterId,
+        input.targetUserId,
+      );
+
+    if (currentRelationship) {
+      return;
+    }
+
     const relationship = ContactRelationship.create({
       requesterId: input.requesterId,
       recipientId: input.targetUserId,

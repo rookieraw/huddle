@@ -1,4 +1,4 @@
-import type { ContactRelationship } from '../../domain/contact-relationship.entity';
+import { ContactRelationship } from '../../domain/contact-relationship.entity';
 import type { ContactRelationshipRepository } from '../ports/contact-relationship.repository.port';
 import type { ContactTargetDirectory } from '../ports/contact-target-directory.port';
 import {
@@ -33,7 +33,21 @@ class FailingContactTargetDirectory implements ContactTargetDirectory {
 }
 
 class RecordingContactRelationshipRepository implements ContactRelationshipRepository {
+  readonly loadedUserPairs: [string, string][] = [];
   readonly savedRelationships: ContactRelationship[] = [];
+
+  constructor(
+    private readonly configuredCurrentRelationship: ContactRelationship | null = null,
+  ) {}
+
+  async findCurrentByUserPair(
+    firstUserId: string,
+    secondUserId: string,
+  ): Promise<ContactRelationship | null> {
+    this.loadedUserPairs.push([firstUserId, secondUserId]);
+
+    return this.configuredCurrentRelationship;
+  }
 
   async save(relationship: ContactRelationship): Promise<void> {
     this.savedRelationships.push(relationship);
@@ -101,5 +115,29 @@ describe('SendContactRequestUseCase', () => {
     expect(relationship?.requesterId).toBe('user-requester');
     expect(relationship?.recipientId).toBe('user-target');
     expect(relationship?.isPending()).toBe(true);
+  });
+
+  it('reuses an existing current relationship without a second save', async () => {
+    const existingRelationship = ContactRelationship.create({
+      requesterId: 'user-requester',
+      recipientId: 'user-target',
+    });
+    const contactTargetDirectory = new ExistingContactTargetDirectory();
+    const contactRelationshipRepository =
+      new RecordingContactRelationshipRepository(existingRelationship);
+    const useCase = new SendContactRequestUseCase(
+      contactTargetDirectory,
+      contactRelationshipRepository,
+    );
+
+    await useCase.execute({
+      requesterId: 'user-requester',
+      targetUserId: 'user-target',
+    });
+
+    expect(contactRelationshipRepository.savedRelationships).toEqual([]);
+    expect(contactRelationshipRepository.loadedUserPairs).toEqual([
+      ['user-requester', 'user-target'],
+    ]);
   });
 });
