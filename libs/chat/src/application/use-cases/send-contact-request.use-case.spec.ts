@@ -33,25 +33,27 @@ class FailingContactTargetDirectory implements ContactTargetDirectory {
 }
 
 class RecordingContactRelationshipRepository implements ContactRelationshipRepository {
-  readonly loadedUserPairs: [string, string][] = [];
-  readonly savedRelationships: ContactRelationship[] = [];
+  private readonly currentRelationships: ContactRelationship[] = [];
 
-  constructor(
-    private readonly configuredCurrentRelationship: ContactRelationship | null = null,
-  ) {}
+  readonly findCurrentByUserPair = jest.fn(
+    async (
+      firstUserId: string,
+      secondUserId: string,
+    ): Promise<ContactRelationship | null> =>
+      this.currentRelationships.find(
+        (relationship) =>
+          (relationship.requesterId === firstUserId &&
+            relationship.recipientId === secondUserId) ||
+          (relationship.requesterId === secondUserId &&
+            relationship.recipientId === firstUserId),
+      ) ?? null,
+  );
 
-  async findCurrentByUserPair(
-    firstUserId: string,
-    secondUserId: string,
-  ): Promise<ContactRelationship | null> {
-    this.loadedUserPairs.push([firstUserId, secondUserId]);
-
-    return this.configuredCurrentRelationship;
-  }
-
-  async save(relationship: ContactRelationship): Promise<void> {
-    this.savedRelationships.push(relationship);
-  }
+  readonly save = jest.fn(
+    async (relationship: ContactRelationship): Promise<void> => {
+      this.currentRelationships.push(relationship);
+    },
+  );
 }
 
 describe('SendContactRequestUseCase', () => {
@@ -70,7 +72,7 @@ describe('SendContactRequestUseCase', () => {
     });
 
     await expect(execution).rejects.toBeInstanceOf(ContactTargetNotFoundError);
-    expect(contactRelationshipRepository.savedRelationships).toEqual([]);
+    expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
   });
 
   it('preserves a Directory dependency failure without saving a relationship', async () => {
@@ -91,7 +93,7 @@ describe('SendContactRequestUseCase', () => {
     });
 
     await expect(execution).rejects.toBe(directoryFailure);
-    expect(contactRelationshipRepository.savedRelationships).toEqual([]);
+    expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
   });
 
   it('saves one pending relationship for a valid first request', async () => {
@@ -108,9 +110,9 @@ describe('SendContactRequestUseCase', () => {
       targetUserId: 'user-target',
     });
 
-    expect(contactRelationshipRepository.savedRelationships).toHaveLength(1);
+    expect(contactRelationshipRepository.save).toHaveBeenCalledTimes(1);
 
-    const [relationship] = contactRelationshipRepository.savedRelationships;
+    const relationship = contactRelationshipRepository.save.mock.calls[0]?.[0];
 
     expect(relationship?.requesterId).toBe('user-requester');
     expect(relationship?.recipientId).toBe('user-target');
@@ -118,13 +120,9 @@ describe('SendContactRequestUseCase', () => {
   });
 
   it('reuses an existing current relationship without a second save', async () => {
-    const existingRelationship = ContactRelationship.create({
-      requesterId: 'user-requester',
-      recipientId: 'user-target',
-    });
     const contactTargetDirectory = new ExistingContactTargetDirectory();
     const contactRelationshipRepository =
-      new RecordingContactRelationshipRepository(existingRelationship);
+      new RecordingContactRelationshipRepository();
     const useCase = new SendContactRequestUseCase(
       contactTargetDirectory,
       contactRelationshipRepository,
@@ -134,10 +132,65 @@ describe('SendContactRequestUseCase', () => {
       requesterId: 'user-requester',
       targetUserId: 'user-target',
     });
+    await useCase.execute({
+      requesterId: 'user-requester',
+      targetUserId: 'user-target',
+    });
 
-    expect(contactRelationshipRepository.savedRelationships).toEqual([]);
-    expect(contactRelationshipRepository.loadedUserPairs).toEqual([
-      ['user-requester', 'user-target'],
-    ]);
+    expect(contactRelationshipRepository.save).toHaveBeenCalledTimes(1);
+    expect(
+      contactRelationshipRepository.findCurrentByUserPair,
+    ).toHaveBeenCalledTimes(2);
+    expect(
+      contactRelationshipRepository.findCurrentByUserPair,
+    ).toHaveBeenNthCalledWith(1, 'user-requester', 'user-target');
+    expect(
+      contactRelationshipRepository.findCurrentByUserPair,
+    ).toHaveBeenNthCalledWith(2, 'user-requester', 'user-target');
+  });
+
+  it('preserves existing roles for a sequential opposing request', async () => {
+    const contactTargetDirectory = new ExistingContactTargetDirectory();
+    const contactRelationshipRepository =
+      new RecordingContactRelationshipRepository();
+    const useCase = new SendContactRequestUseCase(
+      contactTargetDirectory,
+      contactRelationshipRepository,
+    );
+
+    await useCase.execute({
+      requesterId: 'user-original-requester',
+      targetUserId: 'user-original-recipient',
+    });
+    await useCase.execute({
+      requesterId: 'user-original-recipient',
+      targetUserId: 'user-original-requester',
+    });
+
+    expect(
+      contactRelationshipRepository.findCurrentByUserPair,
+    ).toHaveBeenCalledTimes(2);
+    expect(
+      contactRelationshipRepository.findCurrentByUserPair,
+    ).toHaveBeenNthCalledWith(
+      1,
+      'user-original-requester',
+      'user-original-recipient',
+    );
+    expect(
+      contactRelationshipRepository.findCurrentByUserPair,
+    ).toHaveBeenNthCalledWith(
+      2,
+      'user-original-recipient',
+      'user-original-requester',
+    );
+    expect(contactRelationshipRepository.save).toHaveBeenCalledTimes(1);
+
+    const existingRelationship =
+      contactRelationshipRepository.save.mock.calls[0]?.[0];
+
+    expect(existingRelationship?.requesterId).toBe('user-original-requester');
+    expect(existingRelationship?.recipientId).toBe('user-original-recipient');
+    expect(existingRelationship?.isPending()).toBe(true);
   });
 });
