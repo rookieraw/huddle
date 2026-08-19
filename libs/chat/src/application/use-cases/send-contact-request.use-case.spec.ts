@@ -15,11 +15,13 @@ class MissingContactTargetDirectory implements ContactTargetDirectory {
 }
 
 class ExistingContactTargetDirectory implements ContactTargetDirectory {
-  async targetUserExists(targetUserId: string): Promise<boolean> {
-    void targetUserId;
+  readonly targetUserExists = jest.fn(
+    async (targetUserId: string): Promise<boolean> => {
+      void targetUserId;
 
-    return true;
-  }
+      return true;
+    },
+  );
 }
 
 class FailingContactTargetDirectory implements ContactTargetDirectory {
@@ -152,6 +154,10 @@ describe('SendContactRequestUseCase', () => {
       targetUserId: 'user-target',
     });
 
+    expect(contactTargetDirectory.targetUserExists).toHaveBeenCalledTimes(1);
+    expect(contactTargetDirectory.targetUserExists).toHaveBeenCalledWith(
+      'user-target',
+    );
     expect(contactRelationshipRepository.save).toHaveBeenCalledTimes(1);
 
     const relationship = contactRelationshipRepository.save.mock.calls[0]?.[0];
