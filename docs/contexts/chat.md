@@ -1,7 +1,7 @@
 # Chat Context
 
-Status: Accepted target; Phase 2 implementation pending  
-Last reviewed: 2026-08-07
+Status: Accepted target; Phase 2 Contact-request core implementation in progress  
+Last reviewed: 2026-08-19
 
 ## Responsibility
 
@@ -38,6 +38,10 @@ Chat does not own:
 | Call timeline integration    | Phase 3        |
 | Meeting conversations        | Phase 5        |
 | Notification producer events | Phase 6        |
+
+The Phase 2 Contact-request Domain/Application core is implemented and unit-tested for pending request creation, invalid-target rejection, dependency-failure preservation, and sequential duplicate reuse.
+
+This core is not yet operational. Contact persistence, database uniqueness and concurrency guarantees, the Identity composition adapter, NestJS and HTTP delivery, and the remaining Contacts lifecycle are pending.
 
 Accepted target behavior does not imply current implementation.
 

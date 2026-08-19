@@ -1,8 +1,8 @@
 # Project Status
 
-Last updated: 2026-08-18  
+Last updated: 2026-08-19  
 Current implementation phase: Phase 2 — Contacts and Chat  
-Current activity: Minimum Phase 2 Identity support implemented; Contacts implementation is next
+Current activity: Contact-request Domain/Application core implemented and verified; remaining Contacts delivery is pending
 Portfolio Release target: End of Phase 4
 
 ## Purpose
@@ -25,7 +25,7 @@ It does not define target architecture, detailed Phase scope, or task-level work
 | --------------------------- | --------------------------------------------------------------- |
 | Phase 1 Identity            | Completed                                                       |
 | Phase 2 Identity additions  | `displayName` and the three public application APIs implemented |
-| Contacts                    | Not started                                                     |
+| Contacts                    | Contact-request core in progress; not operational               |
 | Direct and Group Chat       | Not started                                                     |
 | MongoDB Message persistence | Not started                                                     |
 | Realtime Chat               | Not started                                                     |
@@ -96,9 +96,13 @@ The public boundary does not add Chat production adapters, directory or profile 
 
 The minimum Identity support required by Phase 2 is implemented and verified: `displayName`, Authentication, Directory, and Profile Query.
 
-The remaining Phase 2 implementation has not started:
+The Contact-request Domain/Application core is implemented and unit-verified. It creates a pending relationship for a valid first request, rejects invalid targets, preserves dependency failures, and reuses an existing relationship for sequential duplicate requests.
 
-- Contacts;
+This core is not an operational Contacts capability. PostgreSQL persistence, database uniqueness and concurrency evidence, the Identity composition adapter, NestJS wiring, and HTTP delivery remain unimplemented.
+
+The remaining Phase 2 implementation includes:
+
+- remaining Contacts lifecycle and operational delivery;
 - Direct and Group Conversations;
 - MongoDB Message persistence;
 - authenticated realtime Chat;
@@ -108,7 +112,7 @@ Accepted target documentation is not evidence of implementation for the remainin
 
 ## Next Implementation Work
 
-The next Phase 2 implementation work is Contacts, followed by the remaining Chat capabilities in:
+Further Phase 2 implementation continues with the remaining Contacts delivery, followed by the remaining Chat capabilities in:
 
 [`phases/02-chat.md`](phases/02-chat.md)
 
@@ -153,7 +157,7 @@ Failure at a future gate must be recorded when discovered. It must not be report
 
 Do not currently assume the existence of:
 
-- Contact management;
+- operational Contact management, including persistence and HTTP delivery;
 - Direct or Group Chat;
 - MongoDB Message persistence;
 - Chat Socket.IO events;
