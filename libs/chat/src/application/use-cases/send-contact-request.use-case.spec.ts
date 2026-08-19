@@ -1,3 +1,4 @@
+import { DomainError } from '@huddle/shared-kernel';
 import { ContactRelationship } from '../../domain/contact-relationship.entity';
 import type { ContactRelationshipRepository } from '../ports/contact-relationship.repository.port';
 import type { ContactTargetDirectory } from '../ports/contact-target-directory.port';
@@ -59,6 +60,24 @@ class RecordingContactRelationshipRepository implements ContactRelationshipRepos
 }
 
 describe('SendContactRequestUseCase', () => {
+  it('rejects a self-directed request without saving a relationship', async () => {
+    const contactTargetDirectory = new ExistingContactTargetDirectory();
+    const contactRelationshipRepository =
+      new RecordingContactRelationshipRepository();
+    const useCase = new SendContactRequestUseCase(
+      contactTargetDirectory,
+      contactRelationshipRepository,
+    );
+
+    const execution = useCase.execute({
+      requesterId: 'user-same',
+      targetUserId: 'user-same',
+    });
+
+    await expect(execution).rejects.toBeInstanceOf(DomainError);
+    expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
+  });
+
   it('rejects a confirmed missing target without saving a relationship', async () => {
     const contactTargetDirectory = new MissingContactTargetDirectory();
     const contactRelationshipRepository =
