@@ -14,6 +14,14 @@ class MissingContactTargetDirectory implements ContactTargetDirectory {
   }
 }
 
+class ExistingContactTargetDirectory implements ContactTargetDirectory {
+  async targetUserExists(targetUserId: string): Promise<boolean> {
+    void targetUserId;
+
+    return true;
+  }
+}
+
 class FailingContactTargetDirectory implements ContactTargetDirectory {
   constructor(private readonly failure: Error) {}
 
@@ -70,5 +78,28 @@ describe('SendContactRequestUseCase', () => {
 
     await expect(execution).rejects.toBe(directoryFailure);
     expect(contactRelationshipRepository.savedRelationships).toEqual([]);
+  });
+
+  it('saves one pending relationship for a valid first request', async () => {
+    const contactTargetDirectory = new ExistingContactTargetDirectory();
+    const contactRelationshipRepository =
+      new RecordingContactRelationshipRepository();
+    const useCase = new SendContactRequestUseCase(
+      contactTargetDirectory,
+      contactRelationshipRepository,
+    );
+
+    await useCase.execute({
+      requesterId: 'user-requester',
+      targetUserId: 'user-target',
+    });
+
+    expect(contactRelationshipRepository.savedRelationships).toHaveLength(1);
+
+    const [relationship] = contactRelationshipRepository.savedRelationships;
+
+    expect(relationship?.requesterId).toBe('user-requester');
+    expect(relationship?.recipientId).toBe('user-target');
+    expect(relationship?.isPending()).toBe(true);
   });
 });

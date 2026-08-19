@@ -1,3 +1,4 @@
+import { ContactRelationship } from '../../domain/contact-relationship.entity';
 import type { ContactRelationshipRepository } from '../ports/contact-relationship.repository.port';
 import type { ContactTargetDirectory } from '../ports/contact-target-directory.port';
 
@@ -27,5 +28,12 @@ export class SendContactRequestUseCase {
     if (!targetExists) {
       throw new ContactTargetNotFoundError();
     }
+
+    const relationship = ContactRelationship.create({
+      requesterId: input.requesterId,
+      recipientId: input.targetUserId,
+    });
+
+    await this.contactRelationshipRepository.save(relationship);
   }
 }
