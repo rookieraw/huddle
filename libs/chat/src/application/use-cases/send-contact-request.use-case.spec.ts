@@ -96,6 +96,28 @@ describe('SendContactRequestUseCase', () => {
     expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
   });
 
+  it('preserves a repository lookup failure without saving a relationship', async () => {
+    const repositoryFailure = new Error('Relationship lookup unavailable');
+    const contactTargetDirectory = new ExistingContactTargetDirectory();
+    const contactRelationshipRepository =
+      new RecordingContactRelationshipRepository();
+    contactRelationshipRepository.findCurrentByUserPair.mockRejectedValueOnce(
+      repositoryFailure,
+    );
+    const useCase = new SendContactRequestUseCase(
+      contactTargetDirectory,
+      contactRelationshipRepository,
+    );
+
+    const execution = useCase.execute({
+      requesterId: 'user-requester',
+      targetUserId: 'user-target',
+    });
+
+    await expect(execution).rejects.toBe(repositoryFailure);
+    expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
+  });
+
   it('saves one pending relationship for a valid first request', async () => {
     const contactTargetDirectory = new ExistingContactTargetDirectory();
     const contactRelationshipRepository =
