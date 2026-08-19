@@ -1,6 +1,6 @@
 # Phase 2 — Contacts and Chat
 
-Status: In progress — minimum Identity support implemented; Contacts and Chat not yet started
+Status: In progress — minimum Identity support and Contact-request Domain/Application core implemented
 Depends on: Phase 1 — Identity  
 Next gate: Phase 2.5 — CI/CD and Deployment Foundation
 
@@ -104,7 +104,11 @@ Do not introduce an Identity Outbox, profile projection, event bus, or profile c
 
 ### Contacts
 
-Implement:
+Contact-request core delivery has begun. The current Domain/Application implementation creates pending requests between distinct users, checks the untrusted target through a Chat-owned port, preserves dependency failures, and reuses an existing relationship for sequential duplicate requests.
+
+This core is not operational. PostgreSQL persistence, database uniqueness and concurrent-request evidence, the production Identity composition adapter, NestJS wiring, HTTP delivery, and the remaining Contacts lifecycle are still pending.
+
+The full Phase 2 Contacts scope includes:
 
 - send a Contact request;
 - list incoming Contact requests;
