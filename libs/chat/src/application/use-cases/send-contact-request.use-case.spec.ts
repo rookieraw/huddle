@@ -118,6 +118,26 @@ describe('SendContactRequestUseCase', () => {
     expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
   });
 
+  it('preserves a repository save failure without reporting success', async () => {
+    const repositoryFailure = new Error('Relationship save unavailable');
+    const contactTargetDirectory = new ExistingContactTargetDirectory();
+    const contactRelationshipRepository =
+      new RecordingContactRelationshipRepository();
+    contactRelationshipRepository.save.mockRejectedValueOnce(repositoryFailure);
+    const useCase = new SendContactRequestUseCase(
+      contactTargetDirectory,
+      contactRelationshipRepository,
+    );
+
+    const execution = useCase.execute({
+      requesterId: 'user-requester',
+      targetUserId: 'user-target',
+    });
+
+    await expect(execution).rejects.toBe(repositoryFailure);
+    expect(contactRelationshipRepository.save).toHaveBeenCalledTimes(1);
+  });
+
   it('saves one pending relationship for a valid first request', async () => {
     const contactTargetDirectory = new ExistingContactTargetDirectory();
     const contactRelationshipRepository =
