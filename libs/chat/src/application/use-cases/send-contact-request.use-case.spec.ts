@@ -14,6 +14,16 @@ class MissingContactTargetDirectory implements ContactTargetDirectory {
   }
 }
 
+class FailingContactTargetDirectory implements ContactTargetDirectory {
+  constructor(private readonly failure: Error) {}
+
+  async targetUserExists(targetUserId: string): Promise<boolean> {
+    void targetUserId;
+
+    throw this.failure;
+  }
+}
+
 class RecordingContactRelationshipRepository implements ContactRelationshipRepository {
   readonly savedRelationships: ContactRelationship[] = [];
 
@@ -38,6 +48,27 @@ describe('SendContactRequestUseCase', () => {
     });
 
     await expect(execution).rejects.toBeInstanceOf(ContactTargetNotFoundError);
+    expect(contactRelationshipRepository.savedRelationships).toEqual([]);
+  });
+
+  it('preserves a Directory dependency failure without saving a relationship', async () => {
+    const directoryFailure = new Error('Directory unavailable');
+    const contactTargetDirectory = new FailingContactTargetDirectory(
+      directoryFailure,
+    );
+    const contactRelationshipRepository =
+      new RecordingContactRelationshipRepository();
+    const useCase = new SendContactRequestUseCase(
+      contactTargetDirectory,
+      contactRelationshipRepository,
+    );
+
+    const execution = useCase.execute({
+      requesterId: 'user-requester',
+      targetUserId: 'user-target',
+    });
+
+    await expect(execution).rejects.toBe(directoryFailure);
     expect(contactRelationshipRepository.savedRelationships).toEqual([]);
   });
 });
