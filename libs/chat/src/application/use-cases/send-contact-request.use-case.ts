@@ -44,8 +44,6 @@ export class SendContactRequestUseCase {
       recipientId: input.targetUserId,
     });
 
-    await this.contactRelationshipRepository.save(relationship);
-
-    return relationship;
+    return this.contactRelationshipRepository.save(relationship);
   }
 }

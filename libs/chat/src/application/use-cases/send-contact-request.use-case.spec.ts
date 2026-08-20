@@ -262,4 +262,28 @@ describe('SendContactRequestUseCase', () => {
     expect(existingRelationship?.recipientId).toBe('user-original-recipient');
     expect(existingRelationship?.isPending()).toBe(true);
   });
+
+  it('returns the persisted winner when save resolves a uniqueness collision', async () => {
+    const contactTargetDirectory = new ExistingContactTargetDirectory();
+    const contactRelationshipRepository =
+      new RecordingContactRelationshipRepository();
+    const persistedWinner = ContactRelationship.reconstitute({
+      id: 'persisted-winner-id',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      status: 'pending',
+    });
+    contactRelationshipRepository.save.mockResolvedValueOnce(persistedWinner);
+    const useCase = new SendContactRequestUseCase(
+      contactTargetDirectory,
+      contactRelationshipRepository,
+    );
+
+    const result = await useCase.execute({
+      requesterId: 'user-original-recipient',
+      targetUserId: 'user-original-requester',
+    });
+
+    expect(result).toBe(persistedWinner);
+  });
 });
