@@ -53,8 +53,10 @@ class RecordingContactRelationshipRepository implements ContactRelationshipRepos
   );
 
   readonly save = jest.fn(
-    async (relationship: ContactRelationship): Promise<void> => {
+    async (relationship: ContactRelationship): Promise<ContactRelationship> => {
       this.currentRelationships.push(relationship);
+
+      return relationship;
     },
   );
 }

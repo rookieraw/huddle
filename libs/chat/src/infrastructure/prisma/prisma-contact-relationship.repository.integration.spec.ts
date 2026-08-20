@@ -87,4 +87,24 @@ describe('PrismaContactRelationshipRepository (integration)', () => {
     expect(found?.requesterId).toBe('user-original-requester');
     expect(found?.recipientId).toBe('user-original-recipient');
   });
+
+  it('returns the persisted winner for an unordered-pair uniqueness collision', async () => {
+    const winner = ContactRelationship.create({
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+    });
+    const competingRelationship = ContactRelationship.create({
+      requesterId: 'user-original-recipient',
+      recipientId: 'user-original-requester',
+    });
+    await repository.save(winner);
+
+    const result = await repository.save(competingRelationship);
+
+    expect(result).toMatchObject({
+      id: winner.id,
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+    });
+  });
 });
