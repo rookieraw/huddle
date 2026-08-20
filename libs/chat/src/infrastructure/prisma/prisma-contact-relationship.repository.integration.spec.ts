@@ -70,4 +70,21 @@ describe('PrismaContactRelationshipRepository (integration)', () => {
     expect(found?.recipientId).toBe('user-recipient');
     expect(found?.isPending()).toBe(true);
   });
+
+  it('finds the same current relationship when the user pair order is reversed', async () => {
+    const relationship = ContactRelationship.create({
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+    });
+    await repository.save(relationship);
+
+    const found = await repository.findCurrentByUserPair(
+      'user-original-recipient',
+      'user-original-requester',
+    );
+
+    expect(found?.id).toBe(relationship.id);
+    expect(found?.requesterId).toBe('user-original-requester');
+    expect(found?.recipientId).toBe('user-original-recipient');
+  });
 });

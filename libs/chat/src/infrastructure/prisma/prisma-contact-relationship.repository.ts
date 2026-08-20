@@ -18,9 +18,17 @@ export class PrismaContactRelationshipRepository implements ContactRelationshipR
   ): Promise<ContactRelationship | null> {
     const record = await this.prisma.contactRelationship.findFirst({
       where: {
-        requesterId: firstUserId,
-        recipientId: secondUserId,
         status: 'pending',
+        OR: [
+          {
+            requesterId: firstUserId,
+            recipientId: secondUserId,
+          },
+          {
+            requesterId: secondUserId,
+            recipientId: firstUserId,
+          },
+        ],
       },
     });
 
