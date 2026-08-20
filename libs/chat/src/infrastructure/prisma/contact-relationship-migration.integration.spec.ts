@@ -122,4 +122,61 @@ describe('ContactRelationship migration (integration, via real prisma migrate de
     expect(statusConstraint.output).toContain('status');
     expect(statusConstraint.output).toContain('pending');
   });
+
+  it('rejects a second current relationship for the unordered user pair', async () => {
+    const firstInsert = await container.exec([
+      'psql',
+      '--username',
+      container.getUsername(),
+      '--dbname',
+      container.getDatabase(),
+      '--set',
+      'ON_ERROR_STOP=1',
+      '--command',
+      `INSERT INTO chat.contact_relationships
+         (id, requester_id, recipient_id, status)
+       VALUES
+         ('relationship-first', 'user-a', 'user-b', 'pending')`,
+    ]);
+
+    expect(firstInsert.exitCode).toBe(0);
+
+    const reversedInsert = await container.exec([
+      'psql',
+      '--username',
+      container.getUsername(),
+      '--dbname',
+      container.getDatabase(),
+      '--set',
+      'ON_ERROR_STOP=1',
+      '--command',
+      `INSERT INTO chat.contact_relationships
+         (id, requester_id, recipient_id, status)
+       VALUES
+         ('relationship-reversed', 'user-b', 'user-a', 'pending')`,
+    ]);
+
+    expect(reversedInsert.exitCode).not.toBe(0);
+    expect(reversedInsert.output).toContain(
+      'contact_relationships_current_user_pair_key',
+    );
+
+    const rowCount = await container.exec([
+      'psql',
+      '--username',
+      container.getUsername(),
+      '--dbname',
+      container.getDatabase(),
+      '--tuples-only',
+      '--no-align',
+      '--command',
+      `SELECT count(*)
+       FROM chat.contact_relationships
+       WHERE requester_id IN ('user-a', 'user-b')
+         AND recipient_id IN ('user-a', 'user-b')`,
+    ]);
+
+    expect(rowCount.exitCode).toBe(0);
+    expect(rowCount.output.trim()).toBe('1');
+  });
 });

@@ -11,3 +11,11 @@ CREATE TABLE "chat"."contact_relationships" (
     CONSTRAINT "contact_relationships_pkey" PRIMARY KEY ("id"),
     CONSTRAINT "contact_relationships_status_check" CHECK ("status" = 'pending')
 );
+
+-- Enforce one current relationship for an unordered user pair.
+CREATE UNIQUE INDEX "contact_relationships_current_user_pair_key"
+ON "chat"."contact_relationships" (
+    LEAST("requester_id", "recipient_id"),
+    GREATEST("requester_id", "recipient_id")
+)
+WHERE "status" = 'pending';
