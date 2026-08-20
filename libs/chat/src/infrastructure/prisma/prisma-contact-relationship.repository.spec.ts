@@ -38,4 +38,26 @@ describe('PrismaContactRelationshipRepository', () => {
     await expect(execution).rejects.toBe(unrelatedCollision);
     expect(findFirst).not.toHaveBeenCalled();
   });
+
+  it('preserves an ordinary persistence failure', async () => {
+    const persistenceFailure = new Error('PostgreSQL unavailable');
+    const upsert = jest.fn().mockRejectedValue(persistenceFailure);
+    const findFirst = jest.fn();
+    const prisma = {
+      contactRelationship: {
+        upsert,
+        findFirst,
+      },
+    } as unknown as PrismaClient;
+    const repository = new PrismaContactRelationshipRepository(prisma);
+    const relationship = ContactRelationship.create({
+      requesterId: 'user-requester',
+      recipientId: 'user-recipient',
+    });
+
+    const execution = repository.save(relationship);
+
+    await expect(execution).rejects.toBe(persistenceFailure);
+    expect(findFirst).not.toHaveBeenCalled();
+  });
 });
