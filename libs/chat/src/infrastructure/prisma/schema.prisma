@@ -1,0 +1,21 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "./generated"
+  moduleFormat        = "cjs"
+  importFileExtension = ""
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["chat"]
+}
+
+model ContactRelationship {
+  id          String @id
+  requesterId String @map("requester_id")
+  recipientId String @map("recipient_id")
+  status      String
+
+  @@map("contact_relationships")
+  @@schema("chat")
+}
