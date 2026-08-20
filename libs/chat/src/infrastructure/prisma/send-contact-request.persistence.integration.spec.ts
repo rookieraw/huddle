@@ -74,4 +74,34 @@ describe('SendContactRequestUseCase with PostgreSQL persistence', () => {
     expect(firstResult).toMatchObject(expectedRelationship);
     expect(duplicateResult).toMatchObject(expectedRelationship);
   });
+
+  it('preserves persisted roles for sequential opposing requests', async () => {
+    const contactTargetDirectory: ContactTargetDirectory = {
+      targetUserExists: jest.fn().mockResolvedValue(true),
+    };
+    const useCase = new SendContactRequestUseCase(
+      contactTargetDirectory,
+      repository,
+    );
+
+    const firstResult = await useCase.execute({
+      requesterId: 'user-requester',
+      targetUserId: 'user-recipient',
+    });
+    const opposingResult = await useCase.execute({
+      requesterId: 'user-recipient',
+      targetUserId: 'user-requester',
+    });
+
+    const persistedRelationships = await prisma.contactRelationship.findMany();
+
+    expect(persistedRelationships).toHaveLength(1);
+    const expectedRelationship = {
+      id: persistedRelationships[0].id,
+      requesterId: 'user-requester',
+      recipientId: 'user-recipient',
+    };
+    expect(firstResult).toMatchObject(expectedRelationship);
+    expect(opposingResult).toMatchObject(expectedRelationship);
+  });
 });
