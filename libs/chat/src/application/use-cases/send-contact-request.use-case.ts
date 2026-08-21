@@ -20,7 +20,7 @@ export class SendContactRequestUseCase {
     private readonly contactRelationshipRepository: ContactRelationshipRepository,
   ) {}
 
-  async execute(input: SendContactRequestInput): Promise<void> {
+  async execute(input: SendContactRequestInput): Promise<ContactRelationship> {
     const targetExists = await this.contactTargetDirectory.targetUserExists(
       input.targetUserId,
     );
@@ -36,7 +36,7 @@ export class SendContactRequestUseCase {
       );
 
     if (currentRelationship) {
-      return;
+      return currentRelationship;
     }
 
     const relationship = ContactRelationship.create({
@@ -44,6 +44,6 @@ export class SendContactRequestUseCase {
       recipientId: input.targetUserId,
     });
 
-    await this.contactRelationshipRepository.save(relationship);
+    return this.contactRelationshipRepository.save(relationship);
   }
 }

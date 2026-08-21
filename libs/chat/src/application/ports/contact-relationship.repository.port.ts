@@ -5,5 +5,5 @@ export interface ContactRelationshipRepository {
     firstUserId: string,
     secondUserId: string,
   ): Promise<ContactRelationship | null>;
-  save(relationship: ContactRelationship): Promise<void>;
+  save(relationship: ContactRelationship): Promise<ContactRelationship>;
 }

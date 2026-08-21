@@ -53,8 +53,10 @@ class RecordingContactRelationshipRepository implements ContactRelationshipRepos
   );
 
   readonly save = jest.fn(
-    async (relationship: ContactRelationship): Promise<void> => {
+    async (relationship: ContactRelationship): Promise<ContactRelationship> => {
       this.currentRelationships.push(relationship);
+
+      return relationship;
     },
   );
 }
@@ -259,5 +261,29 @@ describe('SendContactRequestUseCase', () => {
     expect(existingRelationship?.requesterId).toBe('user-original-requester');
     expect(existingRelationship?.recipientId).toBe('user-original-recipient');
     expect(existingRelationship?.isPending()).toBe(true);
+  });
+
+  it('returns the persisted winner when save resolves a uniqueness collision', async () => {
+    const contactTargetDirectory = new ExistingContactTargetDirectory();
+    const contactRelationshipRepository =
+      new RecordingContactRelationshipRepository();
+    const persistedWinner = ContactRelationship.reconstitute({
+      id: 'persisted-winner-id',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      status: 'pending',
+    });
+    contactRelationshipRepository.save.mockResolvedValueOnce(persistedWinner);
+    const useCase = new SendContactRequestUseCase(
+      contactTargetDirectory,
+      contactRelationshipRepository,
+    );
+
+    const result = await useCase.execute({
+      requesterId: 'user-original-recipient',
+      targetUserId: 'user-original-requester',
+    });
+
+    expect(result).toBe(persistedWinner);
   });
 });
