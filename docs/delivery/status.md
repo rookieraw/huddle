@@ -1,8 +1,8 @@
 # Project Status
 
-Last updated: 2026-08-19  
+Last updated: 2026-08-21  
 Current implementation phase: Phase 2 — Contacts and Chat  
-Current activity: Contact-request Domain/Application core implemented and verified; remaining Contacts delivery is pending
+Current activity: Contact-request core and PostgreSQL persistence implemented and verified; operational delivery remains pending
 Portfolio Release target: End of Phase 4
 
 ## Purpose
@@ -21,21 +21,21 @@ It does not define target architecture, detailed Phase scope, or task-level work
 
 ## Status Summary
 
-| Area                        | Status                                                          |
-| --------------------------- | --------------------------------------------------------------- |
-| Phase 1 Identity            | Completed                                                       |
-| Phase 2 Identity additions  | `displayName` and the three public application APIs implemented |
-| Contacts                    | Contact-request core in progress; not operational               |
-| Direct and Group Chat       | Not started                                                     |
-| MongoDB Message persistence | Not started                                                     |
-| Realtime Chat               | Not started                                                     |
-| Deployment foundation       | Planned                                                         |
-| Voice and Video Calling     | Planned                                                         |
-| Billing                     | Planned                                                         |
-| First Portfolio Release     | Planned                                                         |
-| Meetings                    | Later                                                           |
-| Notification                | Later                                                           |
-| Hardening                   | Later                                                           |
+| Area                        | Status                                                               |
+| --------------------------- | -------------------------------------------------------------------- |
+| Phase 1 Identity            | Completed                                                            |
+| Phase 2 Identity additions  | `displayName` and the three public application APIs implemented      |
+| Contacts                    | Request core and PostgreSQL persistence implemented; not operational |
+| Direct and Group Chat       | Not started                                                          |
+| MongoDB Message persistence | Not started                                                          |
+| Realtime Chat               | Not started                                                          |
+| Deployment foundation       | Planned                                                              |
+| Voice and Video Calling     | Planned                                                              |
+| Billing                     | Planned                                                              |
+| First Portfolio Release     | Planned                                                              |
+| Meetings                    | Later                                                                |
+| Notification                | Later                                                                |
+| Hardening                   | Later                                                                |
 
 `Planned` and `Later` do not mean implemented.
 
@@ -96,9 +96,11 @@ The public boundary does not add Chat production adapters, directory or profile 
 
 The minimum Identity support required by Phase 2 is implemented and verified: `displayName`, Authentication, Directory, and Profile Query.
 
-The Contact-request Domain/Application core is implemented and unit-verified. It creates a pending relationship for a valid first request, rejects invalid targets, preserves dependency failures, and reuses an existing relationship for sequential duplicate requests.
+The Contact-request Domain/Application core and Chat-owned PostgreSQL persistence are implemented and verified. The implementation creates pending relationships, rejects invalid targets, preserves dependency and persistence failures, and reuses the persisted relationship for sequential duplicate or opposing requests.
 
-This core is not an operational Contacts capability. PostgreSQL persistence, database uniqueness and concurrency evidence, the Identity composition adapter, NestJS wiring, and HTTP delivery remain unimplemented.
+PostgreSQL enforces one current relationship per unordered user pair. Real PostgreSQL integration tests verify schema migration, repository mapping, unordered lookup, collision handling, and genuinely concurrent same-direction and opposing request convergence.
+
+This implementation is not yet an operational Contacts capability. The production Identity composition adapter, NestJS wiring, HTTP delivery, and the remaining Contacts lifecycle are unimplemented.
 
 The remaining Phase 2 implementation includes:
 
@@ -118,10 +120,10 @@ Further Phase 2 implementation continues with the remaining Contacts delivery, f
 
 Its remaining high-level outcome is:
 
-- Contacts;
+- remaining Contacts delivery;
 - Direct Conversations;
 - Group Conversations;
-- PostgreSQL Chat metadata;
+- remaining PostgreSQL Chat metadata;
 - MongoDB Messages;
 - authenticated realtime Chat;
 - concurrency-safe quota enforcement;
@@ -157,7 +159,7 @@ Failure at a future gate must be recorded when discovered. It must not be report
 
 Do not currently assume the existence of:
 
-- operational Contact management, including persistence and HTTP delivery;
+- operational Contact management and HTTP delivery;
 - Direct or Group Chat;
 - MongoDB Message persistence;
 - Chat Socket.IO events;

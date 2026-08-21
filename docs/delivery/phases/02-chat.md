@@ -1,6 +1,6 @@
 # Phase 2 — Contacts and Chat
 
-Status: In progress — minimum Identity support and Contact-request Domain/Application core implemented
+Status: In progress — Contact-request core and PostgreSQL persistence implemented
 Depends on: Phase 1 — Identity  
 Next gate: Phase 2.5 — CI/CD and Deployment Foundation
 
@@ -104,9 +104,11 @@ Do not introduce an Identity Outbox, profile projection, event bus, or profile c
 
 ### Contacts
 
-Contact-request core delivery has begun. The current Domain/Application implementation creates pending requests between distinct users, checks the untrusted target through a Chat-owned port, preserves dependency failures, and reuses an existing relationship for sequential duplicate requests.
+The Contact-request Domain/Application core and Chat-owned PostgreSQL persistence are implemented. The current implementation creates pending requests between distinct users, checks the untrusted target through a Chat-owned port, preserves dependency and persistence failures, and reuses the persisted relationship for sequential duplicate or opposing requests.
 
-This core is not operational. PostgreSQL persistence, database uniqueness and concurrent-request evidence, the production Identity composition adapter, NestJS wiring, HTTP delivery, and the remaining Contacts lifecycle are still pending.
+PostgreSQL enforces one current relationship per unordered user pair. Real PostgreSQL integration tests verify migration, repository mapping, unordered lookup, precise collision handling, and genuinely concurrent same-direction and opposing request convergence.
+
+This implementation is not operational. The production Identity composition adapter, NestJS wiring, HTTP delivery, and the remaining Contacts lifecycle are still pending.
 
 The full Phase 2 Contacts scope includes:
 
@@ -299,6 +301,8 @@ Add Chat-owned relational persistence for:
 - invitations;
 - relational quota state.
 
+Contact relationship persistence is implemented with a Chat-owned schema, migration, Prisma repository, and unordered current-pair uniqueness constraint. The remaining relational state above is not yet implemented.
+
 ### MongoDB
 
 Add the initial Chat-owned collection for:
@@ -375,6 +379,8 @@ Verify:
 - successful serialization retry;
 - bounded retry exhaustion;
 - application-level error translation.
+
+Contact pair uniqueness and same-direction and opposing concurrent Contact-request convergence are implemented and verified against real PostgreSQL. The remaining items above are still required as their capabilities are implemented.
 
 Mocks alone are insufficient for database concurrency and unique constraints.
 

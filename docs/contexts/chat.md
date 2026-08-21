@@ -1,7 +1,7 @@
 # Chat Context
 
-Status: Accepted target; Phase 2 Contact-request core implementation in progress  
-Last reviewed: 2026-08-19
+Status: Accepted target; Phase 2 Contact-request core and PostgreSQL persistence implemented  
+Last reviewed: 2026-08-21
 
 ## Responsibility
 
@@ -39,9 +39,11 @@ Chat does not own:
 | Meeting conversations        | Phase 5        |
 | Notification producer events | Phase 6        |
 
-The Phase 2 Contact-request Domain/Application core is implemented and unit-tested for pending request creation, invalid-target rejection, dependency-failure preservation, and sequential duplicate reuse.
+The Phase 2 Contact-request Domain/Application core and Chat-owned PostgreSQL persistence are implemented and tested. Current behavior covers pending request creation, invalid-target rejection, dependency and persistence failure preservation, sequential duplicate reuse, and opposing-request role preservation.
 
-This core is not yet operational. Contact persistence, database uniqueness and concurrency guarantees, the Identity composition adapter, NestJS and HTTP delivery, and the remaining Contacts lifecycle are pending.
+The database constraint enforces one current relationship per unordered user pair. Real PostgreSQL integration tests cover migration, repository mapping, unordered lookup, precise uniqueness-collision handling, and genuinely concurrent same-direction and opposing request convergence.
+
+This capability is not yet operational. The production Identity composition adapter, NestJS and HTTP delivery, and the remaining Contacts lifecycle are pending.
 
 Accepted target behavior does not imply current implementation.
 
@@ -340,6 +342,8 @@ Chat stores relational state in PostgreSQL:
 - Invitation permission
 - Invitations
 - Relational quota state
+
+Contact relationship persistence is implemented in the Chat Context. Conversation, membership, Group administration, invitation, and quota persistence remain target behavior.
 
 ### MongoDB
 
