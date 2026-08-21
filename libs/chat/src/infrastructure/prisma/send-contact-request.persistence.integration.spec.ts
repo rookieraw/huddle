@@ -224,4 +224,73 @@ describe('SendContactRequestUseCase with PostgreSQL persistence', () => {
     expect(firstResult).toMatchObject(expectedRelationship);
     expect(secondResult).toMatchObject(expectedRelationship);
   });
+
+  it('converges genuinely concurrent opposing requests', async () => {
+    const contactTargetDirectory: ContactTargetDirectory = {
+      targetUserExists: jest.fn().mockResolvedValue(true),
+    };
+    const saveBarrierRepository = new SaveBarrierContactRelationshipRepository(
+      repository,
+    );
+    const useCase = new SendContactRequestUseCase(
+      contactTargetDirectory,
+      saveBarrierRepository,
+    );
+    let firstCompleted = false;
+    let secondCompleted = false;
+
+    const firstExecution = useCase
+      .execute({
+        requesterId: 'user-first',
+        targetUserId: 'user-second',
+      })
+      .finally(() => {
+        firstCompleted = true;
+      });
+    const secondExecution = useCase
+      .execute({
+        requesterId: 'user-second',
+        targetUserId: 'user-first',
+      })
+      .finally(() => {
+        secondCompleted = true;
+      });
+
+    await saveBarrierRepository.waitUntilBothSavesAreBlocked();
+
+    expect(saveBarrierRepository.absentLookupCount).toBe(2);
+    expect(saveBarrierRepository.blockedSaveCount).toBe(2);
+    expect(firstCompleted).toBe(false);
+    expect(secondCompleted).toBe(false);
+
+    saveBarrierRepository.releaseSaves();
+
+    const [firstResult, secondResult] = await Promise.all([
+      firstExecution,
+      secondExecution,
+    ]);
+    const persistedRelationships = await prisma.contactRelationship.findMany();
+
+    expect(persistedRelationships).toHaveLength(1);
+    expect([
+      {
+        requesterId: 'user-first',
+        recipientId: 'user-second',
+      },
+      {
+        requesterId: 'user-second',
+        recipientId: 'user-first',
+      },
+    ]).toContainEqual({
+      requesterId: persistedRelationships[0].requesterId,
+      recipientId: persistedRelationships[0].recipientId,
+    });
+    const expectedRelationship = {
+      id: persistedRelationships[0].id,
+      requesterId: persistedRelationships[0].requesterId,
+      recipientId: persistedRelationships[0].recipientId,
+    };
+    expect(firstResult).toMatchObject(expectedRelationship);
+    expect(secondResult).toMatchObject(expectedRelationship);
+  });
 });
