@@ -6,7 +6,7 @@ Next gate: Phase 2.5 — CI/CD and Deployment Foundation
 
 ## Objective
 
-Deliver persistent, authenticated Direct and Group messaging between registered Huddle users.
+Deliver persistent, authenticated Direct and Group messaging between registered Huddle users through the backend and responsive web experience required to operate it.
 
 Phase 2 introduces:
 
@@ -18,24 +18,28 @@ Phase 2 introduces:
 - persistent Messages;
 - authenticated realtime messaging;
 - controlled PostgreSQL and MongoDB persistence;
-- the minimum Identity public capabilities required by Chat.
+- the minimum Identity public capabilities required by Chat;
+- the frontend foundation and user-visible Contacts and Chat journey.
 
 Calling, Meetings, Billing, and Notification are not part of this phase.
 
 ## Implementation Authority
 
-Phase 2 may implement only the Chat capabilities authorized by this document.
+Phase 2 may implement only the Chat and user-visible capabilities authorized by this document.
 
-Target Chat behavior is defined in:
+Target behavior is defined in:
 
 - [`../../contexts/chat.md`](../../contexts/chat.md)
 - [`../../contexts/identity.md`](../../contexts/identity.md)
+- [`../../product/user-experience.md`](../../product/user-experience.md)
 
-The Context documents define the target behavior.
+The Context documents define Domain and public-capability behavior.
 
-This phase defines which parts of that target may be implemented now.
+The User Experience document defines cross-capability experience principles.
 
-The existence of a future interface, Conversation type, Integration Event, entitlement, or extension point does not authorize its early implementation.
+This phase defines which parts of those targets may be implemented now.
+
+The existence of a future interface, journey, navigation seam, Conversation type, Integration Event, entitlement, or extension point does not authorize its early implementation.
 
 ## Entry Criteria
 
@@ -52,21 +56,24 @@ Phase 2 begins only after:
 
 Any required Identity migration for `displayName` must be explicitly designed before applying it to existing Phase 1 users.
 
+A completed Phase 1 backend does not automatically establish a browser-safe Authentication flow. The applicable frontend gate in this document must be satisfied before Authentication UI implementation begins.
+
 ## Required Documents by Task
 
-| Task                   | Read these documents                                                                              |
-| ---------------------- | ------------------------------------------------------------------------------------------------- |
-| Identity `displayName` | This phase file and `contexts/identity.md`                                                        |
-| Contacts               | This phase file, `contexts/chat.md`, and `contracts/http.md`                                      |
-| Direct Conversation    | This phase file, `contexts/chat.md`, and `contracts/http.md`                                      |
-| Group Conversation     | This phase file, `contexts/chat.md`, and `product/tiers.md` when quota-related                    |
-| Message persistence    | This phase file, `contexts/chat.md`, `architecture/data-and-consistency.md`, and ADR 0003         |
-| Realtime messaging     | This phase file, `contexts/chat.md`, `contracts/chat-realtime.md`, and `architecture/security.md` |
-| Identity lookup        | This phase file, `contexts/identity.md`, `contexts/chat.md`, and ADR 0004                         |
-| Quota enforcement      | This phase file, `product/tiers.md`, `contexts/chat.md`, and `contexts/billing.md`                |
-| Tests                  | Relevant task documents and `engineering/testing.md`                                              |
+| Task                   | Read these documents                                                                                                                           |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Identity `displayName` | This phase file and `contexts/identity.md`                                                                                                     |
+| Contacts               | This phase file, `contexts/chat.md`, and `contracts/http.md`                                                                                   |
+| Direct Conversation    | This phase file, `contexts/chat.md`, and `contracts/http.md`                                                                                   |
+| Group Conversation     | This phase file, `contexts/chat.md`, and `product/tiers.md` when quota-related                                                                 |
+| Message persistence    | This phase file, `contexts/chat.md`, `architecture/data-and-consistency.md`, and ADR 0003                                                      |
+| Realtime messaging     | This phase file, `contexts/chat.md`, `contracts/chat-realtime.md`, and `architecture/security.md`                                              |
+| Identity lookup        | This phase file, `contexts/identity.md`, `contexts/chat.md`, and ADR 0004                                                                      |
+| Quota enforcement      | This phase file, `product/tiers.md`, `contexts/chat.md`, and `contexts/billing.md`                                                             |
+| Frontend experience    | This phase file, `product/user-experience.md`, applicable HTTP or realtime contracts, `architecture/security.md`, and `engineering/testing.md` |
+| Tests                  | Relevant task documents and `engineering/testing.md`                                                                                           |
 
-Do not load Calling, Meeting, Stripe, or Notification documents for an ordinary Phase 2 Chat task.
+Do not load Calling, Meeting, Stripe, or Notification documents for an ordinary Phase 2 Chat or frontend task.
 
 ADR 0003 is needed when working on the persistence strategy or its implementation boundary. ADR 0004 is needed when designing or changing a cross-context adapter, not for every Chat use case.
 
@@ -286,6 +293,83 @@ Exact request, response, pagination, and transport-error shapes belong in:
 
 `contracts/http.md`
 
+Before the first Phase 2 Chat controller or consuming frontend slice:
+
+- the stable shared error envelope must be accepted;
+- the first exact Chat HTTP contract must be created;
+- the implemented subset must be registered;
+- applicable pagination behavior must be defined.
+
+A target user journey is not an HTTP contract.
+
+### Frontend Experience
+
+Phase 2 establishes the responsive web foundation required to operate its authorized Identity, Contacts, Conversation, Message, and realtime behavior.
+
+The target journey is:
+
+```text
+Authentication
+→ Contacts
+→ Direct or Group Conversation
+→ Message history
+→ realtime Message delivery
+→ reconnect and durable reconciliation
+```
+
+Cross-capability experience principles belong to:
+
+[`../../product/user-experience.md`](../../product/user-experience.md)
+
+The frontend:
+
+- consumes only accepted public HTTP and realtime contracts;
+- treats the backend as authoritative for identity, authorization, membership, roles, entitlements, persistence, and lifecycle state;
+- distinguishes pending, confirmed, failed, unavailable, disconnected, reconnecting, and reconciled states where applicable;
+- preserves the distinction between Contacts and Conversations;
+- does not expose later-Phase capabilities as available;
+- does not invent conventional account features absent from Product Scope.
+
+Phase 2 may expose implemented Phase 1 Authentication behavior through the web application without reopening Phase 1 Domain scope.
+
+#### Browser Authentication Gate
+
+Before an Authentication UI implementation outcome, explicitly decide and document:
+
+- browser access-token transport and storage;
+- refresh-token transport, storage, and atomic rotation;
+- OAuth callback handoff to the frontend;
+- applicable cookie, CSRF, XSS, and CORS behavior;
+- the user-visible treatment of transitional Email verification.
+
+The decision must update the owning Identity, HTTP-contract, security, implementation, and test sources together where applicable.
+
+This Phase file does not select that transport.
+
+#### Chat Contract Gate
+
+Before a Contacts or Conversation frontend slice consumes backend behavior:
+
+- the required backend capability must be implemented or part of the same authorized vertical outcome;
+- the stable shared HTTP error shape must be accepted;
+- the exact owning Chat HTTP contract must exist;
+- applicable pagination and retry identities must be documented;
+- realtime behavior must follow `contracts/chat-realtime.md`.
+
+The frontend must not infer missing transport behavior from Domain or Phase documentation.
+
+#### Client Quality Gate
+
+Before the first frontend implementation outcome, explicitly define:
+
+- the accessibility conformance target;
+- supported-browser baseline;
+- responsive minimum;
+- keyboard and focus evidence;
+- applicable component and browser-journey verification.
+
+Selecting a new frontend or test dependency remains a separate dependency-managed implementation decision.
+
 ## Persistence Introduced
 
 ### PostgreSQL
@@ -424,6 +508,26 @@ Verify:
 - token-expiration disconnect;
 - reconnect behavior.
 
+### Frontend
+
+Verify applicable Phase 2 web behavior through the smallest reliable layer:
+
+- pure presentation and formatting;
+- loading, empty, validation, authorization, unavailable, pending, confirmed, and failed component states;
+- public HTTP and realtime translation;
+- Authentication and session boundaries after the browser transport is accepted;
+- Contacts-to-Conversation navigation;
+- persistent Message history;
+- Message pending, accepted, failed, and reconciled presentation;
+- realtime disconnect, reconnect, duplicate or late delivery where applicable, and durable reconciliation;
+- keyboard operation and accessibility semantics;
+- responsive narrow-screen behavior;
+- a small number of critical authenticated browser journeys.
+
+Frontend tests do not replace backend authorization, persistence, concurrency, provider, realtime-contract, or deployment evidence.
+
+Hiding or disabling a control is not proof that the backend rejects an unauthorized operation.
+
 ## Definition of Done
 
 Phase 2 is complete only when:
@@ -441,6 +545,11 @@ Phase 2 is complete only when:
 - no Chat code imports Identity internals;
 - no client-controlled tier or sender identity exists;
 - HTTP and realtime contracts are documented;
+- the browser Authentication transport and transitional verification experience are explicitly accepted before their UI is implemented;
+- the accessibility, supported-browser, responsive, keyboard, and focus baselines are explicit;
+- registered users can complete the authorized Phase 2 Contacts and Chat journeys through the responsive web application;
+- critical frontend component, contract-translation, browser-journey, realtime-reconciliation, accessibility, and responsive evidence passes;
+- the frontend does not present target-only behavior as available;
 - excluded future capabilities have not been introduced;
 - [`../status.md`](../status.md) is updated;
 - Phase 2.5 deployment prerequisites are documented.
@@ -466,6 +575,10 @@ Do not implement during Phase 2:
 - Chat Outbox without a real consumer;
 - Notification delivery;
 - Slack integration;
+- native mobile applications;
+- complete offline operation;
+- a complete Progressive Web App commitment;
+- unsupported account settings or password recovery;
 - recording;
 - anonymous guests;
 - Enterprise;

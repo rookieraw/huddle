@@ -1,7 +1,7 @@
 # Product Scope
 
 Status: Accepted  
-Last reviewed: 2026-08-07
+Last reviewed: 2026-08-23
 
 ## Purpose
 
@@ -216,6 +216,9 @@ The following capabilities are intentionally deferred:
 - Recording
 - Recording storage quotas
 - Advanced meeting moderation
+- Native mobile applications
+- Complete offline operation
+- Complete Progressive Web App behavior
 - Multi-region deployment
 - High-availability media infrastructure
 - Independent microservice deployment
