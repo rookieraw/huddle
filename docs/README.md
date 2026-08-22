@@ -78,9 +78,10 @@ Read:
 
 1. [`../README.md`](../README.md)
 2. [`product/scope.md`](product/scope.md)
-3. [`delivery/status.md`](delivery/status.md)
+3. [`product/user-experience.md`](product/user-experience.md)
+4. [`delivery/status.md`](delivery/status.md)
 
-This path explains what Huddle is, its accepted product boundary, and what currently exists.
+This path explains what Huddle is, its accepted product boundary, how users should experience its capabilities, and what currently exists.
 
 ## Architecture
 
@@ -101,6 +102,8 @@ Read:
 3. the owning file under [`contexts/`](contexts/)
 4. the relevant file under [`contracts/`](contracts/)
 5. [`engineering/testing.md`](engineering/testing.md)
+
+For frontend work, also read [`product/user-experience.md`](product/user-experience.md) and the applicable security and transport contracts.
 
 ## Local Development
 
@@ -125,10 +128,11 @@ Read:
 
 1. [`../README.md`](../README.md)
 2. [`product/scope.md`](product/scope.md)
-3. [`architecture/system.md`](architecture/system.md)
-4. [`architecture/context-map.md`](architecture/context-map.md)
-5. [`decisions/README.md`](decisions/README.md)
-6. [`operations/portfolio-demo.md`](operations/portfolio-demo.md)
+3. [`product/user-experience.md`](product/user-experience.md)
+4. [`architecture/system.md`](architecture/system.md)
+5. [`architecture/context-map.md`](architecture/context-map.md)
+6. [`decisions/README.md`](decisions/README.md)
+7. [`operations/portfolio-demo.md`](operations/portfolio-demo.md)
 
 ---
 
@@ -136,15 +140,18 @@ Read:
 
 ## Product
 
-| Document                               | Responsibility                                              | Update when                                   |
-| -------------------------------------- | ----------------------------------------------------------- | --------------------------------------------- |
-| [`product/scope.md`](product/scope.md) | Committed, deferred, stretch, and non-goal product boundary | A capability enters, leaves, or changes scope |
-| [`product/tiers.md`](product/tiers.md) | Free and Pro features, prices, limits, and downgrade policy | A user-facing entitlement or quota changes    |
+| Document                                                   | Responsibility                                                                   | Update when                                                  |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| [`product/scope.md`](product/scope.md)                     | Committed, deferred, stretch, and non-goal product boundary                      | A capability enters, leaves, or changes scope                |
+| [`product/user-experience.md`](product/user-experience.md) | Cross-capability journeys, information architecture, and shared UI-state meaning | A cross-capability journey or shared experience rule changes |
+| [`product/tiers.md`](product/tiers.md)                     | Free and Pro features, prices, limits, and downgrade policy                      | A user-facing entitlement or quota changes                   |
 
 Product documents answer:
 
 ```text
 What should the product permit?
++
+How should users experience those capabilities?
 ```
 
 They do not answer when a capability is delivered or whether it is implemented.
@@ -246,18 +253,18 @@ A materially different decision should supersede the existing ADR.
 
 ## Delivery
 
-| Document                                                                                                     | Responsibility                                                          | Update when                                               |
-| ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- | --------------------------------------------------------- |
-| [`delivery/roadmap.md`](delivery/roadmap.md)                                                                 | Delivery order, gates, and Portfolio Release sequence                   | Phase order or milestone boundary changes                 |
-| [`delivery/status.md`](delivery/status.md)                                                                   | Current implementation state, current activity, next work, and blockers | Implementation state or active work changes materially    |
-| [`delivery/phases/01-identity.md`](delivery/phases/01-identity.md)                                           | Historical boundary and completion record for Identity                  | A correction to the historical Phase boundary is required |
-| [`delivery/phases/02-chat.md`](delivery/phases/02-chat.md)                                                   | Authorized Phase 2 Identity additions, Contacts, and Chat work          | Phase 2 scope or gate changes                             |
-| [`delivery/phases/02.5-deployment-foundation.md`](delivery/phases/02.5-deployment-foundation.md)             | CI/CD and deployable HTTP and Chat foundation                           | Deployment-foundation gate changes                        |
-| [`delivery/phases/03-calling.md`](delivery/phases/03-calling.md)                                             | Authorized Direct and Group Calling work                                | Phase 3 scope or gate changes                             |
-| [`delivery/phases/04-billing-and-portfolio-release.md`](delivery/phases/04-billing-and-portfolio-release.md) | Billing implementation and first Portfolio Release                      | Phase 4 scope or release boundary changes                 |
-| [`delivery/phases/05-meetings.md`](delivery/phases/05-meetings.md)                                           | Authorized standalone Meeting work                                      | Phase 5 scope or gate changes                             |
-| [`delivery/phases/06-notification.md`](delivery/phases/06-notification.md)                                   | Authorized Notification and minimal Slack integration                   | Phase 6 scope or event-catalog gate changes               |
-| [`delivery/phases/07-hardening.md`](delivery/phases/07-hardening.md)                                         | Security, performance, failure, and portfolio hardening                 | Final validation boundary changes                         |
+| Document                                                                                                     | Responsibility                                                            | Update when                                               |
+| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [`delivery/roadmap.md`](delivery/roadmap.md)                                                                 | Delivery order, gates, and Portfolio Release sequence                     | Phase order or milestone boundary changes                 |
+| [`delivery/status.md`](delivery/status.md)                                                                   | Current implementation state, current activity, next work, and blockers   | Implementation state or active work changes materially    |
+| [`delivery/phases/01-identity.md`](delivery/phases/01-identity.md)                                           | Historical boundary and completion record for Identity                    | A correction to the historical Phase boundary is required |
+| [`delivery/phases/02-chat.md`](delivery/phases/02-chat.md)                                                   | Authorized Phase 2 Identity additions, Contacts, Chat, and web experience | Phase 2 scope or gate changes                             |
+| [`delivery/phases/02.5-deployment-foundation.md`](delivery/phases/02.5-deployment-foundation.md)             | CI/CD and deployable HTTP and Chat foundation                             | Deployment-foundation gate changes                        |
+| [`delivery/phases/03-calling.md`](delivery/phases/03-calling.md)                                             | Authorized Direct and Group Calling work                                  | Phase 3 scope or gate changes                             |
+| [`delivery/phases/04-billing-and-portfolio-release.md`](delivery/phases/04-billing-and-portfolio-release.md) | Billing implementation and first Portfolio Release                        | Phase 4 scope or release boundary changes                 |
+| [`delivery/phases/05-meetings.md`](delivery/phases/05-meetings.md)                                           | Authorized standalone Meeting work                                        | Phase 5 scope or gate changes                             |
+| [`delivery/phases/06-notification.md`](delivery/phases/06-notification.md)                                   | Authorized Notification and minimal Slack integration                     | Phase 6 scope or event-catalog gate changes               |
+| [`delivery/phases/07-hardening.md`](delivery/phases/07-hardening.md)                                         | Security, performance, failure, and portfolio hardening                   | Final validation boundary changes                         |
 
 Delivery documents answer:
 
@@ -271,11 +278,11 @@ A future Phase document is not authorization to implement its features early.
 
 ## Engineering
 
-| Document                                                     | Responsibility                                                                            | Update when                                                 |
-| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| [`engineering/setup.md`](engineering/setup.md)               | Local installation, environment, infrastructure, database initialization, and startup     | Local setup or executable development configuration changes |
-| [`engineering/testing.md`](engineering/testing.md)           | Test layers, risk-based coverage, concurrency, provider, realtime, and media verification | Test strategy or CI quality gate changes                    |
-| [`engineering/dependencies.md`](engineering/dependencies.md) | Dependency ownership, update policy, build approval, and verification                     | Dependency policy or approved exception changes             |
+| Document                                                     | Responsibility                                                                                                        | Update when                                                 |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| [`engineering/setup.md`](engineering/setup.md)               | Local installation, environment, infrastructure, database initialization, and startup                                 | Local setup or executable development configuration changes |
+| [`engineering/testing.md`](engineering/testing.md)           | Test layers, risk-based coverage, frontend, concurrency, provider, realtime, media, and failure-recovery verification | Test strategy or CI quality gate changes                    |
+| [`engineering/dependencies.md`](engineering/dependencies.md) | Dependency ownership, update policy, build approval, and verification                                                 | Dependency policy or approved exception changes             |
 
 Engineering documents describe repeatable development practices.
 
@@ -303,28 +310,30 @@ Planned procedures must remain labeled as planned until exercised.
 
 # Task-based Reading Guide
 
-| Task                                 | Minimum documents                                                                                                    |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| Check what exists now                | `delivery/status.md`                                                                                                 |
-| Plan the next implementation         | `delivery/status.md` and the active Phase                                                                            |
-| Change product scope                 | `product/scope.md` and `delivery/roadmap.md`                                                                         |
-| Change a tier limit                  | `product/tiers.md`, affected Context, and active Phase                                                               |
-| Change a domain invariant            | Owning Context, active Phase, and tests                                                                              |
-| Add an HTTP endpoint                 | `contracts/http.md`, owning Context-specific HTTP contract, owning Context, and active Phase                         |
-| Change an Identity HTTP endpoint     | `contracts/identity-http.md`, `contexts/identity.md`, and relevant Phase                                             |
-| Change a shared HTTP convention      | `contracts/http.md`, affected Context contracts, and affected tests                                                  |
-| Add Chat Socket.IO behavior          | `contracts/chat-realtime.md`, `contexts/chat.md`, and active Phase                                                   |
-| Add shared Conferencing behavior     | `contracts/conferencing-realtime.md`, relevant Conferencing Context document, and active Phase                       |
-| Add Direct Call P2P signaling        | `contracts/conferencing-realtime.md`, `contracts/conferencing-p2p.md`, `contexts/conferencing/calls.md`, and Phase 3 |
-| Add Group Call SFU signaling         | `contracts/conferencing-realtime.md`, `contracts/conferencing-sfu.md`, Conferencing Context, and Phase 3             |
-| Add Meeting realtime behavior        | Applicable shared or SFU contract, `contracts/meeting-realtime.md`, `contexts/conferencing/meetings.md`, and Phase 5 |
-| Add a synchronous cross-context read | Consumer Context, provider Context, and ADR 0004                                                                     |
-| Add an Integration Event             | Producer Context, consumer Context, `contracts/integration-events.md`, and ADR 0004                                  |
-| Change persistence ownership         | Owning Context, `architecture/data-and-consistency.md`, and ADR 0002                                                 |
-| Implement Stripe behavior            | `contexts/billing.md`, Phase 4, and applicable Contract                                                              |
-| Change deployment                    | `operations/deployment.md`, active Phase, and ADR 0007 when strategy changes                                         |
-| Diagnose a deployed failure          | `operations/runbook.md` and affected Context                                                                         |
-| Prepare the portfolio demonstration  | `operations/portfolio-demo.md` and `delivery/status.md`                                                              |
+| Task                                 | Minimum documents                                                                                                          |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Check what exists now                | `delivery/status.md`                                                                                                       |
+| Plan the next implementation         | `delivery/status.md` and the active Phase                                                                                  |
+| Plan a frontend journey              | `product/user-experience.md`, `delivery/status.md`, active Phase, and applicable contracts                                 |
+| Implement a frontend slice           | `product/user-experience.md`, active Phase, applicable contracts, `architecture/security.md`, and `engineering/testing.md` |
+| Change product scope                 | `product/scope.md` and `delivery/roadmap.md`                                                                               |
+| Change a tier limit                  | `product/tiers.md`, affected Context, and active Phase                                                                     |
+| Change a domain invariant            | Owning Context, active Phase, and tests                                                                                    |
+| Add an HTTP endpoint                 | `contracts/http.md`, owning Context-specific HTTP contract, owning Context, and active Phase                               |
+| Change an Identity HTTP endpoint     | `contracts/identity-http.md`, `contexts/identity.md`, and relevant Phase                                                   |
+| Change a shared HTTP convention      | `contracts/http.md`, affected Context contracts, and affected tests                                                        |
+| Add Chat Socket.IO behavior          | `contracts/chat-realtime.md`, `contexts/chat.md`, and active Phase                                                         |
+| Add shared Conferencing behavior     | `contracts/conferencing-realtime.md`, relevant Conferencing Context document, and active Phase                             |
+| Add Direct Call P2P signaling        | `contracts/conferencing-realtime.md`, `contracts/conferencing-p2p.md`, `contexts/conferencing/calls.md`, and Phase 3       |
+| Add Group Call SFU signaling         | `contracts/conferencing-realtime.md`, `contracts/conferencing-sfu.md`, Conferencing Context, and Phase 3                   |
+| Add Meeting realtime behavior        | Applicable shared or SFU contract, `contracts/meeting-realtime.md`, `contexts/conferencing/meetings.md`, and Phase 5       |
+| Add a synchronous cross-context read | Consumer Context, provider Context, and ADR 0004                                                                           |
+| Add an Integration Event             | Producer Context, consumer Context, `contracts/integration-events.md`, and ADR 0004                                        |
+| Change persistence ownership         | Owning Context, `architecture/data-and-consistency.md`, and ADR 0002                                                       |
+| Implement Stripe behavior            | `contexts/billing.md`, Phase 4, and applicable Contract                                                                    |
+| Change deployment                    | `operations/deployment.md`, active Phase, and ADR 0007 when strategy changes                                               |
+| Diagnose a deployed failure          | `operations/runbook.md` and affected Context                                                                               |
+| Prepare the portfolio demonstration  | `operations/portfolio-demo.md` and `delivery/status.md`                                                                    |
 
 An ADR is not required reading for every routine implementation after its pattern is established.
 

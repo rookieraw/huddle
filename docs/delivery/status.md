@@ -1,8 +1,11 @@
 # Project Status
 
-Last updated: 2026-08-21  
-Current implementation phase: Phase 2 — Contacts and Chat  
+Last updated: 2026-08-23
+
+Current implementation phase: Phase 2 — Contacts and Chat
+
 Current activity: Contact-request core and PostgreSQL persistence implemented and verified; operational delivery remains pending
+
 Portfolio Release target: End of Phase 4
 
 ## Purpose
@@ -108,13 +111,15 @@ The remaining Phase 2 implementation includes:
 - Direct and Group Conversations;
 - MongoDB Message persistence;
 - authenticated realtime Chat;
-- concurrency-safe quota enforcement.
+- concurrency-safe quota enforcement;
+- browser Authentication experience after its security and transport gates are accepted;
+- the responsive frontend foundation and authorized Contacts and Chat web journeys.
 
 Accepted target documentation is not evidence of implementation for the remaining items above.
 
 ## Next Implementation Work
 
-Further Phase 2 implementation continues with the remaining Contacts delivery, followed by the remaining Chat capabilities in:
+Further Phase 2 implementation continues with the remaining Contacts delivery, followed by the remaining Chat capabilities and their authorized frontend slices in:
 
 [`phases/02-chat.md`](phases/02-chat.md)
 
@@ -127,7 +132,9 @@ Its remaining high-level outcome is:
 - MongoDB Messages;
 - authenticated realtime Chat;
 - concurrency-safe quota enforcement;
-- the transitional static Free entitlement adapter.
+- the transitional static Free entitlement adapter;
+- browser Authentication experience after its security and transport gates are accepted;
+- the responsive frontend foundation and authorized Contacts and Chat web journeys.
 
 The Phase file is authoritative for the detailed implementation boundary.
 

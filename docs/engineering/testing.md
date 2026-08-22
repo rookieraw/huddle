@@ -1,7 +1,7 @@
 # Testing Strategy
 
 Status: Accepted engineering policy  
-Last reviewed: 2026-08-07
+Last reviewed: 2026-08-22
 
 ## Purpose
 
@@ -10,8 +10,8 @@ This document defines Huddle's system-wide testing strategy.
 It describes:
 
 - which test layer should prove which behavior;
-- when mocks, fakes, real datastores, or external test environments are appropriate;
-- how concurrency, time, persistence, realtime behavior, and failure recovery are tested;
+- when mocks, fakes, real datastores, browsers, or external test environments are appropriate;
+- how frontend, concurrency, time, persistence, realtime behavior, and failure recovery are tested;
 - how coverage is measured and improved;
 - which evidence is required before a Phase is considered complete.
 
@@ -35,12 +35,15 @@ Huddle follows these principles:
 12. Capacity claims require measured target-environment evidence.
 13. A failing test is RED evidence only when it fails because the intended behavior is absent or incorrect.
 14. Boundary claims require evidence from every translation, persistence, wiring, or compatibility layer that can violate them.
+15. Frontend tests prove user-observable behavior and contract translation rather than framework internals.
+16. Client-side hiding or disabling never replaces backend authorization evidence.
 
 ## Sources of Testing Authority
 
 | Information                        | Authoritative source            |
 | ---------------------------------- | ------------------------------- |
 | System-wide testing policy         | This document                   |
+| Cross-capability user experience   | `product/user-experience.md`    |
 | Context invariants requiring tests | Context document                |
 | Current Phase acceptance tests     | Active Phase document           |
 | Exact test scripts                 | Owning package's `package.json` |
@@ -75,7 +78,7 @@ GREEN is established only when:
 - the smallest directly affected regression set passes;
 - required higher-layer evidence is not replaced by a lower-layer fake or mock.
 
-Passing one focused test does not prove persistence, dependency-injection wiring, transport compatibility, or complete application composition unless that test actually exercises the claimed layer.
+Passing one focused test does not prove persistence, dependency-injection wiring, transport compatibility, browser behavior, accessibility, or complete application composition unless that test actually exercises the claimed layer.
 
 ### REFACTOR Evidence
 
@@ -98,6 +101,7 @@ They should normally use:
 - no database;
 - no NestJS container;
 - no HTTP;
+- no browser;
 - no provider SDK;
 - no unnecessary mocks.
 
@@ -173,9 +177,9 @@ A mocked repository cannot prove:
 
 ### Interface Tests
 
-Interface tests verify the behavior of an HTTP controller, realtime gateway, or provider callback boundary.
+Interface tests verify the behavior of an HTTP controller, realtime gateway, provider callback boundary, or frontend contract adapter.
 
-Typical subjects include:
+Typical backend subjects include:
 
 - DTO validation;
 - authentication guard wiring;
@@ -187,9 +191,57 @@ Typical subjects include:
 - external-provider signature handling;
 - invalid payload rejection.
 
+Typical frontend-adapter subjects include:
+
+- request and response translation;
+- stable public-error mapping;
+- token or session outcome mapping after its transport is accepted;
+- pagination and cursor translation;
+- realtime acknowledgement translation;
+- duplicate or late delivery handling;
+- preservation of dependency failure versus valid empty results.
+
 A controller can often be tested without booting the complete application when only error mapping or delegation is under test.
 
-Use the full application only when DI, middleware, pipes, guards, raw body, routing, or transport wiring is part of the behavior being proved.
+A frontend adapter can often be tested without rendering the complete application when only contract translation is under test.
+
+Use the full application or browser only when DI, middleware, pipes, guards, raw body, routing, session behavior, navigation, or transport wiring is part of the behavior being proved.
+
+### Frontend Component Tests
+
+Frontend component tests verify user-observable presentation and interaction in a controlled rendering environment.
+
+Typical subjects include:
+
+- accessible names and semantic structure;
+- keyboard interaction;
+- focus movement;
+- loading, empty, pending, confirmed, failed, and unavailable states;
+- validation feedback;
+- enabled and disabled control behavior;
+- preservation of safe user input after failure;
+- navigation intent;
+- responsive presentation behavior that can be proven without a real browser.
+
+Component tests should assert what a user can perceive or operate.
+
+Avoid assertions tied only to:
+
+- internal hook calls;
+- private component state;
+- CSS implementation details with no user-visible effect;
+- framework-generated markup unrelated to behavior;
+- snapshots that obscure meaningful interaction.
+
+A component test does not prove:
+
+- backend authorization;
+- HTTP routing;
+- persistence;
+- realtime delivery;
+- provider callbacks;
+- browser storage security;
+- production responsive layout.
 
 ### End-to-End Tests
 
@@ -200,14 +252,19 @@ They should prove that major layers work together.
 Examples include:
 
 - registration through authenticated access;
+- a browser Authentication and session journey after its transport is accepted;
+- Contacts through opening a Direct Conversation;
 - persistent Message send and history retrieval;
+- realtime Message delivery and durable reconciliation;
 - entitlement-protected mutation;
 - webhook-driven subscription transition;
 - Call or Meeting authorization through realtime transport.
 
-E2E suites remain intentionally smaller than Domain and integration suites.
+E2E suites remain intentionally smaller than Domain, component, and integration suites.
 
-Do not repeat every validation edge case through full application bootstrap when a lower layer already proves it adequately.
+Do not repeat every validation edge case through full application bootstrap or a real browser when a lower layer already proves it adequately.
+
+A browser test using mocked network responses does not prove backend routing, authorization, persistence, or application composition.
 
 ## Boundary and Compatibility Verification
 
@@ -230,11 +287,16 @@ Different boundary claims require different evidence:
 | Package entrypoint exposure                             | Import or compilation evidence                           |
 | NestJS provider exposure                                | Consumer-module resolution test through the public token |
 | Existing HTTP or realtime path remains compatible       | Representative interface or end-to-end test              |
+| Frontend public-contract translation                    | Focused frontend adapter test                            |
+| User-observable component interaction                   | Frontend component test                                  |
+| Complete browser journey                                | Browser E2E through the claimed composition              |
 | Missing result remains distinct from dependency failure | Success, missing-result, and failure-path tests          |
 
 One test may prove more than one claim only when it actually crosses all relevant boundaries.
 
-A fake repository can prove that an application service calls one port operation. It cannot prove the datastore query, persistence mapping, provider export, or application composition behind that port.
+A fake repository can prove that an application service calls one port operation. It cannot prove the datastore query, persistence mapping, provider export, application composition, or frontend behavior behind that port.
+
+A mocked frontend response can prove presentation mapping. It cannot prove the backend contract or deployed journey.
 
 ## Risk-Based Test Depth
 
@@ -245,8 +307,9 @@ Testing depth is selected according to risk.
 Require strong multi-layer evidence:
 
 - authentication;
+- browser token and refresh handling;
 - credential handling;
-- OAuth account linking;
+- OAuth account linking and callback handoff;
 - authorization;
 - cross-user data isolation;
 - Billing entitlements;
@@ -255,6 +318,7 @@ Require strong multi-layer evidence:
 - quota concurrency;
 - ownership transfer;
 - Message idempotency;
+- realtime UI reconciliation after uncertain delivery;
 - Meeting history boundaries;
 - signaling authorization;
 - participant capacity;
@@ -264,7 +328,7 @@ Require strong multi-layer evidence:
 
 ### Medium-Risk Areas
 
-Usually require Domain or application tests plus selected integration tests:
+Usually require Domain or application tests plus selected integration, component, or browser tests:
 
 - ordinary lifecycle transitions;
 - pagination;
@@ -273,14 +337,18 @@ Usually require Domain or application tests plus selected integration tests:
 - role changes;
 - delivery retry classification;
 - projection updates.
+- cross-capability navigation;
+- pending and failure presentation;
+- responsive layout transitions affecting operation.
 
 ### Lower-Risk Areas
 
-May require focused unit or interface tests:
+May require focused unit, component, or interface tests:
 
 - straightforward formatting;
 - simple mapping;
 - presentation-only helpers;
+- static content;
 - configuration with no business effect.
 
 Low risk does not mean no testing. It means using the smallest test capable of proving the behavior.
@@ -310,7 +378,7 @@ When a package gains meaningful implementation:
 
 Thresholds may differ by package or layer.
 
-A pure Domain package may reasonably have higher coverage than infrastructure glue or generated code.
+A pure Domain package may reasonably have higher coverage than infrastructure glue, presentation composition, or generated code.
 
 ### Coverage Is Not Completion
 
@@ -320,6 +388,8 @@ A high percentage does not prove:
 - database constraints;
 - concurrency safety;
 - idempotency;
+- browser interoperability;
+- accessibility;
 - recovery;
 - deployment compatibility;
 - media capacity;
@@ -566,6 +636,165 @@ Tests must not:
 
 Provider test success does not replace Huddle persistence and reconciliation tests.
 
+## Frontend Testing
+
+Frontend tests are selected by user-visible risk and the boundary being claimed.
+
+The accepted cross-capability experience belongs to:
+
+[`../product/user-experience.md`](../product/user-experience.md)
+
+The applicable Phase owns required journeys and completion evidence.
+
+### Pure Presentation Logic
+
+Test pure functions without a component renderer when possible.
+
+Examples include:
+
+- timestamp presentation;
+- initials or placeholder-avatar derivation;
+- display-value normalization;
+- ordering of already-authorized view data;
+- user-visible status mapping from a trusted frontend model.
+
+Do not copy Domain validation or authorization rules into presentation helpers.
+
+### Component Interaction
+
+Use component tests for:
+
+- semantic structure;
+- accessible names;
+- keyboard operation;
+- focus behavior;
+- loading and empty states;
+- validation feedback;
+- pending, confirmed, and failed mutations;
+- dependency-unavailable presentation;
+- retry controls;
+- preservation of safe user input;
+- narrow-layout interaction where a real browser is not required.
+
+Prefer role, label, visible text, and user interaction assertions over internal component structure.
+
+A component hidden by authorization-derived input does not prove the backend authorization decision.
+
+### Public-Contract Translation
+
+Frontend HTTP and realtime adapters require focused tests for applicable:
+
+- request construction;
+- response narrowing;
+- stable error mapping;
+- pagination and cursor behavior;
+- client-operation identity;
+- token-expiration outcome;
+- acknowledgement mapping;
+- missing result versus dependency failure;
+- unsupported or malformed runtime payloads.
+
+Static TypeScript types do not validate runtime HTTP or Socket.IO data.
+
+Do not create frontend-only meanings that contradict the owning public contract.
+
+### Browser Journeys
+
+Use real-browser E2E tests for a small number of critical integrated journeys, including applicable:
+
+- Authentication and session establishment after the browser transport is accepted;
+- session expiration and reauthentication;
+- Contacts through opening a Direct Conversation;
+- Message send through durable history;
+- realtime delivery across two authenticated sessions;
+- disconnect, reconnect, and durable reconciliation;
+- entitlement-protected behavior;
+- OAuth or provider redirect behavior where environment validation is required;
+- keyboard navigation across major application regions;
+- representative narrow-screen operation.
+
+A browser test must state whether it uses:
+
+- real application composition;
+- controlled provider behavior;
+- mocked network responses;
+- a deployed environment.
+
+Do not use a mocked browser journey as evidence for backend persistence, authorization, provider integration, or deployment.
+
+### Realtime Presentation and Reconciliation
+
+Frontend realtime tests verify applicable:
+
+- connected state;
+- disconnected state;
+- reconnecting state;
+- token-expiration transition;
+- duplicate delivery;
+- late delivery;
+- acknowledgement loss;
+- uncertain local pending state;
+- durable history reconciliation;
+- removal of stale or duplicate presentation.
+
+Do not manufacture an ordering or retry guarantee absent from the realtime contract.
+
+### Accessibility Evidence
+
+The applicable Phase or frontend-foundation task must define the accepted accessibility target before implementation.
+
+Evidence should cover applicable:
+
+- semantic landmarks;
+- headings and labels;
+- keyboard-only operation;
+- visible focus;
+- dialog and menu focus management;
+- status and error announcement;
+- non-color-only meaning;
+- reduced-motion behavior;
+- contrast;
+- automated checks;
+- focused manual checks for behavior automation cannot prove reliably.
+
+Automated accessibility checks do not replace keyboard and assistive-technology review of critical journeys.
+
+### Responsive Evidence
+
+The supported-browser and responsive baseline must be explicit before implementation.
+
+Verify representative:
+
+- desktop layout;
+- narrow-screen layout;
+- navigation transition;
+- Conversation-list and active-Conversation transition;
+- overflow behavior;
+- touch-target operability where applicable;
+- focus preservation after responsive layout changes;
+- absence of hover-only core behavior.
+
+Pixel-identical layouts are not required across browsers or viewport sizes.
+
+Responsive evidence proves operability and comprehension, not visual sameness.
+
+### Test Doubles
+
+Frontend tests may use controlled responses to isolate presentation behavior.
+
+A test double must preserve the semantic distinction between:
+
+- success;
+- valid empty result;
+- validation failure;
+- authentication failure;
+- authorization failure;
+- dependency unavailable;
+- unexpected failure;
+- accepted asynchronous work still pending.
+
+Do not use one generic failure response when the user-visible behavior depends on the owning contract category.
+
 ## Realtime Testing
 
 Realtime tests verify applicable:
@@ -583,6 +812,8 @@ Realtime tests verify applicable:
 - authorization change while connected.
 
 Joining a Socket.IO room does not remove the need to test authorization for later protected events.
+
+Backend realtime evidence and frontend realtime-presentation evidence are separate claims.
 
 ## WebRTC and Media Testing
 
@@ -651,6 +882,8 @@ Security-oriented tests include applicable:
 
 Test the backend decision, not merely whether the frontend hides a control.
 
+Browser Authentication tests must distinguish user-visible session behavior from the backend security evidence for token verification, storage, rotation, CSRF, XSS, CORS, and provider callback handling.
+
 ## Failure and Recovery Testing
 
 A feature that relies on asynchronous or external work must test applicable failure points.
@@ -671,7 +904,7 @@ Examples include:
 
 Recovery tests verify the documented recovery source.
 
-They must not assume an in-memory object or Redis queue is durable when PostgreSQL or MongoDB is the authoritative source.
+They must not assume an in-memory object, frontend state, or Redis queue is durable when PostgreSQL or MongoDB is the authoritative source.
 
 ## Test Data
 
@@ -686,7 +919,9 @@ Test data must be:
 
 Do not use production credentials or real private user data.
 
-Factories and builders should express meaningful domain state rather than hide important setup behind overly generic defaults.
+Frontend fixtures must not contain real tokens, private Messages, provider secrets, or personal account data.
+
+Factories and builders should express meaningful domain or user-visible state rather than hide important setup behind overly generic defaults.
 
 ## Test Organization
 
@@ -697,6 +932,7 @@ Prefer names that identify the behavior under test.
 Separate tests by concern when they require different:
 
 - bootstrapping;
+- renderer or browser;
 - datastore;
 - timeout;
 - environment;
@@ -705,7 +941,7 @@ Separate tests by concern when they require different:
 
 Do not impose one repository-wide folder pattern if package tooling requires different layouts.
 
-Do not scatter one use case's tests across many files without a clear layer or behavior distinction.
+Do not scatter one use case or frontend journey's tests across many files without a clear layer or behavior distinction.
 
 ## Avoiding Duplicate Tests
 
@@ -717,6 +953,8 @@ Examples:
 - Use-case saves after success: prove in application test.
 - Unique constraint: prove in persistence integration test.
 - HTTP error mapping: prove in interface test.
+- Frontend contract translation: prove in frontend adapter test.
+- User-visible component state: prove in component test.
 - Critical complete journey: prove once in E2E.
 
 A higher-level smoke test may overlap a lower-level rule, but it should prove integration rather than repeat every branch.
@@ -734,6 +972,7 @@ Applicable steps include:
 - lint;
 - type checking;
 - Domain and application tests;
+- frontend unit and component tests where implemented;
 - persistence integration tests;
 - end-to-end tests;
 - build.
@@ -742,9 +981,11 @@ The exact order and commands belong to executable CI configuration.
 
 Testcontainers-based tests may run in the existing CI job while project size remains manageable.
 
+Browser tests may run in the existing CI structure while their environment and runtime remain reliable. Parallelization or separate jobs require measured need.
+
 Parallelization should be introduced only when measured CI duration justifies the added complexity.
 
-A passing local suite is not sufficient when the Phase requires CI or target-environment evidence.
+A passing local suite is not sufficient when the Phase requires CI, browser, provider, or target-environment evidence.
 
 ## Handling Flaky Tests
 
@@ -768,6 +1009,8 @@ Investigate:
 - port collisions;
 - container readiness;
 - asynchronous acknowledgement;
+- browser timing;
+- focus and animation timing;
 - resource exhaustion.
 
 A temporarily quarantined test requires a visible owner, reason, and follow-up. Silent permanent quarantine is not acceptable.
@@ -781,6 +1024,8 @@ A Phase may be marked complete only when:
 - critical failure paths are covered;
 - concurrency claims are verified;
 - contracts are tested where applicable;
+- required user-visible browser journeys pass where the Phase includes frontend delivery;
+- accessibility and responsive evidence meets the accepted Phase baseline;
 - CI passes;
 - target-environment validation is recorded where required;
 - known gaps are documented;
@@ -793,11 +1038,12 @@ A checklist item is not completion evidence without the corresponding implementa
 Update this document when:
 
 - test-layer responsibility changes;
+- frontend verification responsibility changes;
 - coverage policy changes;
 - CI test execution changes materially;
 - a new datastore or external-provider category is introduced;
 - media validation strategy changes;
-- a recurring reliability problem requires a new policy.
+- a recurring reliability problem requires a new policy;
 - a recurring boundary-validation or compatibility gap requires a new policy.
 
 Do not update this document for every individual test case.
@@ -811,6 +1057,7 @@ This document is the source of truth for:
 - test-layer responsibilities;
 - TDD evidence requirements;
 - boundary and compatibility verification;
+- frontend testing;
 - risk-based testing;
 - coverage-ratchet policy;
 - Testcontainers policy;
@@ -825,10 +1072,14 @@ This document is not the source of truth for:
 
 - exact package versions;
 - exact test script names;
+- selected frontend test dependencies;
 - every Context test case;
+- every frontend component test;
 - current coverage percentage;
 - current test inventory;
+- supported-browser product policy;
+- accessibility conformance target;
 - Phase-specific completion criteria;
 - CI implementation.
 
-Those concerns belong to package manifests, source code, generated reports, active Phase documents, and executable CI configuration.
+Those concerns belong to package manifests, source code, generated reports, Product experience, active Phase documents, and executable CI configuration.
