@@ -19,4 +19,15 @@ describe('IdentityContactTargetDirectoryAdapter', () => {
 
     await expect(adapter.targetUserExists('missing-user')).resolves.toBe(false);
   });
+
+  it('preserves an Identity dependency rejection', async () => {
+    const directoryFailure = new Error('Identity directory unavailable');
+    const userExists = jest.fn(() => Promise.reject(directoryFailure));
+    const directoryApi: DirectoryApi = { userExists };
+    const adapter = new IdentityContactTargetDirectoryAdapter(directoryApi);
+
+    await expect(adapter.targetUserExists('user-target')).rejects.toBe(
+      directoryFailure,
+    );
+  });
 });
