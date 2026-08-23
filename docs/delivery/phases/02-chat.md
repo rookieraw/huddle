@@ -115,7 +115,7 @@ The Contact-request Domain/Application core and Chat-owned PostgreSQL persistenc
 
 PostgreSQL enforces one current relationship per unordered user pair. Real PostgreSQL integration tests verify migration, repository mapping, unordered lookup, precise collision handling, and genuinely concurrent same-direction and opposing request convergence.
 
-This implementation is not operational. The production Identity composition adapter, NestJS wiring, HTTP delivery, and the remaining Contacts lifecycle are still pending.
+The API Gateway-owned production Identity composition adapter now connects the Chat-owned target-directory port to Identity's public Directory API. This implementation is not operational: NestJS wiring, HTTP delivery, the remaining Contacts lifecycle, and frontend delivery are still pending.
 
 The full Phase 2 Contacts scope includes:
 

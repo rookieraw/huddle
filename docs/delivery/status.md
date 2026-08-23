@@ -28,7 +28,7 @@ It does not define target architecture, detailed Phase scope, or task-level work
 | --------------------------- | -------------------------------------------------------------------- |
 | Phase 1 Identity            | Completed                                                            |
 | Phase 2 Identity additions  | `displayName` and the three public application APIs implemented      |
-| Contacts                    | Request core and PostgreSQL persistence implemented; not operational |
+| Contacts                    | Core, persistence, and Identity adapter implemented; not operational |
 | Direct and Group Chat       | Not started                                                          |
 | MongoDB Message persistence | Not started                                                          |
 | Realtime Chat               | Not started                                                          |
@@ -103,7 +103,7 @@ The Contact-request Domain/Application core and Chat-owned PostgreSQL persistenc
 
 PostgreSQL enforces one current relationship per unordered user pair. Real PostgreSQL integration tests verify schema migration, repository mapping, unordered lookup, collision handling, and genuinely concurrent same-direction and opposing request convergence.
 
-This implementation is not yet an operational Contacts capability. The production Identity composition adapter, NestJS wiring, HTTP delivery, and the remaining Contacts lifecycle are unimplemented.
+The API Gateway-owned production Identity composition adapter now connects the Chat-owned target-directory port to Identity's public Directory API. Contacts is not yet operational: NestJS wiring, HTTP delivery, the remaining Contacts lifecycle, and frontend delivery are still pending.
 
 The remaining Phase 2 implementation includes:
 

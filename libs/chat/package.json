@@ -2,6 +2,13 @@
   "name": "@huddle/chat",
   "version": "0.0.1",
   "private": true,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "test": "jest --testPathIgnorePatterns=\\.integration\\.spec\\.ts$",
