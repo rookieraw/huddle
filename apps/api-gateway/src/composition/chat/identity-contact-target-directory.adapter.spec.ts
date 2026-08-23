@@ -11,4 +11,12 @@ describe('IdentityContactTargetDirectoryAdapter', () => {
     expect(userExists).toHaveBeenCalledTimes(1);
     expect(userExists).toHaveBeenCalledWith('user-target');
   });
+
+  it('returns false when Identity confirms that the target is missing', async () => {
+    const userExists = jest.fn(() => Promise.resolve(false));
+    const directoryApi: DirectoryApi = { userExists };
+    const adapter = new IdentityContactTargetDirectoryAdapter(directoryApi);
+
+    await expect(adapter.targetUserExists('missing-user')).resolves.toBe(false);
+  });
 });
