@@ -1,6 +1,6 @@
 # Phase 2 — Contacts and Chat
 
-Status: In progress — Contact-request core and PostgreSQL persistence implemented
+Status: In progress — Contact-request creation production composition implemented
 Depends on: Phase 1 — Identity  
 Next gate: Phase 2.5 — CI/CD and Deployment Foundation
 
@@ -115,7 +115,12 @@ The Contact-request Domain/Application core and Chat-owned PostgreSQL persistenc
 
 PostgreSQL enforces one current relationship per unordered user pair. Real PostgreSQL integration tests verify migration, repository mapping, unordered lookup, precise collision handling, and genuinely concurrent same-direction and opposing request convergence.
 
-The API Gateway-owned production Identity composition adapter now connects the Chat-owned target-directory port to Identity's public Directory API. This implementation is not operational: NestJS wiring, HTTP delivery, the remaining Contacts lifecycle, and frontend delivery are still pending.
+The API Gateway application composition boundary now owns the production
+NestJS graph that connects Identity's public Directory API, the
+API Gateway-owned target-directory adapter, the Chat-owned PostgreSQL
+repository, and `SendContactRequestUseCase`. This implementation is not
+operational: HTTP delivery, authentication-to-requester translation, the
+remaining Contacts lifecycle, and frontend delivery are still pending.
 
 The full Phase 2 Contacts scope includes:
 

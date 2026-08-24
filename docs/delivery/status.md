@@ -1,10 +1,10 @@
 # Project Status
 
-Last updated: 2026-08-23
+Last updated: 2026-08-24
 
 Current implementation phase: Phase 2 — Contacts and Chat
 
-Current activity: Contact-request core and PostgreSQL persistence implemented and verified; operational delivery remains pending
+Current activity: Contact-request production composition implemented and verified; operational delivery remains pending
 
 Portfolio Release target: End of Phase 4
 
@@ -24,21 +24,21 @@ It does not define target architecture, detailed Phase scope, or task-level work
 
 ## Status Summary
 
-| Area                        | Status                                                               |
-| --------------------------- | -------------------------------------------------------------------- |
-| Phase 1 Identity            | Completed                                                            |
-| Phase 2 Identity additions  | `displayName` and the three public application APIs implemented      |
-| Contacts                    | Core, persistence, and Identity adapter implemented; not operational |
-| Direct and Group Chat       | Not started                                                          |
-| MongoDB Message persistence | Not started                                                          |
-| Realtime Chat               | Not started                                                          |
-| Deployment foundation       | Planned                                                              |
-| Voice and Video Calling     | Planned                                                              |
-| Billing                     | Planned                                                              |
-| First Portfolio Release     | Planned                                                              |
-| Meetings                    | Later                                                                |
-| Notification                | Later                                                                |
-| Hardening                   | Later                                                                |
+| Area                        | Status                                                                              |
+| --------------------------- | ----------------------------------------------------------------------------------- |
+| Phase 1 Identity            | Completed                                                                           |
+| Phase 2 Identity additions  | `displayName` and the three public application APIs implemented                     |
+| Contacts                    | Creation core, persistence, and production composition implemented; not operational |
+| Direct and Group Chat       | Not started                                                                         |
+| MongoDB Message persistence | Not started                                                                         |
+| Realtime Chat               | Not started                                                                         |
+| Deployment foundation       | Planned                                                                             |
+| Voice and Video Calling     | Planned                                                                             |
+| Billing                     | Planned                                                                             |
+| First Portfolio Release     | Planned                                                                             |
+| Meetings                    | Later                                                                               |
+| Notification                | Later                                                                               |
+| Hardening                   | Later                                                                               |
 
 `Planned` and `Later` do not mean implemented.
 
@@ -103,7 +103,12 @@ The Contact-request Domain/Application core and Chat-owned PostgreSQL persistenc
 
 PostgreSQL enforces one current relationship per unordered user pair. Real PostgreSQL integration tests verify schema migration, repository mapping, unordered lookup, collision handling, and genuinely concurrent same-direction and opposing request convergence.
 
-The API Gateway-owned production Identity composition adapter now connects the Chat-owned target-directory port to Identity's public Directory API. Contacts is not yet operational: NestJS wiring, HTTP delivery, the remaining Contacts lifecycle, and frontend delivery are still pending.
+The API Gateway application composition boundary now owns the production
+NestJS graph that connects Identity's public Directory API, the
+API Gateway-owned target-directory adapter, the Chat-owned PostgreSQL
+repository, and `SendContactRequestUseCase`. Contacts is not yet operational:
+HTTP delivery, authentication-to-requester translation, the remaining
+Contacts lifecycle, and frontend delivery are still pending.
 
 The remaining Phase 2 implementation includes:
 
