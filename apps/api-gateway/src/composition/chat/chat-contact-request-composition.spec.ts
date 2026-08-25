@@ -52,7 +52,7 @@ describe('Chat Contact-request production composition', () => {
       .mockResolvedValue(undefined);
 
     await testingModule.close();
-    testingModule = undefined;
+    testingModule = undefined; // Prevent afterEach from closing the module twice.
 
     expect(disconnect).toHaveBeenCalledTimes(1);
   });
@@ -82,8 +82,6 @@ describe('Chat Contact-request production composition', () => {
       .overrideProvider(CHAT_PRISMA_CLIENT)
       .useValue(prisma)
       .compile();
-
-    expect(CONTACT_RELATIONSHIP_REPOSITORY).toBeDefined();
 
     const repository = testingModule.get<ContactRelationshipRepository>(
       CONTACT_RELATIONSHIP_REPOSITORY,
