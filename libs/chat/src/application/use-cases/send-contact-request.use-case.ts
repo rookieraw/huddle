@@ -7,6 +7,13 @@ type SendContactRequestInput = {
   targetUserId: string;
 };
 
+export class SelfContactRequestError extends Error {
+  constructor() {
+    super('A Contact request cannot target the requester.');
+    this.name = 'SelfContactRequestError';
+  }
+}
+
 export class ContactTargetNotFoundError extends Error {
   constructor() {
     super('Contact target was not found.');
@@ -21,6 +28,10 @@ export class SendContactRequestUseCase {
   ) {}
 
   async execute(input: SendContactRequestInput): Promise<ContactRelationship> {
+    if (input.requesterId === input.targetUserId) {
+      throw new SelfContactRequestError();
+    }
+
     const targetExists = await this.contactTargetDirectory.targetUserExists(
       input.targetUserId,
     );

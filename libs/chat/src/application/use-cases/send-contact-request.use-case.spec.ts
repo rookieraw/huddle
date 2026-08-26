@@ -1,10 +1,10 @@
-import { DomainError } from '@huddle/shared-kernel';
 import { ContactRelationship } from '../../domain/contact-relationship.entity';
 import type { ContactRelationshipRepository } from '../ports/contact-relationship.repository.port';
 import type { ContactTargetDirectory } from '../ports/contact-target-directory.port';
 import {
   ContactTargetNotFoundError,
   SendContactRequestUseCase,
+  SelfContactRequestError,
 } from './send-contact-request.use-case';
 
 class MissingContactTargetDirectory implements ContactTargetDirectory {
@@ -71,12 +71,18 @@ describe('SendContactRequestUseCase', () => {
       contactRelationshipRepository,
     );
 
+    expect(SelfContactRequestError).toEqual(expect.any(Function));
+
     const execution = useCase.execute({
       requesterId: 'user-same',
       targetUserId: 'user-same',
     });
 
-    await expect(execution).rejects.toBeInstanceOf(DomainError);
+    await expect(execution).rejects.toBeInstanceOf(SelfContactRequestError);
+    expect(contactTargetDirectory.targetUserExists).not.toHaveBeenCalled();
+    expect(
+      contactRelationshipRepository.findCurrentByUserPair,
+    ).not.toHaveBeenCalled();
     expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
   });
 
