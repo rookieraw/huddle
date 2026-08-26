@@ -1,6 +1,7 @@
 # HTTP Contracts
 
-Status: Shared conventions accepted; Identity endpoints implemented  
+Status: Shared conventions accepted; Identity endpoints implemented; first Chat subset accepted
+Last reviewed: 2026-08-27
 Last verified against source: 2026-08-07
 
 ## Purpose
@@ -16,9 +17,10 @@ It defines:
 - Pagination requirements
 - Contract states
 - The location and delivery state of Context-specific HTTP contracts
-- Planned capability groups whose exact HTTP contracts are not yet defined
+- Accepted and planned capability groups and their exact contract locations
 
-Exact implemented endpoint paths, methods, payloads, and status behavior belong to the relevant Context-specific contract file.
+Exact accepted and implemented endpoint paths, methods, payloads, and status
+behavior belong to the relevant Context-specific contract file.
 
 A capability appearing in a Context or Phase document does not create an HTTP endpoint automatically.
 
@@ -37,7 +39,7 @@ Before implementing a new controller operation:
 | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Shared HTTP conventions and error categories | This document                                                                                                                                                                                        |
 | Implemented Identity endpoints               | [`identity-http.md`](identity-http.md)                                                                                                                                                               |
-| Future exact Context-specific HTTP contracts | Owning contract file registered in this document                                                                                                                                                     |
+| Context-specific HTTP contracts              | Owning contract file registered in this document                                                                                                                                                     |
 | Context invariants and authorization         | Owning file under [`../contexts/`](../contexts/)                                                                                                                                                     |
 | Delivery timing                              | Active file under [`../delivery/phases/`](../delivery/phases/)                                                                                                                                       |
 | Current implementation status                | [`../delivery/status.md`](../delivery/status.md)                                                                                                                                                     |
@@ -63,18 +65,19 @@ A Planned capability name is not a stable public route.
 
 ## Contract Registry
 
-| Context or capability | State                                  | Contract document                                           |
-| --------------------- | -------------------------------------- | ----------------------------------------------------------- |
-| Identity              | Implemented with transitional behavior | [`identity-http.md`](identity-http.md)                      |
-| Chat                  | Planned for Phase 2                    | Create when the first exact Chat HTTP contract is defined   |
-| Calling               | Planned for Phase 3                    | Create only if a required HTTP capability is identified     |
-| Billing               | Planned for Phase 4                    | Create when the exact Billing HTTP contract is defined      |
-| Meetings              | Planned for Phase 5                    | Create when the exact Meeting HTTP contract is defined      |
-| Notification          | Planned for Phase 6                    | Create when the exact Notification HTTP contract is defined |
+| Context or capability | State                                                                     | Contract document                                           |
+| --------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Identity              | Implemented with transitional behavior                                    | [`identity-http.md`](identity-http.md)                      |
+| Chat                  | Contact-request creation Accepted; remaining Phase 2 capabilities Planned | [`chat-http.md`](chat-http.md)                              |
+| Calling               | Planned for Phase 3                                                       | Create only if a required HTTP capability is identified     |
+| Billing               | Planned for Phase 4                                                       | Create when the exact Billing HTTP contract is defined      |
+| Meetings              | Planned for Phase 5                                                       | Create when the exact Meeting HTTP contract is defined      |
+| Notification          | Planned for Phase 6                                                       | Create when the exact Notification HTTP contract is defined |
 
 Do not create empty Context contract files merely to satisfy this registry.
 
-A Context-specific contract file is created when its first exact endpoint is designed as part of an authorized implementation task.
+A Context-specific contract file is created when its first exact endpoint is
+designed as part of an authorized contract or implementation task.
 
 ## General Conventions
 
@@ -173,7 +176,7 @@ The response must not include a JSON body.
 
 ## Error Contract
 
-### Current Implemented Error Envelope
+### Transitional Identity Error Envelope
 
 Identity currently uses NestJS framework exceptions.
 
@@ -189,34 +192,120 @@ The current response commonly has a framework-generated form equivalent to:
 
 Validation errors may return `message` as an array.
 
-The exact framework-generated body has not been adopted as a stable cross-context error envelope.
+The exact framework-generated body is not the stable application error
+envelope defined below.
 
-Before Phase 2 adds public Chat endpoints, the project should introduce and test a stable application error shape rather than allowing each controller to invent one independently.
+The existing Identity endpoints remain transitional and have not implemented
+the stable envelope. Adopting it for Identity requires a separately authorized
+implementation change with updated Identity contract and transport evidence.
+This shared decision must not be used to describe unchanged Identity responses
+as already migrated.
 
-The resulting shared error-envelope decision must be recorded in this document and applied consistently to Context-specific contract files.
+### Stable Application Error Envelope
 
-### Accepted Error Categories
+New Context-specific HTTP contracts use this envelope for application errors:
 
-The following semantic mappings are accepted for implementing endpoints:
+```json
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "Request validation failed.",
+    "details": [
+      {
+        "field": "targetUserId",
+        "message": "targetUserId must be a non-empty string."
+      }
+    ]
+  }
+}
+```
+
+The envelope fields are:
+
+| Field                     | Presence                      | Consumer meaning                                                                 |
+| ------------------------- | ----------------------------- | -------------------------------------------------------------------------------- |
+| `error`                   | Required                      | Distinguishes the error response and contains its public application semantics.  |
+| `error.code`              | Required                      | Stable machine-readable code used for programmatic client behavior.              |
+| `error.message`           | Required                      | Safe human-readable explanation or fallback presentation.                        |
+| `error.details`           | Optional                      | Safe field-level corrections for a validation failure; omitted for other errors. |
+| `error.details[].field`   | Required when a detail exists | Declared client field that needs correction.                                     |
+| `error.details[].message` | Required when a detail exists | Safe human-readable explanation for that field.                                  |
+
+Clients branch on `error.code`, not `error.message`.
+
+`error.details`:
+
+- is present only when `error.code` is `VALIDATION_FAILED` and safe,
+  client-correctable field information exists;
+- contains only fields declared by the applicable public request contract;
+- does not repeat rejected values or expose DTO class names, validation-library
+  objects, internal property paths, or implementation rules;
+- is omitted rather than returned as an empty array when no safe detail exists.
+
+An owning Context contract defines the exact safe validation messages required
+by its consumer. It must not reflect arbitrary client input into the response.
+
+### Shared Error Codes and Status Mappings
+
+The following codes are the stable shared defaults:
+
+| Category               | Stable code               | HTTP status | Consumer semantics                                      |
+| ---------------------- | ------------------------- | ----------: | ------------------------------------------------------- |
+| Validation failure     | `VALIDATION_FAILED`       |         400 | Correct the request before retrying.                    |
+| Authentication failure | `AUTHENTICATION_REQUIRED` |         401 | Stop protected interaction and reauthenticate.          |
+| Authorization failure  | `FORBIDDEN`               |         403 | Do not retry unchanged.                                 |
+| Resource not found     | `RESOURCE_NOT_FOUND`      |         404 | Do not retry unchanged; return to a stable resource.    |
+| State conflict         | `CONFLICT`                |         409 | Follow the owning operation's reconciliation guidance.  |
+| Dependency unavailable | `DEPENDENCY_UNAVAILABLE`  |         503 | Preserve confirmed state and retry according to policy. |
+| Unexpected failure     | `INTERNAL_ERROR`          |         500 | Do not assume whether the operation completed safely.   |
+
+An owning Context contract may define a narrower stable code only when its
+consumer must distinguish that outcome. The narrower code retains this
+envelope and the shared category's status and information-minimization rules.
+It must not expose an internal exception class or infrastructure identifier.
+
+`AUTHENTICATION_REQUIRED` does not distinguish whether authentication was
+missing, invalid, expired, or otherwise unusable unless an owning accepted
+contract establishes a safe consumer requirement.
+
+### Accepted Specialized Error Categories
+
+The following semantic mappings remain accepted for the owning contracts to
+define when their capabilities are introduced:
 
 | Application error               | Meaning                                            | HTTP status | Retry guidance                                |
 | ------------------------------- | -------------------------------------------------- | ----------: | --------------------------------------------- |
-| Validation failure              | Request shape or value is invalid                  |         400 | Correct the request                           |
-| Authentication failure          | Authentication is absent, invalid, or expired      |         401 | Reauthenticate                                |
-| Authorization failure           | Actor is known but cannot perform the operation    |         403 | Do not retry unchanged                        |
-| Resource not found              | Visible resource does not exist                    |         404 | Do not retry unchanged                        |
-| Duplicate or state conflict     | Requested state conflicts with committed state     |         409 | Depends on operation                          |
 | `QuotaExceededError`            | Confirmed usage is at or above the effective limit |         403 | Retry only after usage or tier changes        |
 | `ConcurrentQuotaUpdateError`    | Bounded serialization retries were exhausted       |         409 | Retry the logical operation later             |
 | `EntitlementsUnavailableError`  | Effective entitlement could not be determined      |         503 | Retry after the dependency recovers           |
-| Dependency unavailable          | Required dependency could not serve the operation  |         503 | Retry according to client policy              |
 | Message persistence unavailable | Durable Message acceptance failed                  |         503 | Retry with the same client operation identity |
 | Media unavailable               | Required media infrastructure is unavailable       |         503 | Retry according to session state              |
-| Unexpected server failure       | Unhandled internal failure                         |         500 | Do not assume the operation failed safely     |
 
-Exact public error codes and the stable response envelope must be defined before the first Phase 2 Chat controller is implemented.
+The application code used for a specialized category belongs to its exact
+owning contract. It must follow the stable envelope and must not change the
+status mapping above where the category already corresponds to a shared
+default.
 
-Infrastructure error codes must not be exposed directly.
+### Information Minimization
+
+Public error messages and details disclose only what the client needs to
+recover or present the result safely.
+
+They must not expose:
+
+- raw internal exception messages;
+- database or driver codes;
+- database constraint, table, column, collection, or index names;
+- provider or SDK internals;
+- stack traces;
+- filesystem paths;
+- secrets, credentials, tokens, or private payloads;
+- internal network or deployment topology;
+- account existence during authentication;
+- hidden-resource existence or another user's membership unless an owning
+  authorization contract explicitly permits that fact.
+
+Infrastructure error codes remain internal.
 
 Examples that remain internal include:
 
@@ -228,34 +317,42 @@ Examples that remain internal include:
 - Filesystem paths
 - Stack traces
 
-### Security-sensitive Errors
+Context-specific authorization determines whether a hidden resource is
+represented as `403` or `404`.
 
-Public error handling must avoid unnecessary disclosure of:
-
-- Whether a hidden resource exists
-- Another user’s membership
-- Account existence during authentication
-- Provider credentials
-- Database structure
-- Internal network state
-
-Context-specific authorization determines whether a hidden resource is represented as `403` or `404`.
-
-## Planned HTTP Capability Registry
-
-The following capabilities are authorized by their delivery phases, but their exact routes and payloads are not yet contracts.
-
-This registry does not authorize endpoints that are absent from the owning Context contract.
-
-The exact contract must be added to an owning Context-specific contract file as part of the authorized implementation task.
+## Accepted HTTP Capability Subsets
 
 ### Phase 2 — Chat
 
-Exact contracts are required for the implemented subset of the following capabilities.
+Only this Chat HTTP subset is accepted:
+
+| Capability               | State      | Contract                       | Implementation state         |
+| ------------------------ | ---------- | ------------------------------ | ---------------------------- |
+| Contact-request creation | `Accepted` | [`chat-http.md`](chat-http.md) | HTTP delivery does not exist |
+
+The accepted subset defines `POST /contact-requests`. It does not accept or
+implement another Contacts, Conversation, Group, Message-history, or frontend
+capability.
+
+## Planned HTTP Capability Registry
+
+The following capabilities are authorized by their delivery phases, but their
+exact routes and payloads are not yet contracts. The accepted subset above is
+not repeated in this planned registry.
+
+This registry does not authorize endpoints that are absent from the owning
+Context contract.
+
+The exact contract must be added to an owning Context-specific contract file
+as part of an authorized contract or implementation task.
+
+### Phase 2 — Chat
+
+Exact contracts remain required for the following Phase-authorized
+capabilities.
 
 #### Contacts
 
-- Send Contact request
 - List incoming Contact requests
 - List outgoing Contact requests
 - Accept Contact request
@@ -425,6 +522,7 @@ A new endpoint for one of these capabilities requires an explicit Product Scope 
 ## Related Documentation
 
 - [Identity HTTP Contract](identity-http.md)
+- [Chat HTTP Contract](chat-http.md)
 - [Chat Realtime Contract](chat-realtime.md)
 - [Shared Conferencing Realtime Contract](conferencing-realtime.md)
 - [Conferencing P2P Contract](conferencing-p2p.md)
