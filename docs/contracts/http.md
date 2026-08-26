@@ -1,6 +1,7 @@
 # HTTP Contracts
 
-Status: Shared conventions accepted; Identity endpoints implemented  
+Status: Shared conventions accepted; Identity endpoints implemented; first Chat subset accepted
+Last reviewed: 2026-08-27
 Last verified against source: 2026-08-07
 
 ## Purpose
@@ -16,9 +17,10 @@ It defines:
 - Pagination requirements
 - Contract states
 - The location and delivery state of Context-specific HTTP contracts
-- Planned capability groups whose exact HTTP contracts are not yet defined
+- Accepted and planned capability groups and their exact contract locations
 
-Exact implemented endpoint paths, methods, payloads, and status behavior belong to the relevant Context-specific contract file.
+Exact accepted and implemented endpoint paths, methods, payloads, and status
+behavior belong to the relevant Context-specific contract file.
 
 A capability appearing in a Context or Phase document does not create an HTTP endpoint automatically.
 
@@ -37,7 +39,7 @@ Before implementing a new controller operation:
 | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Shared HTTP conventions and error categories | This document                                                                                                                                                                                        |
 | Implemented Identity endpoints               | [`identity-http.md`](identity-http.md)                                                                                                                                                               |
-| Future exact Context-specific HTTP contracts | Owning contract file registered in this document                                                                                                                                                     |
+| Context-specific HTTP contracts              | Owning contract file registered in this document                                                                                                                                                     |
 | Context invariants and authorization         | Owning file under [`../contexts/`](../contexts/)                                                                                                                                                     |
 | Delivery timing                              | Active file under [`../delivery/phases/`](../delivery/phases/)                                                                                                                                       |
 | Current implementation status                | [`../delivery/status.md`](../delivery/status.md)                                                                                                                                                     |
@@ -63,18 +65,19 @@ A Planned capability name is not a stable public route.
 
 ## Contract Registry
 
-| Context or capability | State                                  | Contract document                                           |
-| --------------------- | -------------------------------------- | ----------------------------------------------------------- |
-| Identity              | Implemented with transitional behavior | [`identity-http.md`](identity-http.md)                      |
-| Chat                  | Planned for Phase 2                    | Create when the first exact Chat HTTP contract is defined   |
-| Calling               | Planned for Phase 3                    | Create only if a required HTTP capability is identified     |
-| Billing               | Planned for Phase 4                    | Create when the exact Billing HTTP contract is defined      |
-| Meetings              | Planned for Phase 5                    | Create when the exact Meeting HTTP contract is defined      |
-| Notification          | Planned for Phase 6                    | Create when the exact Notification HTTP contract is defined |
+| Context or capability | State                                                                     | Contract document                                           |
+| --------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Identity              | Implemented with transitional behavior                                    | [`identity-http.md`](identity-http.md)                      |
+| Chat                  | Contact-request creation Accepted; remaining Phase 2 capabilities Planned | [`chat-http.md`](chat-http.md)                              |
+| Calling               | Planned for Phase 3                                                       | Create only if a required HTTP capability is identified     |
+| Billing               | Planned for Phase 4                                                       | Create when the exact Billing HTTP contract is defined      |
+| Meetings              | Planned for Phase 5                                                       | Create when the exact Meeting HTTP contract is defined      |
+| Notification          | Planned for Phase 6                                                       | Create when the exact Notification HTTP contract is defined |
 
 Do not create empty Context contract files merely to satisfy this registry.
 
-A Context-specific contract file is created when its first exact endpoint is designed as part of an authorized implementation task.
+A Context-specific contract file is created when its first exact endpoint is
+designed as part of an authorized contract or implementation task.
 
 ## General Conventions
 
@@ -317,21 +320,39 @@ Examples that remain internal include:
 Context-specific authorization determines whether a hidden resource is
 represented as `403` or `404`.
 
-## Planned HTTP Capability Registry
-
-The following capabilities are authorized by their delivery phases, but their exact routes and payloads are not yet contracts.
-
-This registry does not authorize endpoints that are absent from the owning Context contract.
-
-The exact contract must be added to an owning Context-specific contract file as part of the authorized implementation task.
+## Accepted HTTP Capability Subsets
 
 ### Phase 2 — Chat
 
-Exact contracts are required for the implemented subset of the following capabilities.
+Only this Chat HTTP subset is accepted:
+
+| Capability               | State      | Contract                       | Implementation state         |
+| ------------------------ | ---------- | ------------------------------ | ---------------------------- |
+| Contact-request creation | `Accepted` | [`chat-http.md`](chat-http.md) | HTTP delivery does not exist |
+
+The accepted subset defines `POST /contact-requests`. It does not accept or
+implement another Contacts, Conversation, Group, Message-history, or frontend
+capability.
+
+## Planned HTTP Capability Registry
+
+The following capabilities are authorized by their delivery phases, but their
+exact routes and payloads are not yet contracts. The accepted subset above is
+not repeated in this planned registry.
+
+This registry does not authorize endpoints that are absent from the owning
+Context contract.
+
+The exact contract must be added to an owning Context-specific contract file
+as part of an authorized contract or implementation task.
+
+### Phase 2 — Chat
+
+Exact contracts remain required for the following Phase-authorized
+capabilities.
 
 #### Contacts
 
-- Send Contact request
 - List incoming Contact requests
 - List outgoing Contact requests
 - Accept Contact request
@@ -501,6 +522,7 @@ A new endpoint for one of these capabilities requires an explicit Product Scope 
 ## Related Documentation
 
 - [Identity HTTP Contract](identity-http.md)
+- [Chat HTTP Contract](chat-http.md)
 - [Chat Realtime Contract](chat-realtime.md)
 - [Shared Conferencing Realtime Contract](conferencing-realtime.md)
 - [Conferencing P2P Contract](conferencing-p2p.md)
