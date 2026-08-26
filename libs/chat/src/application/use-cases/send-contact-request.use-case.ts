@@ -14,6 +14,13 @@ export class SelfContactRequestError extends Error {
   }
 }
 
+export class ContactTargetLookupUnavailableError extends Error {
+  constructor() {
+    super('Contact target validation is temporarily unavailable.');
+    this.name = 'ContactTargetLookupUnavailableError';
+  }
+}
+
 export class ContactTargetNotFoundError extends Error {
   constructor() {
     super('Contact target was not found.');
@@ -32,9 +39,15 @@ export class SendContactRequestUseCase {
       throw new SelfContactRequestError();
     }
 
-    const targetExists = await this.contactTargetDirectory.targetUserExists(
-      input.targetUserId,
-    );
+    let targetExists: boolean;
+
+    try {
+      targetExists = await this.contactTargetDirectory.targetUserExists(
+        input.targetUserId,
+      );
+    } catch {
+      throw new ContactTargetLookupUnavailableError();
+    }
 
     if (!targetExists) {
       throw new ContactTargetNotFoundError();

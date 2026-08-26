@@ -2,6 +2,7 @@ import { ContactRelationship } from '../../domain/contact-relationship.entity';
 import type { ContactRelationshipRepository } from '../ports/contact-relationship.repository.port';
 import type { ContactTargetDirectory } from '../ports/contact-target-directory.port';
 import {
+  ContactTargetLookupUnavailableError,
   ContactTargetNotFoundError,
   SendContactRequestUseCase,
   SelfContactRequestError,
@@ -104,7 +105,7 @@ describe('SendContactRequestUseCase', () => {
     expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
   });
 
-  it('preserves a Directory dependency failure without saving a relationship', async () => {
+  it('classifies a Directory dependency failure without repository work', async () => {
     const directoryFailure = new Error('Directory unavailable');
     const contactTargetDirectory = new FailingContactTargetDirectory(
       directoryFailure,
@@ -116,12 +117,19 @@ describe('SendContactRequestUseCase', () => {
       contactRelationshipRepository,
     );
 
+    expect(ContactTargetLookupUnavailableError).toEqual(expect.any(Function));
+
     const execution = useCase.execute({
       requesterId: 'user-requester',
       targetUserId: 'user-target',
     });
 
-    await expect(execution).rejects.toBe(directoryFailure);
+    await expect(execution).rejects.toBeInstanceOf(
+      ContactTargetLookupUnavailableError,
+    );
+    expect(
+      contactRelationshipRepository.findCurrentByUserPair,
+    ).not.toHaveBeenCalled();
     expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
   });
 
