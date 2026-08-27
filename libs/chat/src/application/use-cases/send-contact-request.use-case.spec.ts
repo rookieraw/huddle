@@ -2,6 +2,7 @@ import { ContactRelationship } from '../../domain/contact-relationship.entity';
 import type { ContactRelationshipRepository } from '../ports/contact-relationship.repository.port';
 import type { ContactTargetDirectory } from '../ports/contact-target-directory.port';
 import {
+  ContactRequestUnavailableError,
   ContactTargetLookupUnavailableError,
   ContactTargetNotFoundError,
   SendContactRequestUseCase,
@@ -133,7 +134,7 @@ describe('SendContactRequestUseCase', () => {
     expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
   });
 
-  it('preserves a repository lookup failure without saving a relationship', async () => {
+  it('classifies a repository lookup failure without saving a relationship', async () => {
     const repositoryFailure = new Error('Relationship lookup unavailable');
     const contactTargetDirectory = new ExistingContactTargetDirectory();
     const contactRelationshipRepository =
@@ -146,16 +147,20 @@ describe('SendContactRequestUseCase', () => {
       contactRelationshipRepository,
     );
 
+    expect(ContactRequestUnavailableError).toEqual(expect.any(Function));
+
     const execution = useCase.execute({
       requesterId: 'user-requester',
       targetUserId: 'user-target',
     });
 
-    await expect(execution).rejects.toBe(repositoryFailure);
+    await expect(execution).rejects.toBeInstanceOf(
+      ContactRequestUnavailableError,
+    );
     expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
   });
 
-  it('preserves a repository save failure without reporting success', async () => {
+  it('classifies a repository save failure without reporting success', async () => {
     const repositoryFailure = new Error('Relationship save unavailable');
     const contactTargetDirectory = new ExistingContactTargetDirectory();
     const contactRelationshipRepository =
@@ -166,12 +171,16 @@ describe('SendContactRequestUseCase', () => {
       contactRelationshipRepository,
     );
 
+    expect(ContactRequestUnavailableError).toEqual(expect.any(Function));
+
     const execution = useCase.execute({
       requesterId: 'user-requester',
       targetUserId: 'user-target',
     });
 
-    await expect(execution).rejects.toBe(repositoryFailure);
+    await expect(execution).rejects.toBeInstanceOf(
+      ContactRequestUnavailableError,
+    );
     expect(contactRelationshipRepository.save).toHaveBeenCalledTimes(1);
   });
 

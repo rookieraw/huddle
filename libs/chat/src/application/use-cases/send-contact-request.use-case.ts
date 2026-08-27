@@ -28,6 +28,13 @@ export class ContactTargetNotFoundError extends Error {
   }
 }
 
+export class ContactRequestUnavailableError extends Error {
+  constructor() {
+    super('Contact request service is temporarily unavailable.');
+    this.name = 'ContactRequestUnavailableError';
+  }
+}
+
 export class SendContactRequestUseCase {
   constructor(
     private readonly contactTargetDirectory: ContactTargetDirectory,
@@ -53,11 +60,17 @@ export class SendContactRequestUseCase {
       throw new ContactTargetNotFoundError();
     }
 
-    const currentRelationship =
-      await this.contactRelationshipRepository.findCurrentByUserPair(
-        input.requesterId,
-        input.targetUserId,
-      );
+    let currentRelationship: ContactRelationship | null;
+
+    try {
+      currentRelationship =
+        await this.contactRelationshipRepository.findCurrentByUserPair(
+          input.requesterId,
+          input.targetUserId,
+        );
+    } catch {
+      throw new ContactRequestUnavailableError();
+    }
 
     if (currentRelationship) {
       return currentRelationship;
@@ -68,6 +81,10 @@ export class SendContactRequestUseCase {
       recipientId: input.targetUserId,
     });
 
-    return this.contactRelationshipRepository.save(relationship);
+    try {
+      return await this.contactRelationshipRepository.save(relationship);
+    } catch {
+      throw new ContactRequestUnavailableError();
+    }
   }
 }
