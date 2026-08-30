@@ -5,6 +5,7 @@ import {
   type ArgumentsHost,
   type ExceptionFilter,
 } from '@nestjs/common';
+import { ContactRequestAuthenticationRequiredError } from './contact-request-authentication.guard';
 
 type ContactRequestHttpResponse = {
   status(statusCode: number): ContactRequestHttpResponse;
@@ -14,25 +15,42 @@ type ContactRequestHttpResponse = {
 @Catch()
 export class ContactRequestExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
-    if (!(exception instanceof BadRequestException)) {
-      throw exception;
+    if (exception instanceof ContactRequestAuthenticationRequiredError) {
+      const response = host
+        .switchToHttp()
+        .getResponse<ContactRequestHttpResponse>();
+
+      response.status(HttpStatus.UNAUTHORIZED).json({
+        error: {
+          code: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication is required.',
+        },
+      });
+
+      return;
     }
 
-    const response = host
-      .switchToHttp()
-      .getResponse<ContactRequestHttpResponse>();
+    if (exception instanceof BadRequestException) {
+      const response = host
+        .switchToHttp()
+        .getResponse<ContactRequestHttpResponse>();
 
-    response.status(HttpStatus.BAD_REQUEST).json({
-      error: {
-        code: 'VALIDATION_FAILED',
-        message: 'Request validation failed.',
-        details: [
-          {
-            field: 'targetUserId',
-            message: 'targetUserId must be a non-empty string.',
-          },
-        ],
-      },
-    });
+      response.status(HttpStatus.BAD_REQUEST).json({
+        error: {
+          code: 'VALIDATION_FAILED',
+          message: 'Request validation failed.',
+          details: [
+            {
+              field: 'targetUserId',
+              message: 'targetUserId must be a non-empty string.',
+            },
+          ],
+        },
+      });
+
+      return;
+    }
+
+    throw exception;
   }
 }

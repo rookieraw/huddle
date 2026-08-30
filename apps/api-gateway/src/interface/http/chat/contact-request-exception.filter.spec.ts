@@ -3,6 +3,7 @@ import {
   HttpStatus,
   type ArgumentsHost,
 } from '@nestjs/common';
+import { ContactRequestAuthenticationRequiredError } from './contact-request-authentication.guard';
 import { ContactRequestExceptionFilter } from './contact-request-exception.filter';
 
 function createArgumentsHost() {
@@ -57,5 +58,20 @@ describe('ContactRequestExceptionFilter', () => {
     expect(JSON.stringify(response.json.mock.calls)).not.toContain(
       rejectedValue,
     );
+  });
+
+  it('returns the fixed authentication-required envelope', () => {
+    const filter = new ContactRequestExceptionFilter();
+    const { host, response } = createArgumentsHost();
+
+    filter.catch(new ContactRequestAuthenticationRequiredError(), host);
+
+    expect(response.status).toHaveBeenCalledWith(HttpStatus.UNAUTHORIZED);
+    expect(response.json).toHaveBeenCalledWith({
+      error: {
+        code: 'AUTHENTICATION_REQUIRED',
+        message: 'Authentication is required.',
+      },
+    });
   });
 });
