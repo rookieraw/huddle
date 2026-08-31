@@ -1,5 +1,11 @@
 import { CHAT_PRISMA_CLIENT } from '@huddle/chat';
-import { AUTHENTICATION_API, DIRECTORY_API } from '@huddle/identity';
+import {
+  AUTHENTICATION_API,
+  DIRECTORY_API,
+  ExpiredAccessTokenError,
+  InvalidAccessTokenError,
+  UnsupportedAccessTokenTypeError,
+} from '@huddle/identity';
 import {
   INestApplication,
   type PipeTransform,
@@ -231,4 +237,65 @@ describe('Contact requests (e2e)', () => {
       ],
     ]);
   });
+
+  it.each([
+    ['a missing header', undefined],
+    ['a different scheme', 'Basic access-token'],
+    ['a missing token', 'Bearer'],
+    ['more than one credential', 'Bearer access-token unexpected'],
+  ])(
+    'returns authentication required for %s',
+    async (_scenario, authorization) => {
+      let httpRequest = request(app.getHttpServer()).post('/contact-requests');
+
+      if (authorization !== undefined) {
+        httpRequest = httpRequest.set('Authorization', authorization);
+      }
+
+      const response = await httpRequest
+        .send({ targetUserId: 'user-target' })
+        .expect(401);
+      const body = response.body as ContactRequestErrorBody;
+
+      expect(body).toEqual({
+        error: {
+          code: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication is required.',
+        },
+      });
+      expect(verifyAccessToken).not.toHaveBeenCalled();
+      expect(userExists).not.toHaveBeenCalled();
+      expect(findFirst).not.toHaveBeenCalled();
+      expect(upsert).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ['invalid', new InvalidAccessTokenError()],
+    ['expired', new ExpiredAccessTokenError()],
+    ['unsupported', new UnsupportedAccessTokenTypeError()],
+  ])(
+    'returns authentication required for an %s access token',
+    async (_scenario, tokenError) => {
+      verifyAccessToken.mockRejectedValueOnce(tokenError);
+
+      const response = await request(app.getHttpServer())
+        .post('/contact-requests')
+        .set('Authorization', 'Bearer unusable-access-token')
+        .send({ targetUserId: 'user-target' })
+        .expect(401);
+      const body = response.body as ContactRequestErrorBody;
+
+      expect(body).toEqual({
+        error: {
+          code: 'AUTHENTICATION_REQUIRED',
+          message: 'Authentication is required.',
+        },
+      });
+      expect(verifyAccessToken).toHaveBeenCalledWith('unusable-access-token');
+      expect(userExists).not.toHaveBeenCalled();
+      expect(findFirst).not.toHaveBeenCalled();
+      expect(upsert).not.toHaveBeenCalled();
+    },
+  );
 });
