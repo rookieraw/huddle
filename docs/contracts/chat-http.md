@@ -1,13 +1,14 @@
 # Chat HTTP Contract
 
-Status: Accepted contract; HTTP implementation does not exist
-Last reviewed: 2026-08-26
+Status: Implemented
+Last reviewed: 2026-09-01
 
 ## Purpose
 
-This document is the authoritative HTTP contract for accepted Chat endpoints.
+This document is the authoritative HTTP contract for accepted and implemented
+Chat endpoints.
 
-The currently accepted subset contains only authenticated Contact-request
+The currently implemented subset contains only authenticated Contact-request
 creation. A capability appearing in the Chat Context or Phase 2 does not create
 another HTTP endpoint automatically.
 
@@ -15,7 +16,7 @@ another HTTP endpoint automatically.
 
 | Concern                                     | Authoritative source                                                                               |
 | ------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Exact accepted Chat HTTP contract           | This document                                                                                      |
+| Exact Chat HTTP contract                    | This document                                                                                      |
 | Shared HTTP envelope and conventions        | [`http.md`](http.md)                                                                               |
 | Contact invariants and application behavior | [`../contexts/chat.md`](../contexts/chat.md)                                                       |
 | Phase authorization                         | [`../delivery/phases/02-chat.md`](../delivery/phases/02-chat.md)                                   |
@@ -24,33 +25,26 @@ another HTTP endpoint automatically.
 | Cross-context integration                   | [`../decisions/0004-cross-context-integration.md`](../decisions/0004-cross-context-integration.md) |
 | Executable behavior                         | Chat and API Gateway source code and tests                                                         |
 
-When this accepted contract is implemented, controller behavior, transport
-tests, the shared HTTP conventions, and this document must agree before its
-state changes to `Implemented`.
+Controller behavior, transport tests, the shared HTTP conventions, and this
+document must remain aligned for the contract to retain `Implemented` state.
 
 ## Delivery State
 
-This contract is accepted target behavior, not implemented HTTP behavior.
+Authenticated Contact-request creation is implemented through
+`POST /contact-requests`. The runtime path includes the request DTO, public
+Identity Authentication API binding, verified `userId` to requester
+translation, named application errors, controller-scoped error translation,
+production NestJS registration, and HTTP transport evidence.
 
-The Contact-request Domain/Application core, PostgreSQL persistence, Identity
-target-directory adapter, and production NestJS composition graph exist. The
-following delivery pieces do not exist:
+Transport E2E boots the real `AppModule` and HTTP server while overriding only
+the Authentication API, Directory API, and Chat Prisma client external seams.
+It proves route, guard, validation, whitelist, success serialization, exact
+status and error envelopes, and information minimization. It is not
+PostgreSQL evidence. Existing Chat integration tests separately verify the
+real persistence mapping, uniqueness, collision, and concurrency behavior.
 
-- an HTTP controller or route;
-- a request DTO;
-- an authentication guard binding for this endpoint;
-- verified-principal to requester translation;
-- application-error to HTTP-error translation;
-- a shared runtime error adapter or exception filter;
-- controller or transport E2E evidence;
-- a frontend Contacts flow.
-
-The current application path also preserves untyped Directory and repository
-failures, and self-request currently produces a generic `DomainError`. A later
-authorized runtime outcome must introduce stable, non-message-based
-discrimination for every exact mapping below. Matching exception messages is
-not accepted evidence. Until the route and all required mappings are
-implemented and verified, this contract remains `Accepted`.
+No frontend Contacts flow or remaining Contacts lifecycle endpoint is
+implemented by this contract.
 
 ## Create or Return a Contact Request
 
@@ -120,7 +114,7 @@ The operation uses one success status for both first creation and reuse:
 | `id`          | string    | Stable identifier for the returned Contact relationship.             |
 | `requesterId` | string    | Authoritative user who originally created the pending relationship.  |
 | `recipientId` | string    | Authoritative user who originally received the pending relationship. |
-| `status`      | `pending` | Current status supported by this accepted endpoint subset.           |
+| `status`      | `pending` | Current status supported by this implemented endpoint subset.        |
 
 The response contains the persisted relationship. It does not report whether
 this invocation inserted a new row or reused an existing result because the
@@ -135,7 +129,7 @@ preserved; the roles are not reversed to match the latest caller.
 
 Reuse is not a `409 Conflict` for this operation.
 
-This accepted subset supports only `status: "pending"`. It does not define
+This implemented subset supports only `status: "pending"`. It does not define
 reuse behavior for future accepted, rejected, removed, or other unimplemented
 relationship states.
 
@@ -224,7 +218,7 @@ This document does not define:
 - Messages, history, realtime, events, or frontend routes;
 - browser token transport, cookie, CSRF, CORS, or storage policy;
 - exact rate-limit values;
-- any runtime implementation described in the delivery-state section.
+- any additional runtime capability outside the implemented creation endpoint.
 
 Those capabilities require their own Phase-authorized exact contracts and
 implementation outcomes.

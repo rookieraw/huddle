@@ -1,7 +1,7 @@
 # Chat Context
 
-Status: Accepted target; Phase 2 Contact-request creation production composition implemented
-Last reviewed: 2026-08-24
+Status: Accepted target; authenticated Contact-request creation HTTP delivery implemented
+Last reviewed: 2026-09-01
 
 ## Responsibility
 
@@ -39,18 +39,19 @@ Chat does not own:
 | Meeting conversations        | Phase 5        |
 | Notification producer events | Phase 6        |
 
-The Phase 2 Contact-request Domain/Application core and Chat-owned PostgreSQL persistence are implemented and tested. Current behavior covers pending request creation, invalid-target rejection, dependency and persistence failure preservation, sequential duplicate reuse, and opposing-request role preservation.
+The Phase 2 Contact-request Domain/Application core and Chat-owned PostgreSQL persistence are implemented and tested. Current behavior creates pending relationships, rejects self-directed and confirmed missing-target requests, classifies Directory and repository unavailability without relying on exception messages, and reuses the persisted relationship for sequential duplicate or opposing requests.
 
 The database constraint enforces one current relationship per unordered user pair. Real PostgreSQL integration tests cover migration, repository mapping, unordered lookup, precise uniqueness-collision handling, and genuinely concurrent same-direction and opposing request convergence.
 
-The API Gateway application composition boundary now owns the production
-NestJS graph that connects Identity's public Directory API, the
-API Gateway-owned target-directory adapter, the Chat-owned PostgreSQL
-repository, and `SendContactRequestUseCase`. This capability is not yet
-operational: HTTP delivery, authentication-to-requester translation, the
-remaining Contacts lifecycle, and frontend delivery are pending.
+The API Gateway application composition boundary connects Identity's public
+Authentication and Directory capabilities to Chat's Contact-request creation
+use case and repository. Authenticated Contact-request creation is
+HTTP-operational. Its exact route, requester translation, and response and
+error mappings belong to [`../contracts/chat-http.md`](../contracts/chat-http.md).
+The remaining Contacts lifecycle and frontend delivery are pending.
 
-Accepted target behavior does not imply current implementation.
+Accepted target behavior outside this implemented creation subset does not
+imply current implementation.
 
 ## Core Concepts
 

@@ -1,8 +1,8 @@
 # HTTP Contracts
 
-Status: Shared conventions accepted; Identity endpoints implemented; first Chat subset accepted
-Last reviewed: 2026-08-27
-Last verified against source: 2026-08-07
+Status: Shared conventions accepted; Identity endpoints and first Chat subset implemented
+Last reviewed: 2026-09-01
+Last verified against source: 2026-09-01
 
 ## Purpose
 
@@ -17,7 +17,7 @@ It defines:
 - Pagination requirements
 - Contract states
 - The location and delivery state of Context-specific HTTP contracts
-- Accepted and planned capability groups and their exact contract locations
+- Implemented, accepted, and planned capability groups and their exact contract locations
 
 Exact accepted and implemented endpoint paths, methods, payloads, and status
 behavior belong to the relevant Context-specific contract file.
@@ -65,14 +65,14 @@ A Planned capability name is not a stable public route.
 
 ## Contract Registry
 
-| Context or capability | State                                                                     | Contract document                                           |
-| --------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Identity              | Implemented with transitional behavior                                    | [`identity-http.md`](identity-http.md)                      |
-| Chat                  | Contact-request creation Accepted; remaining Phase 2 capabilities Planned | [`chat-http.md`](chat-http.md)                              |
-| Calling               | Planned for Phase 3                                                       | Create only if a required HTTP capability is identified     |
-| Billing               | Planned for Phase 4                                                       | Create when the exact Billing HTTP contract is defined      |
-| Meetings              | Planned for Phase 5                                                       | Create when the exact Meeting HTTP contract is defined      |
-| Notification          | Planned for Phase 6                                                       | Create when the exact Notification HTTP contract is defined |
+| Context or capability | State                                                                        | Contract document                                           |
+| --------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Identity              | Implemented with transitional behavior                                       | [`identity-http.md`](identity-http.md)                      |
+| Chat                  | Contact-request creation Implemented; remaining Phase 2 capabilities Planned | [`chat-http.md`](chat-http.md)                              |
+| Calling               | Planned for Phase 3                                                          | Create only if a required HTTP capability is identified     |
+| Billing               | Planned for Phase 4                                                          | Create when the exact Billing HTTP contract is defined      |
+| Meetings              | Planned for Phase 5                                                          | Create when the exact Meeting HTTP contract is defined      |
+| Notification          | Planned for Phase 6                                                          | Create when the exact Notification HTTP contract is defined |
 
 Do not create empty Context contract files merely to satisfy this registry.
 
@@ -125,14 +125,29 @@ The authenticated actor comes from the verified token principal.
 
 A request body, path parameter, or query parameter must not override the authenticated actor.
 
-The currently implemented access-token principal contains:
+Identity's existing Passport-protected HTTP path attaches:
 
 ```typescript
-type AuthenticatedPrincipal = {
+type PassportAuthenticatedPrincipal = {
   id: string;
   email: string;
 };
 ```
+
+The implemented Chat Contact-request endpoint instead consumes Identity's
+public Authentication API, whose verified result contains:
+
+```typescript
+type AuthenticationApiPrincipal = {
+  userId: string;
+  expiresAt: Date;
+};
+```
+
+Its API Gateway-owned guard attaches only `userId` to the Contact request.
+These are separate integration paths; this document does not merge their
+principal types or expose email, expiration, or token claims as Chat requester
+authority.
 
 The JWT currently carries equivalent claims:
 
@@ -320,25 +335,25 @@ Examples that remain internal include:
 Context-specific authorization determines whether a hidden resource is
 represented as `403` or `404`.
 
-## Accepted HTTP Capability Subsets
+## Context HTTP Capability Subsets
 
 ### Phase 2 — Chat
 
-Only this Chat HTTP subset is accepted:
+Only this Chat HTTP subset is implemented:
 
-| Capability               | State      | Contract                       | Implementation state         |
-| ------------------------ | ---------- | ------------------------------ | ---------------------------- |
-| Contact-request creation | `Accepted` | [`chat-http.md`](chat-http.md) | HTTP delivery does not exist |
+| Capability               | State         | Contract                       | Implementation state                 |
+| ------------------------ | ------------- | ------------------------------ | ------------------------------------ |
+| Contact-request creation | `Implemented` | [`chat-http.md`](chat-http.md) | Authenticated HTTP delivery verified |
 
-The accepted subset defines `POST /contact-requests`. It does not accept or
+The implemented subset defines `POST /contact-requests`. It does not accept or
 implement another Contacts, Conversation, Group, Message-history, or frontend
 capability.
 
 ## Planned HTTP Capability Registry
 
 The following capabilities are authorized by their delivery phases, but their
-exact routes and payloads are not yet contracts. The accepted subset above is
-not repeated in this planned registry.
+exact routes and payloads are not yet contracts. The implemented subset above
+is not repeated in this planned registry.
 
 This registry does not authorize endpoints that are absent from the owning
 Context contract.

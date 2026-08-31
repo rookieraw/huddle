@@ -63,7 +63,8 @@ A document should have one coherent responsibility, but related rules should rem
 Examples:
 
 - Calls and Meetings have separate capability documents but share one Conferencing Context;
-- all HTTP contracts currently remain in one file;
+- shared HTTP conventions remain together while exact Context HTTP contracts
+  are added only when their first endpoint is designed;
 - realtime Chat and Conferencing contracts are separate because their transports and payloads differ.
 
 Split a document only when readers repeatedly need unrelated sections or its ownership becomes ambiguous.
@@ -205,6 +206,7 @@ They do not own exact HTTP paths, Socket.IO event names, or tier values.
 | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------- |
 | [`contracts/http.md`](contracts/http.md)                                   | Shared HTTP conventions, errors, pagination, and Context contract registry    | A shared HTTP convention or registry entry changes |
 | [`contracts/identity-http.md`](contracts/identity-http.md)                 | Implemented Identity HTTP endpoints and transitional behavior                 | An Identity HTTP endpoint changes                  |
+| [`contracts/chat-http.md`](contracts/chat-http.md)                         | Accepted and implemented Chat HTTP endpoints                                  | A Chat HTTP endpoint changes                       |
 | [`contracts/chat-realtime.md`](contracts/chat-realtime.md)                 | `/chat` namespace, Message events, acknowledgements, and reconnect behavior   | Chat realtime behavior changes                     |
 | [`contracts/conferencing-realtime.md`](contracts/conferencing-realtime.md) | Shared `/conferencing` connection, session, participant, and lifecycle events | Shared Conferencing realtime behavior changes      |
 | [`contracts/conferencing-p2p.md`](contracts/conferencing-p2p.md)           | Direct Call SDP offer, answer, and ICE signaling                              | Direct Call P2P signaling changes                  |
