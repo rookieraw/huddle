@@ -1,4 +1,8 @@
 import {
+  ContactTargetNotFoundError,
+  SelfContactRequestError,
+} from '@huddle/chat';
+import {
   BadRequestException,
   HttpStatus,
   type ArgumentsHost,
@@ -74,4 +78,35 @@ describe('ContactRequestExceptionFilter', () => {
       },
     });
   });
+
+  it.each([
+    {
+      exception: new SelfContactRequestError(),
+      status: HttpStatus.BAD_REQUEST,
+      code: 'SELF_CONTACT_REQUEST',
+      message: 'A Contact request cannot target the requester.',
+    },
+    {
+      exception: new ContactTargetNotFoundError(),
+      status: HttpStatus.NOT_FOUND,
+      code: 'CONTACT_TARGET_NOT_FOUND',
+      message: 'Contact target was not found.',
+    },
+  ])(
+    'returns the fixed $code envelope',
+    ({ exception, status, code, message }) => {
+      const filter = new ContactRequestExceptionFilter();
+      const { host, response } = createArgumentsHost();
+
+      filter.catch(exception, host);
+
+      expect(response.status).toHaveBeenCalledWith(status);
+      expect(response.json).toHaveBeenCalledWith({
+        error: {
+          code,
+          message,
+        },
+      });
+    },
+  );
 });

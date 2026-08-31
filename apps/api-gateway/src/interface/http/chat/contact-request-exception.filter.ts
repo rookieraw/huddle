@@ -1,4 +1,8 @@
 import {
+  ContactTargetNotFoundError,
+  SelfContactRequestError,
+} from '@huddle/chat';
+import {
   BadRequestException,
   Catch,
   HttpStatus,
@@ -24,6 +28,36 @@ export class ContactRequestExceptionFilter implements ExceptionFilter {
         error: {
           code: 'AUTHENTICATION_REQUIRED',
           message: 'Authentication is required.',
+        },
+      });
+
+      return;
+    }
+
+    if (exception instanceof SelfContactRequestError) {
+      const response = host
+        .switchToHttp()
+        .getResponse<ContactRequestHttpResponse>();
+
+      response.status(HttpStatus.BAD_REQUEST).json({
+        error: {
+          code: 'SELF_CONTACT_REQUEST',
+          message: 'A Contact request cannot target the requester.',
+        },
+      });
+
+      return;
+    }
+
+    if (exception instanceof ContactTargetNotFoundError) {
+      const response = host
+        .switchToHttp()
+        .getResponse<ContactRequestHttpResponse>();
+
+      response.status(HttpStatus.NOT_FOUND).json({
+        error: {
+          code: 'CONTACT_TARGET_NOT_FOUND',
+          message: 'Contact target was not found.',
         },
       });
 
