@@ -401,4 +401,47 @@ describe('Contact requests (e2e)', () => {
       expect(upsert).toHaveBeenCalledTimes(expectedUpsertCalls);
     },
   );
+
+  it('returns only the fixed internal-error response for an unexpected failure', async () => {
+    const internalValues = [
+      'unexpected verifier failure',
+      'JWT_PROVIDER_FAILURE',
+      'private@example.com',
+      'secret-access-token',
+      'P2002',
+      'contact_relationships_current_user_pair_key',
+      'D:\\internal\\contact-request.ts',
+    ];
+    const unexpectedFailure = Object.assign(new Error(internalValues[0]), {
+      providerCode: internalValues[1],
+      principalEmail: internalValues[2],
+      token: internalValues[3],
+      databaseCode: internalValues[4],
+      constraint: internalValues[5],
+      stack: internalValues[6],
+    });
+    verifyAccessToken.mockRejectedValueOnce(unexpectedFailure);
+
+    const response = await request(app.getHttpServer())
+      .post('/contact-requests')
+      .set('Authorization', 'Bearer secret-access-token')
+      .send({ targetUserId: 'user-target' })
+      .expect(500);
+    const body = response.body as ContactRequestErrorBody;
+
+    expect(body).toEqual({
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'An unexpected error occurred.',
+      },
+    });
+    const serializedBody = JSON.stringify(body);
+    for (const internalValue of internalValues) {
+      expect(serializedBody).not.toContain(internalValue);
+    }
+    expect(verifyAccessToken).toHaveBeenCalledWith('secret-access-token');
+    expect(userExists).not.toHaveBeenCalled();
+    expect(findFirst).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+  });
 });
