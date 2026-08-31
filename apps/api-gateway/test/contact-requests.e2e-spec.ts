@@ -298,4 +298,44 @@ describe('Contact requests (e2e)', () => {
       expect(upsert).not.toHaveBeenCalled();
     },
   );
+
+  it('returns the fixed self-contact-request response before dependency work', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/contact-requests')
+      .set('Authorization', 'Bearer access-token')
+      .send({ targetUserId: 'user-requester' })
+      .expect(400);
+    const body = response.body as ContactRequestErrorBody;
+
+    expect(body).toEqual({
+      error: {
+        code: 'SELF_CONTACT_REQUEST',
+        message: 'A Contact request cannot target the requester.',
+      },
+    });
+    expect(userExists).not.toHaveBeenCalled();
+    expect(findFirst).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it('returns the fixed target-not-found response for a confirmed missing target', async () => {
+    userExists.mockResolvedValueOnce(false);
+
+    const response = await request(app.getHttpServer())
+      .post('/contact-requests')
+      .set('Authorization', 'Bearer access-token')
+      .send({ targetUserId: 'user-missing' })
+      .expect(404);
+    const body = response.body as ContactRequestErrorBody;
+
+    expect(body).toEqual({
+      error: {
+        code: 'CONTACT_TARGET_NOT_FOUND',
+        message: 'Contact target was not found.',
+      },
+    });
+    expect(userExists).toHaveBeenCalledWith('user-missing');
+    expect(findFirst).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+  });
 });
