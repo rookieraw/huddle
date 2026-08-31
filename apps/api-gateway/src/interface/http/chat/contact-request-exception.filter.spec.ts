@@ -1,4 +1,6 @@
 import {
+  ContactRequestUnavailableError,
+  ContactTargetLookupUnavailableError,
   ContactTargetNotFoundError,
   SelfContactRequestError,
 } from '@huddle/chat';
@@ -91,6 +93,18 @@ describe('ContactRequestExceptionFilter', () => {
       status: HttpStatus.NOT_FOUND,
       code: 'CONTACT_TARGET_NOT_FOUND',
       message: 'Contact target was not found.',
+    },
+    {
+      exception: new ContactTargetLookupUnavailableError(),
+      status: HttpStatus.SERVICE_UNAVAILABLE,
+      code: 'CONTACT_TARGET_LOOKUP_UNAVAILABLE',
+      message: 'Contact target validation is temporarily unavailable.',
+    },
+    {
+      exception: new ContactRequestUnavailableError(),
+      status: HttpStatus.SERVICE_UNAVAILABLE,
+      code: 'CONTACT_REQUEST_UNAVAILABLE',
+      message: 'Contact request service is temporarily unavailable.',
     },
   ])(
     'returns the fixed $code envelope',

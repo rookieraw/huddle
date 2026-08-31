@@ -1,4 +1,6 @@
 import {
+  ContactRequestUnavailableError,
+  ContactTargetLookupUnavailableError,
   ContactTargetNotFoundError,
   SelfContactRequestError,
 } from '@huddle/chat';
@@ -58,6 +60,36 @@ export class ContactRequestExceptionFilter implements ExceptionFilter {
         error: {
           code: 'CONTACT_TARGET_NOT_FOUND',
           message: 'Contact target was not found.',
+        },
+      });
+
+      return;
+    }
+
+    if (exception instanceof ContactTargetLookupUnavailableError) {
+      const response = host
+        .switchToHttp()
+        .getResponse<ContactRequestHttpResponse>();
+
+      response.status(HttpStatus.SERVICE_UNAVAILABLE).json({
+        error: {
+          code: 'CONTACT_TARGET_LOOKUP_UNAVAILABLE',
+          message: 'Contact target validation is temporarily unavailable.',
+        },
+      });
+
+      return;
+    }
+
+    if (exception instanceof ContactRequestUnavailableError) {
+      const response = host
+        .switchToHttp()
+        .getResponse<ContactRequestHttpResponse>();
+
+      response.status(HttpStatus.SERVICE_UNAVAILABLE).json({
+        error: {
+          code: 'CONTACT_REQUEST_UNAVAILABLE',
+          message: 'Contact request service is temporarily unavailable.',
         },
       });
 

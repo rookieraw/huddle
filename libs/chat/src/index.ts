@@ -3,6 +3,8 @@ export type { ContactTargetDirectory } from './application/ports/contact-target-
 export { CONTACT_RELATIONSHIP_REPOSITORY } from './application/ports/contact-relationship.repository.port';
 export { CONTACT_TARGET_DIRECTORY } from './application/ports/contact-target-directory.port';
 export {
+  ContactRequestUnavailableError,
+  ContactTargetLookupUnavailableError,
   ContactTargetNotFoundError,
   SelfContactRequestError,
   SendContactRequestUseCase,
