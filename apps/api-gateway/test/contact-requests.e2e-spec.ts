@@ -338,4 +338,67 @@ describe('Contact requests (e2e)', () => {
     expect(findFirst).not.toHaveBeenCalled();
     expect(upsert).not.toHaveBeenCalled();
   });
+
+  it.each([
+    {
+      scenario: 'a Directory rejection',
+      arrangeFailure: (internalMessage: string) => {
+        userExists.mockRejectedValueOnce(new Error(internalMessage));
+      },
+      code: 'CONTACT_TARGET_LOOKUP_UNAVAILABLE',
+      message: 'Contact target validation is temporarily unavailable.',
+      internalMessage: 'private Directory provider failure',
+      expectedFindFirstCalls: 0,
+      expectedUpsertCalls: 0,
+    },
+    {
+      scenario: 'a repository lookup rejection',
+      arrangeFailure: (internalMessage: string) => {
+        findFirst.mockRejectedValueOnce(new Error(internalMessage));
+      },
+      code: 'CONTACT_REQUEST_UNAVAILABLE',
+      message: 'Contact request service is temporarily unavailable.',
+      internalMessage: 'private repository lookup failure',
+      expectedFindFirstCalls: 1,
+      expectedUpsertCalls: 0,
+    },
+    {
+      scenario: 'a repository save rejection',
+      arrangeFailure: (internalMessage: string) => {
+        upsert.mockRejectedValueOnce(new Error(internalMessage));
+      },
+      code: 'CONTACT_REQUEST_UNAVAILABLE',
+      message: 'Contact request service is temporarily unavailable.',
+      internalMessage: 'private repository save failure',
+      expectedFindFirstCalls: 1,
+      expectedUpsertCalls: 1,
+    },
+  ])(
+    'returns the fixed $code response for $scenario',
+    async ({
+      arrangeFailure,
+      code,
+      message,
+      internalMessage,
+      expectedFindFirstCalls,
+      expectedUpsertCalls,
+    }) => {
+      arrangeFailure(internalMessage);
+
+      const response = await request(app.getHttpServer())
+        .post('/contact-requests')
+        .set('Authorization', 'Bearer access-token')
+        .send({ targetUserId: 'user-target' })
+        .expect(503);
+      const body = response.body as ContactRequestErrorBody;
+
+      expect(body).toEqual({
+        error: { code, message },
+      });
+      expect(JSON.stringify(body)).not.toContain(internalMessage);
+      expect(userExists).toHaveBeenCalledWith('user-target');
+      expect(findFirst).toHaveBeenCalledTimes(expectedFindFirstCalls);
+      expect(upsert).toHaveBeenCalledTimes(expectedUpsertCalls);
+    },
+  );
 });
