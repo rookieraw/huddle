@@ -11,11 +11,17 @@ import type {
 } from '@huddle/chat';
 import { DIRECTORY_API, IdentityModule } from '@huddle/identity';
 import type { DirectoryApi } from '@huddle/identity';
+import { ContactRequestAuthenticationGuard } from '../../interface/http/chat/contact-request-authentication.guard';
+import { ContactRequestExceptionFilter } from '../../interface/http/chat/contact-request-exception.filter';
+import { ContactRequestsController } from '../../interface/http/chat/contact-requests.controller';
 import { IdentityContactTargetDirectoryAdapter } from './identity-contact-target-directory.adapter';
 
 @Module({
   imports: [IdentityModule, ChatPersistenceModule],
+  controllers: [ContactRequestsController],
   providers: [
+    ContactRequestAuthenticationGuard,
+    ContactRequestExceptionFilter,
     {
       provide: IdentityContactTargetDirectoryAdapter,
       useFactory: (directoryApi: DirectoryApi) =>

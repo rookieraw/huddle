@@ -6,8 +6,14 @@ import {
   HttpStatus,
   Post,
   Req,
+  UseFilters,
+  UseGuards,
 } from '@nestjs/common';
-import type { ContactRequestAuthenticatedRequest } from './contact-request-authentication.guard';
+import {
+  ContactRequestAuthenticationGuard,
+  type ContactRequestAuthenticatedRequest,
+} from './contact-request-authentication.guard';
+import { ContactRequestExceptionFilter } from './contact-request-exception.filter';
 import { SendContactRequestDto } from './dto/send-contact-request.dto';
 
 type VerifiedContactRequest = ContactRequestAuthenticatedRequest & {
@@ -17,6 +23,8 @@ type VerifiedContactRequest = ContactRequestAuthenticatedRequest & {
 };
 
 @Controller('contact-requests')
+@UseGuards(ContactRequestAuthenticationGuard)
+@UseFilters(ContactRequestExceptionFilter)
 export class ContactRequestsController {
   constructor(
     private readonly sendContactRequestUseCase: SendContactRequestUseCase,
