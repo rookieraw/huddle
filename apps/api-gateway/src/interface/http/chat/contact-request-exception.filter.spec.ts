@@ -123,4 +123,41 @@ describe('ContactRequestExceptionFilter', () => {
       });
     },
   );
+
+  it('returns only the fixed internal-error envelope for an unexpected failure', () => {
+    const filter = new ContactRequestExceptionFilter();
+    const { host, response } = createArgumentsHost();
+    const internalValues = [
+      'Prisma request failed',
+      'P2002',
+      'chat_contact_relationship_current_pair_key',
+      'private@example.com',
+      'secret-access-token',
+      'D:\\internal\\contact-request.ts',
+    ];
+    const unexpectedFailure = Object.assign(new Error(internalValues[0]), {
+      code: internalValues[1],
+      constraint: internalValues[2],
+      principalEmail: internalValues[3],
+      token: internalValues[4],
+      stack: internalValues[5],
+    });
+
+    filter.catch(unexpectedFailure, host);
+
+    expect(response.status).toHaveBeenCalledWith(
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
+    expect(response.json).toHaveBeenCalledWith({
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'An unexpected error occurred.',
+      },
+    });
+
+    const serializedResponse = JSON.stringify(response.json.mock.calls);
+    for (const internalValue of internalValues) {
+      expect(serializedResponse).not.toContain(internalValue);
+    }
+  });
 });
