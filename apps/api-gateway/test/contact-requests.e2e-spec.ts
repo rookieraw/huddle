@@ -7,14 +7,15 @@ import {
   UnsupportedAccessTokenTypeError,
 } from '@huddle/identity';
 import {
+  BadRequestException,
   INestApplication,
   type PipeTransform,
-  ValidationPipe,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { ApiValidationPipe } from '../src/interface/http/api-validation.pipe';
 
 type ContactRequestSuccessBody = {
   id: string;
@@ -70,10 +71,7 @@ describe('Contact requests (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, transform: true }),
-      observeTransformedBody,
-    );
+    app.useGlobalPipes(new ApiValidationPipe(), observeTransformedBody);
     await app.init();
   });
 
@@ -412,14 +410,17 @@ describe('Contact requests (e2e)', () => {
       'contact_relationships_current_user_pair_key',
       'D:\\internal\\contact-request.ts',
     ];
-    const unexpectedFailure = Object.assign(new Error(internalValues[0]), {
-      providerCode: internalValues[1],
-      principalEmail: internalValues[2],
-      token: internalValues[3],
-      databaseCode: internalValues[4],
-      constraint: internalValues[5],
-      stack: internalValues[6],
-    });
+    const unexpectedFailure = Object.assign(
+      new BadRequestException(internalValues[0]),
+      {
+        providerCode: internalValues[1],
+        principalEmail: internalValues[2],
+        token: internalValues[3],
+        databaseCode: internalValues[4],
+        constraint: internalValues[5],
+        stack: internalValues[6],
+      },
+    );
     verifyAccessToken.mockRejectedValueOnce(unexpectedFailure);
 
     const response = await request(app.getHttpServer())

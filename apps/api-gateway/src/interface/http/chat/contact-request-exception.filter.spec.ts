@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ContactRequestAuthenticationRequiredError } from './contact-request-authentication.guard';
 import { ContactRequestExceptionFilter } from './contact-request-exception.filter';
+import { ApiValidationException } from '../api-validation.pipe';
 
 function createArgumentsHost() {
   const response = {
@@ -34,7 +35,7 @@ describe('ContactRequestExceptionFilter', () => {
     const filter = new ContactRequestExceptionFilter();
     const { host, response } = createArgumentsHost();
     const rejectedValue = 'private-target-value';
-    const validationFailure = new BadRequestException({
+    const validationFailure = new ApiValidationException({
       statusCode: HttpStatus.BAD_REQUEST,
       message: [
         `targetUserId rejected ${rejectedValue}`,
@@ -135,13 +136,16 @@ describe('ContactRequestExceptionFilter', () => {
       'secret-access-token',
       'D:\\internal\\contact-request.ts',
     ];
-    const unexpectedFailure = Object.assign(new Error(internalValues[0]), {
-      code: internalValues[1],
-      constraint: internalValues[2],
-      principalEmail: internalValues[3],
-      token: internalValues[4],
-      stack: internalValues[5],
-    });
+    const unexpectedFailure = Object.assign(
+      new BadRequestException(internalValues[0]),
+      {
+        code: internalValues[1],
+        constraint: internalValues[2],
+        principalEmail: internalValues[3],
+        token: internalValues[4],
+        stack: internalValues[5],
+      },
+    );
 
     filter.catch(unexpectedFailure, host);
 

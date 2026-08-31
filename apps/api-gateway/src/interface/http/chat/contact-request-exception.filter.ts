@@ -5,12 +5,12 @@ import {
   SelfContactRequestError,
 } from '@huddle/chat';
 import {
-  BadRequestException,
   Catch,
   HttpStatus,
   type ArgumentsHost,
   type ExceptionFilter,
 } from '@nestjs/common';
+import { ApiValidationException } from '../api-validation.pipe';
 import { ContactRequestAuthenticationRequiredError } from './contact-request-authentication.guard';
 
 type ContactRequestHttpResponse = {
@@ -87,7 +87,7 @@ export class ContactRequestExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    if (exception instanceof BadRequestException) {
+    if (exception instanceof ApiValidationException) {
       writeErrorResponse(response, HttpStatus.BAD_REQUEST, {
         code: 'VALIDATION_FAILED',
         message: 'Request validation failed.',
