@@ -33,6 +33,7 @@ It does not define target architecture, detailed Phase scope, or task-level work
 | MongoDB Message persistence | Not started                                                                                |
 | Realtime Chat               | Not started                                                                                |
 | Deployment foundation       | Planned                                                                                    |
+| OpenAPI and Swagger UI      | Dependency declared; generation and UI not configured; planned for Phase 2.5               |
 | Voice and Video Calling     | Planned                                                                                    |
 | Billing                     | Planned                                                                                    |
 | First Portfolio Release     | Planned                                                                                    |
@@ -165,6 +166,7 @@ The following are future validation gates rather than current blockers:
 | ------------------------------------------------- | ----------- |
 | OCI ARM64 application build                       | Phase 2.5   |
 | HTTPS and WebSocket deployment                    | Phase 2.5   |
+| OpenAPI and Swagger UI contract alignment         | Phase 2.5   |
 | mediasoup ARM64 execution                         | Phase 3     |
 | Direct WebRTC validation                          | Phase 3     |
 | TURN relay validation                             | Phase 3     |
@@ -183,6 +185,7 @@ Do not currently assume the existence of:
 - Direct or Group Chat;
 - MongoDB Message persistence;
 - Chat Socket.IO events;
+- generated OpenAPI documentation or Swagger UI;
 - voice or video Calls;
 - mediasoup;
 - coturn;

@@ -70,7 +70,9 @@ Phase 2 is the frontend transition point.
 
 It may establish the shared web foundation and expose already-implemented Phase 1 Authentication behavior without reopening Phase 1 Domain scope.
 
-Phase 2.5 remains responsible for repeatable validation, packaging, and deployment of the Next.js application with the HTTP and WebSocket foundation.
+Phase 2.5 remains responsible for repeatable validation, packaging, and
+deployment of the Next.js application with the HTTP, OpenAPI documentation, and
+WebSocket foundation.
 
 Before Phases 3 through 6 begin, their Phase documents must define the user-visible scope and verification required for their capabilities.
 
@@ -113,7 +115,10 @@ Phase 2 also introduces only the minimal Identity capabilities required by Chat.
 
 ### Phase 2.5 — CI/CD and Deployment Foundation
 
-Establish repeatable validation, container builds, Next.js and API delivery, OCI deployment, HTTPS, WebSocket operation, migration execution, rollback, and secrets handling before introducing media infrastructure.
+Establish repeatable validation, container builds, Next.js and API delivery,
+OpenAPI documentation for the implemented HTTP surface, OCI deployment, HTTPS,
+WebSocket operation, migration execution, rollback, and secrets handling before
+introducing media infrastructure.
 
 ### Phase 3 — Voice and Video Calling
 
