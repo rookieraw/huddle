@@ -1,6 +1,6 @@
 # Phase 2 — Contacts and Chat
 
-Status: In progress — Contact-request creation production composition implemented
+Status: In progress — authenticated Contact-request creation HTTP delivery implemented
 Depends on: Phase 1 — Identity  
 Next gate: Phase 2.5 — CI/CD and Deployment Foundation
 
@@ -63,7 +63,7 @@ A completed Phase 1 backend does not automatically establish a browser-safe Auth
 | Task                   | Read these documents                                                                                                                           |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | Identity `displayName` | This phase file and `contexts/identity.md`                                                                                                     |
-| Contacts               | This phase file, `contexts/chat.md`, and `contracts/http.md`                                                                                   |
+| Contacts               | This phase file, `contexts/chat.md`, `contracts/http.md`, and `contracts/chat-http.md`                                                         |
 | Direct Conversation    | This phase file, `contexts/chat.md`, and `contracts/http.md`                                                                                   |
 | Group Conversation     | This phase file, `contexts/chat.md`, and `product/tiers.md` when quota-related                                                                 |
 | Message persistence    | This phase file, `contexts/chat.md`, `architecture/data-and-consistency.md`, and ADR 0003                                                      |
@@ -111,16 +111,15 @@ Do not introduce an Identity Outbox, profile projection, event bus, or profile c
 
 ### Contacts
 
-The Contact-request Domain/Application core and Chat-owned PostgreSQL persistence are implemented. The current implementation creates pending requests between distinct users, checks the untrusted target through a Chat-owned port, preserves dependency and persistence failures, and reuses the persisted relationship for sequential duplicate or opposing requests.
+The Contact-request Domain/Application core and Chat-owned PostgreSQL persistence are implemented. The current implementation creates pending requests between distinct users, checks the untrusted target through a Chat-owned port, classifies target-lookup and repository unavailability, and reuses the persisted relationship for sequential duplicate or opposing requests.
 
 PostgreSQL enforces one current relationship per unordered user pair. Real PostgreSQL integration tests verify migration, repository mapping, unordered lookup, precise collision handling, and genuinely concurrent same-direction and opposing request convergence.
 
-The API Gateway application composition boundary now owns the production
-NestJS graph that connects Identity's public Directory API, the
-API Gateway-owned target-directory adapter, the Chat-owned PostgreSQL
-repository, and `SendContactRequestUseCase`. This implementation is not
-operational: HTTP delivery, authentication-to-requester translation, the
-remaining Contacts lifecycle, and frontend delivery are still pending.
+The API Gateway application composition boundary now delivers authenticated
+Contact-request creation over HTTP. The exact route, requester authority,
+validation, response, error, and evidence boundaries belong to
+[`../../contracts/chat-http.md`](../../contracts/chat-http.md). The remaining
+Contacts lifecycle and frontend delivery are still pending.
 
 The full Phase 2 Contacts scope includes:
 
@@ -294,14 +293,15 @@ Create or update public HTTP contracts for:
 - Message history;
 - entitlement and concurrency failures.
 
-Exact request, response, pagination, and transport-error shapes belong in:
+Shared HTTP conventions belong in `contracts/http.md`. Exact request, response,
+pagination, and transport-error shapes belong in the owning Context-specific
+HTTP contract, including `contracts/chat-http.md` for Chat.
 
-`contracts/http.md`
-
-Before the first Phase 2 Chat controller or consuming frontend slice:
+The first Phase 2 Chat controller and exact contract are implemented. Before
+an additional Chat controller or consuming frontend slice:
 
 - the stable shared error envelope must be accepted;
-- the first exact Chat HTTP contract must be created;
+- its exact Chat HTTP contract must be created;
 - the implemented subset must be registered;
 - applicable pagination behavior must be defined.
 

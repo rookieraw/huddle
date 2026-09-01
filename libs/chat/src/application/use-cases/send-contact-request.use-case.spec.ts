@@ -1,10 +1,12 @@
-import { DomainError } from '@huddle/shared-kernel';
 import { ContactRelationship } from '../../domain/contact-relationship.entity';
 import type { ContactRelationshipRepository } from '../ports/contact-relationship.repository.port';
 import type { ContactTargetDirectory } from '../ports/contact-target-directory.port';
 import {
+  ContactRequestUnavailableError,
+  ContactTargetLookupUnavailableError,
   ContactTargetNotFoundError,
   SendContactRequestUseCase,
+  SelfContactRequestError,
 } from './send-contact-request.use-case';
 
 class MissingContactTargetDirectory implements ContactTargetDirectory {
@@ -71,12 +73,18 @@ describe('SendContactRequestUseCase', () => {
       contactRelationshipRepository,
     );
 
+    expect(SelfContactRequestError).toEqual(expect.any(Function));
+
     const execution = useCase.execute({
       requesterId: 'user-same',
       targetUserId: 'user-same',
     });
 
-    await expect(execution).rejects.toBeInstanceOf(DomainError);
+    await expect(execution).rejects.toBeInstanceOf(SelfContactRequestError);
+    expect(contactTargetDirectory.targetUserExists).not.toHaveBeenCalled();
+    expect(
+      contactRelationshipRepository.findCurrentByUserPair,
+    ).not.toHaveBeenCalled();
     expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
   });
 
@@ -98,7 +106,7 @@ describe('SendContactRequestUseCase', () => {
     expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
   });
 
-  it('preserves a Directory dependency failure without saving a relationship', async () => {
+  it('classifies a Directory dependency failure without repository work', async () => {
     const directoryFailure = new Error('Directory unavailable');
     const contactTargetDirectory = new FailingContactTargetDirectory(
       directoryFailure,
@@ -110,16 +118,23 @@ describe('SendContactRequestUseCase', () => {
       contactRelationshipRepository,
     );
 
+    expect(ContactTargetLookupUnavailableError).toEqual(expect.any(Function));
+
     const execution = useCase.execute({
       requesterId: 'user-requester',
       targetUserId: 'user-target',
     });
 
-    await expect(execution).rejects.toBe(directoryFailure);
+    await expect(execution).rejects.toBeInstanceOf(
+      ContactTargetLookupUnavailableError,
+    );
+    expect(
+      contactRelationshipRepository.findCurrentByUserPair,
+    ).not.toHaveBeenCalled();
     expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
   });
 
-  it('preserves a repository lookup failure without saving a relationship', async () => {
+  it('classifies a repository lookup failure without saving a relationship', async () => {
     const repositoryFailure = new Error('Relationship lookup unavailable');
     const contactTargetDirectory = new ExistingContactTargetDirectory();
     const contactRelationshipRepository =
@@ -132,16 +147,20 @@ describe('SendContactRequestUseCase', () => {
       contactRelationshipRepository,
     );
 
+    expect(ContactRequestUnavailableError).toEqual(expect.any(Function));
+
     const execution = useCase.execute({
       requesterId: 'user-requester',
       targetUserId: 'user-target',
     });
 
-    await expect(execution).rejects.toBe(repositoryFailure);
+    await expect(execution).rejects.toBeInstanceOf(
+      ContactRequestUnavailableError,
+    );
     expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
   });
 
-  it('preserves a repository save failure without reporting success', async () => {
+  it('classifies a repository save failure without reporting success', async () => {
     const repositoryFailure = new Error('Relationship save unavailable');
     const contactTargetDirectory = new ExistingContactTargetDirectory();
     const contactRelationshipRepository =
@@ -152,12 +171,16 @@ describe('SendContactRequestUseCase', () => {
       contactRelationshipRepository,
     );
 
+    expect(ContactRequestUnavailableError).toEqual(expect.any(Function));
+
     const execution = useCase.execute({
       requesterId: 'user-requester',
       targetUserId: 'user-target',
     });
 
-    await expect(execution).rejects.toBe(repositoryFailure);
+    await expect(execution).rejects.toBeInstanceOf(
+      ContactRequestUnavailableError,
+    );
     expect(contactRelationshipRepository.save).toHaveBeenCalledTimes(1);
   });
 

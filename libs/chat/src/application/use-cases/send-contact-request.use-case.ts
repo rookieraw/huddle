@@ -7,10 +7,31 @@ type SendContactRequestInput = {
   targetUserId: string;
 };
 
+export class SelfContactRequestError extends Error {
+  constructor() {
+    super('A Contact request cannot target the requester.');
+    this.name = 'SelfContactRequestError';
+  }
+}
+
+export class ContactTargetLookupUnavailableError extends Error {
+  constructor() {
+    super('Contact target validation is temporarily unavailable.');
+    this.name = 'ContactTargetLookupUnavailableError';
+  }
+}
+
 export class ContactTargetNotFoundError extends Error {
   constructor() {
     super('Contact target was not found.');
     this.name = 'ContactTargetNotFoundError';
+  }
+}
+
+export class ContactRequestUnavailableError extends Error {
+  constructor() {
+    super('Contact request service is temporarily unavailable.');
+    this.name = 'ContactRequestUnavailableError';
   }
 }
 
@@ -21,19 +42,35 @@ export class SendContactRequestUseCase {
   ) {}
 
   async execute(input: SendContactRequestInput): Promise<ContactRelationship> {
-    const targetExists = await this.contactTargetDirectory.targetUserExists(
-      input.targetUserId,
-    );
+    if (input.requesterId === input.targetUserId) {
+      throw new SelfContactRequestError();
+    }
+
+    let targetExists: boolean;
+
+    try {
+      targetExists = await this.contactTargetDirectory.targetUserExists(
+        input.targetUserId,
+      );
+    } catch {
+      throw new ContactTargetLookupUnavailableError();
+    }
 
     if (!targetExists) {
       throw new ContactTargetNotFoundError();
     }
 
-    const currentRelationship =
-      await this.contactRelationshipRepository.findCurrentByUserPair(
-        input.requesterId,
-        input.targetUserId,
-      );
+    let currentRelationship: ContactRelationship | null;
+
+    try {
+      currentRelationship =
+        await this.contactRelationshipRepository.findCurrentByUserPair(
+          input.requesterId,
+          input.targetUserId,
+        );
+    } catch {
+      throw new ContactRequestUnavailableError();
+    }
 
     if (currentRelationship) {
       return currentRelationship;
@@ -44,6 +81,10 @@ export class SendContactRequestUseCase {
       recipientId: input.targetUserId,
     });
 
-    return this.contactRelationshipRepository.save(relationship);
+    try {
+      return await this.contactRelationshipRepository.save(relationship);
+    } catch {
+      throw new ContactRequestUnavailableError();
+    }
   }
 }
