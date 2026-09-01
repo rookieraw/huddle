@@ -18,6 +18,8 @@ It defines:
 - Contract states
 - The location and delivery state of Context-specific HTTP contracts
 - Implemented, accepted, and planned capability groups and their exact contract locations
+- The relationship between human-maintained HTTP contracts and future generated
+  OpenAPI documentation
 
 Exact accepted and implemented endpoint paths, methods, payloads, and status
 behavior belong to the relevant Context-specific contract file.
@@ -45,6 +47,7 @@ Before implementing a new controller operation:
 | Current implementation status                | [`../delivery/status.md`](../delivery/status.md)                                                                                                                                                     |
 | System-wide security principles              | [`../architecture/security.md`](../architecture/security.md)                                                                                                                                         |
 | Executable behavior                          | Controllers, DTOs, guards, and tests                                                                                                                                                                 |
+| OpenAPI documentation relationship           | This document; generated output remains derived from implemented executable behavior and owning HTTP contracts                                                                                       |
 | Chat realtime events                         | [`chat-realtime.md`](chat-realtime.md)                                                                                                                                                               |
 | Conferencing realtime contracts              | [`conferencing-realtime.md`](conferencing-realtime.md), [`conferencing-p2p.md`](conferencing-p2p.md), [`conferencing-sfu.md`](conferencing-sfu.md), and [`meeting-realtime.md`](meeting-realtime.md) |
 | Integration Events                           | [`integration-events.md`](integration-events.md)                                                                                                                                                     |
@@ -78,6 +81,43 @@ Do not create empty Context contract files merely to satisfy this registry.
 
 A Context-specific contract file is created when its first exact endpoint is
 designed as part of an authorized contract or implementation task.
+
+## OpenAPI Documentation Direction
+
+Huddle plans a machine-readable OpenAPI description so consumers and reviewers
+can discover the implemented HTTP surface, inspect request and response shapes,
+and use the result as portfolio evidence without reconstructing every operation
+from controller source.
+
+The generated description is derived documentation. It is not a separate
+source of truth:
+
+- This document owns shared HTTP conventions and the relationship between
+  generated documentation and Huddle's HTTP contracts.
+- Context-specific contract files own accepted and implemented endpoint paths,
+  methods, payloads, status behavior, and resource-specific semantics.
+- Controllers, DTOs, guards, configuration, and tests evidence executable
+  behavior.
+- Generated OpenAPI operations and schemas must describe only implemented
+  endpoints and must agree with both executable behavior and the owning
+  contracts.
+
+The initial OpenAPI foundation is a required future
+[`Phase 2.5`](../delivery/phases/02.5-deployment-foundation.md) deliverable. It
+includes a generated OpenAPI description of the implemented Phase 2 HTTP
+surface and a Swagger UI presentation within an explicitly selected security
+and network boundary. The future implementation task must define the exact
+route and environment exposure; this contract does not authorize a public
+documentation endpoint by itself.
+
+After that foundation exists, each endpoint-owning Phase must update and verify
+the generated documentation in the same change as an implemented endpoint.
+Planned endpoints must not appear as generated operations.
+
+Currently, the API Gateway declares the `@nestjs/swagger` dependency, but it
+does not generate an OpenAPI description or configure Swagger UI. Dependency
+presence is not implementation evidence. Current state remains owned by
+[`delivery/status.md`](../delivery/status.md).
 
 ## General Conventions
 

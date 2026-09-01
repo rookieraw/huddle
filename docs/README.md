@@ -202,17 +202,17 @@ They do not own exact HTTP paths, Socket.IO event names, or tier values.
 
 ## Contracts
 
-| Document                                                                   | Responsibility                                                                | Update when                                        |
-| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------- |
-| [`contracts/http.md`](contracts/http.md)                                   | Shared HTTP conventions, errors, pagination, and Context contract registry    | A shared HTTP convention or registry entry changes |
-| [`contracts/identity-http.md`](contracts/identity-http.md)                 | Implemented Identity HTTP endpoints and transitional behavior                 | An Identity HTTP endpoint changes                  |
-| [`contracts/chat-http.md`](contracts/chat-http.md)                         | Accepted and implemented Chat HTTP endpoints                                  | A Chat HTTP endpoint changes                       |
-| [`contracts/chat-realtime.md`](contracts/chat-realtime.md)                 | `/chat` namespace, Message events, acknowledgements, and reconnect behavior   | Chat realtime behavior changes                     |
-| [`contracts/conferencing-realtime.md`](contracts/conferencing-realtime.md) | Shared `/conferencing` connection, session, participant, and lifecycle events | Shared Conferencing realtime behavior changes      |
-| [`contracts/conferencing-p2p.md`](contracts/conferencing-p2p.md)           | Direct Call SDP offer, answer, and ICE signaling                              | Direct Call P2P signaling changes                  |
-| [`contracts/conferencing-sfu.md`](contracts/conferencing-sfu.md)           | mediasoup transport, Producer, and Consumer signaling                         | Group Call or Meeting SFU signaling changes        |
-| [`contracts/meeting-realtime.md`](contracts/meeting-realtime.md)           | Meeting lobby and Meeting-specific realtime notifications                     | Meeting realtime behavior changes                  |
-| [`contracts/integration-events.md`](contracts/integration-events.md)       | Versioned cross-context event envelope, catalog, payloads, and consumers      | An Integration Event is added or changed           |
+| Document                                                                   | Responsibility                                                                  | Update when                                      |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------ |
+| [`contracts/http.md`](contracts/http.md)                                   | Shared HTTP conventions, OpenAPI relationship, errors, pagination, and registry | A shared HTTP, OpenAPI, or registry rule changes |
+| [`contracts/identity-http.md`](contracts/identity-http.md)                 | Implemented Identity HTTP endpoints and transitional behavior                   | An Identity HTTP endpoint changes                |
+| [`contracts/chat-http.md`](contracts/chat-http.md)                         | Accepted and implemented Chat HTTP endpoints                                    | A Chat HTTP endpoint changes                     |
+| [`contracts/chat-realtime.md`](contracts/chat-realtime.md)                 | `/chat` namespace, Message events, acknowledgements, and reconnect behavior     | Chat realtime behavior changes                   |
+| [`contracts/conferencing-realtime.md`](contracts/conferencing-realtime.md) | Shared `/conferencing` connection, session, participant, and lifecycle events   | Shared Conferencing realtime behavior changes    |
+| [`contracts/conferencing-p2p.md`](contracts/conferencing-p2p.md)           | Direct Call SDP offer, answer, and ICE signaling                                | Direct Call P2P signaling changes                |
+| [`contracts/conferencing-sfu.md`](contracts/conferencing-sfu.md)           | mediasoup transport, Producer, and Consumer signaling                           | Group Call or Meeting SFU signaling changes      |
+| [`contracts/meeting-realtime.md`](contracts/meeting-realtime.md)           | Meeting lobby and Meeting-specific realtime notifications                       | Meeting realtime behavior changes                |
+| [`contracts/integration-events.md`](contracts/integration-events.md)       | Versioned cross-context event envelope, catalog, payloads, and consumers        | An Integration Event is added or changed         |
 
 Contracts answer:
 
@@ -312,30 +312,31 @@ Planned procedures must remain labeled as planned until exercised.
 
 # Task-based Reading Guide
 
-| Task                                 | Minimum documents                                                                                                          |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| Check what exists now                | `delivery/status.md`                                                                                                       |
-| Plan the next implementation         | `delivery/status.md` and the active Phase                                                                                  |
-| Plan a frontend journey              | `product/user-experience.md`, `delivery/status.md`, active Phase, and applicable contracts                                 |
-| Implement a frontend slice           | `product/user-experience.md`, active Phase, applicable contracts, `architecture/security.md`, and `engineering/testing.md` |
-| Change product scope                 | `product/scope.md` and `delivery/roadmap.md`                                                                               |
-| Change a tier limit                  | `product/tiers.md`, affected Context, and active Phase                                                                     |
-| Change a domain invariant            | Owning Context, active Phase, and tests                                                                                    |
-| Add an HTTP endpoint                 | `contracts/http.md`, owning Context-specific HTTP contract, owning Context, and active Phase                               |
-| Change an Identity HTTP endpoint     | `contracts/identity-http.md`, `contexts/identity.md`, and relevant Phase                                                   |
-| Change a shared HTTP convention      | `contracts/http.md`, affected Context contracts, and affected tests                                                        |
-| Add Chat Socket.IO behavior          | `contracts/chat-realtime.md`, `contexts/chat.md`, and active Phase                                                         |
-| Add shared Conferencing behavior     | `contracts/conferencing-realtime.md`, relevant Conferencing Context document, and active Phase                             |
-| Add Direct Call P2P signaling        | `contracts/conferencing-realtime.md`, `contracts/conferencing-p2p.md`, `contexts/conferencing/calls.md`, and Phase 3       |
-| Add Group Call SFU signaling         | `contracts/conferencing-realtime.md`, `contracts/conferencing-sfu.md`, Conferencing Context, and Phase 3                   |
-| Add Meeting realtime behavior        | Applicable shared or SFU contract, `contracts/meeting-realtime.md`, `contexts/conferencing/meetings.md`, and Phase 5       |
-| Add a synchronous cross-context read | Consumer Context, provider Context, and ADR 0004                                                                           |
-| Add an Integration Event             | Producer Context, consumer Context, `contracts/integration-events.md`, and ADR 0004                                        |
-| Change persistence ownership         | Owning Context, `architecture/data-and-consistency.md`, and ADR 0002                                                       |
-| Implement Stripe behavior            | `contexts/billing.md`, Phase 4, and applicable Contract                                                                    |
-| Change deployment                    | `operations/deployment.md`, active Phase, and ADR 0007 when strategy changes                                               |
-| Diagnose a deployed failure          | `operations/runbook.md` and affected Context                                                                               |
-| Prepare the portfolio demonstration  | `operations/portfolio-demo.md` and `delivery/status.md`                                                                    |
+| Task                                 | Minimum documents                                                                                                                            |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Check what exists now                | `delivery/status.md`                                                                                                                         |
+| Plan the next implementation         | `delivery/status.md` and the active Phase                                                                                                    |
+| Plan a frontend journey              | `product/user-experience.md`, `delivery/status.md`, active Phase, and applicable contracts                                                   |
+| Implement a frontend slice           | `product/user-experience.md`, active Phase, applicable contracts, `architecture/security.md`, and `engineering/testing.md`                   |
+| Change product scope                 | `product/scope.md` and `delivery/roadmap.md`                                                                                                 |
+| Change a tier limit                  | `product/tiers.md`, affected Context, and active Phase                                                                                       |
+| Change a domain invariant            | Owning Context, active Phase, and tests                                                                                                      |
+| Add an HTTP endpoint                 | `contracts/http.md`, owning Context-specific HTTP contract, owning Context, and active Phase                                                 |
+| Change an Identity HTTP endpoint     | `contracts/identity-http.md`, `contexts/identity.md`, and relevant Phase                                                                     |
+| Change a shared HTTP convention      | `contracts/http.md`, affected Context contracts, and affected tests                                                                          |
+| Plan or implement OpenAPI docs       | `contracts/http.md`, `delivery/status.md`, `delivery/roadmap.md`, applicable Phase, `architecture/security.md`, and `engineering/testing.md` |
+| Add Chat Socket.IO behavior          | `contracts/chat-realtime.md`, `contexts/chat.md`, and active Phase                                                                           |
+| Add shared Conferencing behavior     | `contracts/conferencing-realtime.md`, relevant Conferencing Context document, and active Phase                                               |
+| Add Direct Call P2P signaling        | `contracts/conferencing-realtime.md`, `contracts/conferencing-p2p.md`, `contexts/conferencing/calls.md`, and Phase 3                         |
+| Add Group Call SFU signaling         | `contracts/conferencing-realtime.md`, `contracts/conferencing-sfu.md`, Conferencing Context, and Phase 3                                     |
+| Add Meeting realtime behavior        | Applicable shared or SFU contract, `contracts/meeting-realtime.md`, `contexts/conferencing/meetings.md`, and Phase 5                         |
+| Add a synchronous cross-context read | Consumer Context, provider Context, and ADR 0004                                                                                             |
+| Add an Integration Event             | Producer Context, consumer Context, `contracts/integration-events.md`, and ADR 0004                                                          |
+| Change persistence ownership         | Owning Context, `architecture/data-and-consistency.md`, and ADR 0002                                                                         |
+| Implement Stripe behavior            | `contexts/billing.md`, Phase 4, and applicable Contract                                                                                      |
+| Change deployment                    | `operations/deployment.md`, active Phase, and ADR 0007 when strategy changes                                                                 |
+| Diagnose a deployed failure          | `operations/runbook.md` and affected Context                                                                                                 |
+| Prepare the portfolio demonstration  | `operations/portfolio-demo.md` and `delivery/status.md`                                                                                      |
 
 An ADR is not required reading for every routine implementation after its pattern is established.
 
