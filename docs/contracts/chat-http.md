@@ -80,12 +80,16 @@ Directory capability.
 }
 ```
 
-| Field          | Presence | Validation                               | Consumer meaning                 |
-| -------------- | -------- | ---------------------------------------- | -------------------------------- |
-| `targetUserId` | Required | String containing at least one character | Untrusted target user to contact |
+| Field          | Presence | Validation                                        | Consumer meaning                 |
+| -------------- | -------- | ------------------------------------------------- | -------------------------------- |
+| `targetUserId` | Required | String whose raw length is at least one character | Untrusted target user to contact |
 
 `targetUserId` is an opaque identifier. Clients and servers must not infer
 authorization or resource type from its format.
+
+The HTTP boundary does not trim or otherwise normalize `targetUserId`.
+Whitespace-only strings therefore satisfy DTO validation; Identity Directory
+remains authoritative for whether the supplied opaque identifier exists.
 
 `targetUserId` is the only declared body field. The current shared validation
 configuration removes unsupported fields rather than rejecting them. A
