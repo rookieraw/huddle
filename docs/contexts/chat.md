@@ -1,7 +1,7 @@
 # Chat Context
 
-Status: Accepted target; authenticated Contact-request creation HTTP delivery implemented
-Last reviewed: 2026-09-01
+Status: Accepted target; Contact-request creation and accepted-state persistence implemented
+Last reviewed: 2026-09-02
 
 ## Responsibility
 
@@ -39,16 +39,18 @@ Chat does not own:
 | Meeting conversations        | Phase 5        |
 | Notification producer events | Phase 6        |
 
-The Phase 2 Contact-request Domain/Application core and Chat-owned PostgreSQL persistence are implemented and tested. Current behavior creates pending relationships, rejects self-directed and confirmed missing-target requests, classifies Directory and repository unavailability without relying on exception messages, and reuses the persisted relationship for sequential duplicate or opposing requests.
+The Phase 2 Contact-request Domain/Application core and Chat-owned PostgreSQL persistence are implemented and tested. The Domain supports recipient acceptance, and persistence stores and reloads pending or accepted relationships. Contact-request creation still creates pending relationships, rejects self-directed and confirmed missing-target requests, classifies Directory and repository unavailability without relying on exception messages, and reuses a pending or accepted current relationship for sequential duplicate or opposing requests.
 
-The database constraint enforces one current relationship per unordered user pair. Real PostgreSQL integration tests cover migration, repository mapping, unordered lookup, precise uniqueness-collision handling, and genuinely concurrent same-direction and opposing request convergence.
+The database constraint enforces one pending-or-accepted current relationship per unordered user pair. Real PostgreSQL integration tests cover additive migration, exact status enforcement, repository mapping, unordered lookup, precise uniqueness-collision handling, and genuinely concurrent same-direction and opposing request convergence.
 
 The API Gateway application composition boundary connects Identity's public
 Authentication and Directory capabilities to Chat's Contact-request creation
 use case and repository. Authenticated Contact-request creation is
 HTTP-operational. Its exact route, requester translation, and response and
 error mappings belong to [`../contracts/chat-http.md`](../contracts/chat-http.md).
-The remaining Contacts lifecycle and frontend delivery are pending.
+The existing endpoint truthfully returns a reused pending or accepted current
+relationship. An Application acceptance command, acceptance endpoint, the
+remaining Contacts lifecycle, and frontend delivery are pending.
 
 Accepted target behavior outside this implemented creation subset does not
 imply current implementation.
@@ -64,6 +66,10 @@ Relevant states are equivalent to:
 - Pending
 - Accepted
 - Rejected or removed according to the use case
+
+The pending-to-accepted Domain transition and pending/accepted PostgreSQL
+persistence are implemented. Application and HTTP acceptance operations remain
+unimplemented.
 
 Required invariants:
 
@@ -349,7 +355,7 @@ Chat stores relational state in PostgreSQL:
 - Invitations
 - Relational quota state
 
-Contact relationship persistence is implemented in the Chat Context. Conversation, membership, Group administration, invitation, and quota persistence remain target behavior.
+Pending and accepted Contact relationship persistence is implemented in the Chat Context. Conversation, membership, Group administration, invitation, and quota persistence remain target behavior.
 
 ### MongoDB
 

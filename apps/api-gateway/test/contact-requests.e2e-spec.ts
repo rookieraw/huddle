@@ -172,6 +172,37 @@ describe('Contact requests (e2e)', () => {
     expect(upsert).not.toHaveBeenCalled();
   });
 
+  it('returns an accepted relationship truthfully when reusing it in the opposing direction', async () => {
+    verifyAccessToken.mockResolvedValueOnce({
+      userId: 'user-original-recipient',
+      expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+    });
+    findFirst.mockResolvedValueOnce({
+      id: 'accepted-relationship-id',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      status: 'accepted',
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/contact-requests')
+      .set('Authorization', 'Bearer recipient-access-token')
+      .send({ targetUserId: 'user-original-requester' })
+      .expect(200);
+    const body = response.body as ContactRequestSuccessBody;
+
+    expect(body).toEqual({
+      id: 'accepted-relationship-id',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      status: 'accepted',
+    });
+    expect(verifyAccessToken).toHaveBeenCalledWith('recipient-access-token');
+    expect(userExists).toHaveBeenCalledWith('user-original-requester');
+    expect(findFirst).toHaveBeenCalledTimes(1);
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['missing', {}],
     ['non-string', { targetUserId: 42 }],

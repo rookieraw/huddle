@@ -36,7 +36,7 @@ export class PrismaContactRelationshipRepository implements ContactRelationshipR
   ): Promise<ContactRelationship | null> {
     const record = await this.prisma.contactRelationship.findFirst({
       where: {
-        status: 'pending',
+        status: { in: ['pending', 'accepted'] },
         OR: [
           {
             requesterId: firstUserId,
@@ -58,6 +58,8 @@ export class PrismaContactRelationshipRepository implements ContactRelationshipR
   }
 
   async save(relationship: ContactRelationship): Promise<ContactRelationship> {
+    const status = this.toPersistenceStatus(relationship);
+
     try {
       const record = await this.prisma.contactRelationship.upsert({
         where: { id: relationship.id },
@@ -65,12 +67,12 @@ export class PrismaContactRelationshipRepository implements ContactRelationshipR
           id: relationship.id,
           requesterId: relationship.requesterId,
           recipientId: relationship.recipientId,
-          status: 'pending',
+          status,
         },
         update: {
           requesterId: relationship.requesterId,
           recipientId: relationship.recipientId,
-          status: 'pending',
+          status,
         },
       });
 
@@ -112,7 +114,7 @@ export class PrismaContactRelationshipRepository implements ContactRelationshipR
   }
 
   private toDomain(record: ContactRelationshipRecord): ContactRelationship {
-    if (record.status !== 'pending') {
+    if (record.status !== 'pending' && record.status !== 'accepted') {
       throw new Error('Unsupported persisted ContactRelationship status.');
     }
 
@@ -122,5 +124,19 @@ export class PrismaContactRelationshipRepository implements ContactRelationshipR
       recipientId: record.recipientId,
       status: record.status,
     });
+  }
+
+  private toPersistenceStatus(
+    relationship: ContactRelationship,
+  ): 'pending' | 'accepted' {
+    if (relationship.isPending()) {
+      return 'pending';
+    }
+
+    if (relationship.isAccepted()) {
+      return 'accepted';
+    }
+
+    throw new Error('Unsupported ContactRelationship status.');
   }
 }

@@ -18,6 +18,7 @@ import {
 const PRISMA_DIR = __dirname;
 const CHAT_PACKAGE_ROOT = resolve(PRISMA_DIR, '../../..');
 const REAL_MIGRATIONS_DIR = join(PRISMA_DIR, 'migrations');
+const INITIAL_MIGRATION = '20260820000000_create_contact_relationships';
 
 const MIGRATION_TEST_SCHEMA = `
 datasource db {
@@ -41,6 +42,14 @@ function runMigrateDeploy(schemaPath: string, databaseUrl: string): void {
   });
 }
 
+function copyMigration(migrationName: string, targetDirectory: string): void {
+  cpSync(
+    join(REAL_MIGRATIONS_DIR, migrationName),
+    join(targetDirectory, migrationName),
+    { recursive: true },
+  );
+}
+
 describe('ContactRelationship migration (integration, via real prisma migrate deploy)', () => {
   let container: StartedPostgreSqlContainer;
   let tempDir: string;
@@ -58,15 +67,37 @@ describe('ContactRelationship migration (integration, via real prisma migrate de
       join(tempMigrationsDir, 'migration_lock.toml'),
     );
 
-    for (const entry of readdirSync(REAL_MIGRATIONS_DIR, {
+    const migrationEntries = readdirSync(REAL_MIGRATIONS_DIR, {
       withFileTypes: true,
-    })) {
-      if (entry.isDirectory()) {
-        cpSync(
-          join(REAL_MIGRATIONS_DIR, entry.name),
-          join(tempMigrationsDir, entry.name),
-          { recursive: true },
-        );
+    }).filter((entry) => entry.isDirectory());
+
+    copyMigration(INITIAL_MIGRATION, tempMigrationsDir);
+    runMigrateDeploy(schemaPath, container.getConnectionUri());
+
+    const existingRow = await container.exec([
+      'psql',
+      '--username',
+      container.getUsername(),
+      '--dbname',
+      container.getDatabase(),
+      '--set',
+      'ON_ERROR_STOP=1',
+      '--command',
+      `INSERT INTO chat.contact_relationships
+         (id, requester_id, recipient_id, status)
+       VALUES
+         ('relationship-before-upgrade', 'user-before-a', 'user-before-b', 'pending')`,
+    ]);
+
+    if (existingRow.exitCode !== 0) {
+      throw new Error(
+        `Failed to seed the pre-migration row: ${existingRow.output}`,
+      );
+    }
+
+    for (const entry of migrationEntries) {
+      if (entry.name !== INITIAL_MIGRATION) {
+        copyMigration(entry.name, tempMigrationsDir);
       }
     }
 
@@ -78,7 +109,28 @@ describe('ContactRelationship migration (integration, via real prisma migrate de
     rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it('creates the Chat-owned pending ContactRelationship storage', async () => {
+  it('preserves an existing pending relationship through the additive migration', async () => {
+    const existingRow = await container.exec([
+      'psql',
+      '--username',
+      container.getUsername(),
+      '--dbname',
+      container.getDatabase(),
+      '--tuples-only',
+      '--no-align',
+      '--command',
+      `SELECT id, requester_id, recipient_id, status
+         FROM chat.contact_relationships
+         WHERE id = 'relationship-before-upgrade'`,
+    ]);
+
+    expect(existingRow.exitCode).toBe(0);
+    expect(existingRow.output.trim()).toBe(
+      'relationship-before-upgrade|user-before-a|user-before-b|pending',
+    );
+  });
+
+  it('creates storage that allows exactly the current relationship statuses', async () => {
     const columns = await container.exec([
       'psql',
       '--username',
@@ -121,10 +173,9 @@ describe('ContactRelationship migration (integration, via real prisma migrate de
     expect(statusConstraint.exitCode).toBe(0);
     expect(statusConstraint.output).toContain('status');
     expect(statusConstraint.output).toContain('pending');
-  });
+    expect(statusConstraint.output).toContain('accepted');
 
-  it('rejects a second current relationship for the unordered user pair', async () => {
-    const firstInsert = await container.exec([
+    const acceptedInsert = await container.exec([
       'psql',
       '--username',
       container.getUsername(),
@@ -136,12 +187,12 @@ describe('ContactRelationship migration (integration, via real prisma migrate de
       `INSERT INTO chat.contact_relationships
          (id, requester_id, recipient_id, status)
        VALUES
-         ('relationship-first', 'user-a', 'user-b', 'pending')`,
+         ('relationship-status-accepted', 'user-status-a', 'user-status-b', 'accepted')`,
     ]);
 
-    expect(firstInsert.exitCode).toBe(0);
+    expect(acceptedInsert.exitCode).toBe(0);
 
-    const reversedInsert = await container.exec([
+    const unsupportedInsert = await container.exec([
       'psql',
       '--username',
       container.getUsername(),
@@ -153,30 +204,80 @@ describe('ContactRelationship migration (integration, via real prisma migrate de
       `INSERT INTO chat.contact_relationships
          (id, requester_id, recipient_id, status)
        VALUES
-         ('relationship-reversed', 'user-b', 'user-a', 'pending')`,
+         ('relationship-status-unsupported', 'user-status-c', 'user-status-d', 'unsupported')`,
     ]);
 
-    expect(reversedInsert.exitCode).not.toBe(0);
-    expect(reversedInsert.output).toContain(
-      'contact_relationships_current_user_pair_key',
+    expect(unsupportedInsert.exitCode).not.toBe(0);
+    expect(unsupportedInsert.output).toContain(
+      'contact_relationships_status_check',
     );
-
-    const rowCount = await container.exec([
-      'psql',
-      '--username',
-      container.getUsername(),
-      '--dbname',
-      container.getDatabase(),
-      '--tuples-only',
-      '--no-align',
-      '--command',
-      `SELECT count(*)
-       FROM chat.contact_relationships
-       WHERE requester_id IN ('user-a', 'user-b')
-         AND recipient_id IN ('user-a', 'user-b')`,
-    ]);
-
-    expect(rowCount.exitCode).toBe(0);
-    expect(rowCount.output.trim()).toBe('1');
   });
+
+  it.each([
+    ['pending', 'pending'],
+    ['pending', 'accepted'],
+    ['accepted', 'pending'],
+    ['accepted', 'accepted'],
+  ] as const)(
+    'rejects a reversed relationship for current %s/%s statuses',
+    async (firstStatus, secondStatus) => {
+      const pairKey = `${firstStatus}-${secondStatus}`;
+      const firstUserId = `user-${pairKey}-a`;
+      const secondUserId = `user-${pairKey}-b`;
+      const firstInsert = await container.exec([
+        'psql',
+        '--username',
+        container.getUsername(),
+        '--dbname',
+        container.getDatabase(),
+        '--set',
+        'ON_ERROR_STOP=1',
+        '--command',
+        `INSERT INTO chat.contact_relationships
+           (id, requester_id, recipient_id, status)
+         VALUES
+           ('relationship-${pairKey}-first', '${firstUserId}', '${secondUserId}', '${firstStatus}')`,
+      ]);
+
+      expect(firstInsert.exitCode).toBe(0);
+
+      const reversedInsert = await container.exec([
+        'psql',
+        '--username',
+        container.getUsername(),
+        '--dbname',
+        container.getDatabase(),
+        '--set',
+        'ON_ERROR_STOP=1',
+        '--command',
+        `INSERT INTO chat.contact_relationships
+           (id, requester_id, recipient_id, status)
+         VALUES
+           ('relationship-${pairKey}-reversed', '${secondUserId}', '${firstUserId}', '${secondStatus}')`,
+      ]);
+
+      expect(reversedInsert.exitCode).not.toBe(0);
+      expect(reversedInsert.output).toContain(
+        'contact_relationships_current_user_pair_key',
+      );
+
+      const rowCount = await container.exec([
+        'psql',
+        '--username',
+        container.getUsername(),
+        '--dbname',
+        container.getDatabase(),
+        '--tuples-only',
+        '--no-align',
+        '--command',
+        `SELECT count(*)
+         FROM chat.contact_relationships
+         WHERE requester_id IN ('${firstUserId}', '${secondUserId}')
+           AND recipient_id IN ('${firstUserId}', '${secondUserId}')`,
+      ]);
+
+      expect(rowCount.exitCode).toBe(0);
+      expect(rowCount.output.trim()).toBe('1');
+    },
+  );
 });

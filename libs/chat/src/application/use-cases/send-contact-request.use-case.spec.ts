@@ -241,6 +241,42 @@ describe('SendContactRequestUseCase', () => {
     ).toHaveBeenNthCalledWith(2, 'user-requester', 'user-target');
   });
 
+  it('reuses an accepted current relationship without saving another relationship', async () => {
+    const contactTargetDirectory = new ExistingContactTargetDirectory();
+    const contactRelationshipRepository =
+      new RecordingContactRelationshipRepository();
+    const acceptedRelationship = ContactRelationship.reconstitute({
+      id: 'relationship-accepted',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      status: 'accepted',
+    });
+    contactRelationshipRepository.findCurrentByUserPair.mockResolvedValueOnce(
+      acceptedRelationship,
+    );
+    const useCase = new SendContactRequestUseCase(
+      contactTargetDirectory,
+      contactRelationshipRepository,
+    );
+
+    const result = await useCase.execute({
+      requesterId: 'user-original-recipient',
+      targetUserId: 'user-original-requester',
+    });
+
+    expect(result).toBe(acceptedRelationship);
+    expect(result.isAccepted()).toBe(true);
+    expect(result.requesterId).toBe('user-original-requester');
+    expect(result.recipientId).toBe('user-original-recipient');
+    expect(
+      contactRelationshipRepository.findCurrentByUserPair,
+    ).toHaveBeenCalledWith(
+      'user-original-recipient',
+      'user-original-requester',
+    );
+    expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
+  });
+
   it('preserves existing roles for a sequential opposing request', async () => {
     const contactTargetDirectory = new ExistingContactTargetDirectory();
     const contactRelationshipRepository =
