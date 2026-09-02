@@ -19,15 +19,16 @@ Those concerns belong to their active source-of-truth documents.
 
 ## Decision Index
 
-| ADR                                           | Decision                                                               | Status   |
-| --------------------------------------------- | ---------------------------------------------------------------------- | -------- |
-| [0001](0001-modular-monolith.md)              | Use a DDD modular monolith                                             | Accepted |
-| [0002](0002-context-owned-persistence.md)     | Enforce context-owned persistence                                      | Accepted |
-| [0003](0003-message-storage-strategy.md)      | Use controlled polyglot persistence for Chat messages                  | Accepted |
-| [0004](0004-cross-context-integration.md)     | Use consumer-owned ports and provider-owned public contracts           | Accepted |
-| [0005](0005-billing-entitlement-model.md)     | Separate BillingAccount, paid Subscription, and effective entitlements | Accepted |
-| [0006](0006-call-and-meeting-lifecycle.md)    | Separate conversation calls, Meetings, and live ConferenceSessions     | Accepted |
-| [0007](0007-portfolio-deployment-topology.md) | Use a single-host OCI Portfolio deployment                             | Accepted |
+| ADR                                                          | Decision                                                               | Status   |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------- | -------- |
+| [0001](0001-modular-monolith.md)                             | Use a DDD modular monolith                                             | Accepted |
+| [0002](0002-context-owned-persistence.md)                    | Enforce context-owned persistence                                      | Accepted |
+| [0003](0003-message-storage-strategy.md)                     | Use controlled polyglot persistence for Chat messages                  | Accepted |
+| [0004](0004-cross-context-integration.md)                    | Use consumer-owned ports and provider-owned public contracts           | Accepted |
+| [0005](0005-billing-entitlement-model.md)                    | Separate BillingAccount, paid Subscription, and effective entitlements | Accepted |
+| [0006](0006-call-and-meeting-lifecycle.md)                   | Separate conversation calls, Meetings, and live ConferenceSessions     | Accepted |
+| [0007](0007-portfolio-deployment-topology.md)                | Use a single-host OCI Portfolio deployment                             | Accepted |
+| [0008](0008-place-http-transport-by-integration-boundary.md) | Place HTTP transport by integration boundary                           | Accepted |
 
 ## Status Values
 
@@ -175,15 +176,16 @@ Read only the ADRs relevant to the current change.
 
 Examples:
 
-| Task                              | Relevant ADRs                   |
-| --------------------------------- | ------------------------------- |
-| Add a Chat repository             | 0002, 0003                      |
-| Add a cross-context lookup        | 0004                            |
-| Enforce a subscription capability | 0004, 0005                      |
-| Add call signaling                | 0004, 0006                      |
-| Add Meeting chat                  | 0004, 0006                      |
-| Change deployment topology        | 0007                            |
-| Extract a microservice            | 0001, 0002, 0004, and a new ADR |
+| Task                                        | Relevant ADRs                                |
+| ------------------------------------------- | -------------------------------------------- |
+| Add a Chat repository                       | 0002, 0003                                   |
+| Add a cross-context lookup                  | 0004                                         |
+| Enforce a subscription capability           | 0004, 0005                                   |
+| Add call signaling                          | 0004, 0006                                   |
+| Add Meeting chat                            | 0004, 0006                                   |
+| Change deployment topology                  | 0007                                         |
+| Add or relocate an HTTP transport interface | 0008; add 0004 for cross-context integration |
+| Extract a microservice                      | 0001, 0002, 0004, and a new ADR              |
 
 Reading the entire ADR collection is not required for every change.
 
