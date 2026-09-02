@@ -1,6 +1,6 @@
 # Phase 2 — Contacts and Chat
 
-Status: In progress — authenticated Contact-request creation HTTP delivery implemented
+Status: In progress — Contact-request creation and accepted-state persistence implemented
 Depends on: Phase 1 — Identity  
 Next gate: Phase 2.5 — CI/CD and Deployment Foundation
 
@@ -111,15 +111,17 @@ Do not introduce an Identity Outbox, profile projection, event bus, or profile c
 
 ### Contacts
 
-The Contact-request Domain/Application core and Chat-owned PostgreSQL persistence are implemented. The current implementation creates pending requests between distinct users, checks the untrusted target through a Chat-owned port, classifies target-lookup and repository unavailability, and reuses the persisted relationship for sequential duplicate or opposing requests.
+The Contact-request Domain/Application core and Chat-owned PostgreSQL persistence are implemented. The Domain supports recipient acceptance, and the repository persists and reloads pending or accepted relationships. The existing creation use case creates pending requests between distinct users, checks the untrusted target through a Chat-owned port, classifies target-lookup and repository unavailability, and reuses a pending or accepted current relationship for sequential duplicate or opposing requests.
 
-PostgreSQL enforces one current relationship per unordered user pair. Real PostgreSQL integration tests verify migration, repository mapping, unordered lookup, precise collision handling, and genuinely concurrent same-direction and opposing request convergence.
+PostgreSQL enforces one pending-or-accepted current relationship per unordered user pair. Real PostgreSQL integration tests verify additive migration, exact status enforcement, repository mapping, unordered lookup, precise collision handling, and genuinely concurrent same-direction and opposing request convergence.
 
 The API Gateway application composition boundary now delivers authenticated
-Contact-request creation over HTTP. The exact route, requester authority,
+Contact-request creation over HTTP and truthfully returns a reused pending or
+accepted current relationship. The exact route, requester authority,
 validation, response, error, and evidence boundaries belong to
-[`../../contracts/chat-http.md`](../../contracts/chat-http.md). The remaining
-Contacts lifecycle and frontend delivery are still pending.
+[`../../contracts/chat-http.md`](../../contracts/chat-http.md). An Application
+acceptance command, acceptance endpoint, the remaining Contacts lifecycle, and
+frontend delivery are still pending.
 
 The full Phase 2 Contacts scope includes:
 
@@ -390,7 +392,7 @@ Add Chat-owned relational persistence for:
 - invitations;
 - relational quota state.
 
-Contact relationship persistence is implemented with a Chat-owned schema, migration, Prisma repository, and unordered current-pair uniqueness constraint. The remaining relational state above is not yet implemented.
+Contact relationship persistence supports pending and accepted states through a Chat-owned schema, additive migration, Prisma repository, and one unordered current-pair uniqueness constraint across both states. The Application acceptance command, acceptance endpoint, and remaining relational state above are not yet implemented.
 
 ### MongoDB
 

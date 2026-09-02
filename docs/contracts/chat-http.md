@@ -1,7 +1,7 @@
 # Chat HTTP Contract
 
 Status: Implemented
-Last reviewed: 2026-09-01
+Last reviewed: 2026-09-02
 
 ## Purpose
 
@@ -35,6 +35,10 @@ Authenticated Contact-request creation is implemented through
 Identity Authentication API binding, verified `userId` to requester
 translation, named application errors, controller-scoped error translation,
 production NestJS registration, and HTTP transport evidence.
+
+The endpoint creates pending relationships and truthfully returns either a
+pending or accepted current relationship when reusing persisted state. It does
+not accept a relationship or provide an acceptance command.
 
 Transport E2E boots the real `AppModule` and HTTP server while overriding only
 the Authentication API, Directory API, and Chat Prisma client external seams.
@@ -113,12 +117,12 @@ The operation uses one success status for both first creation and reuse:
 }
 ```
 
-| Field         | Type      | Consumer meaning                                                     |
-| ------------- | --------- | -------------------------------------------------------------------- |
-| `id`          | string    | Stable identifier for the returned Contact relationship.             |
-| `requesterId` | string    | Authoritative user who originally created the pending relationship.  |
-| `recipientId` | string    | Authoritative user who originally received the pending relationship. |
-| `status`      | `pending` | Current status supported by this implemented endpoint subset.        |
+| Field         | Type                    | Consumer meaning                                               |
+| ------------- | ----------------------- | -------------------------------------------------------------- |
+| `id`          | string                  | Stable identifier for the returned Contact relationship.       |
+| `requesterId` | string                  | Authoritative user who originally requested the relationship.  |
+| `recipientId` | string                  | Authoritative user who originally received the request.        |
+| `status`      | `pending` or `accepted` | Persisted current status returned truthfully by this endpoint. |
 
 The response contains the persisted relationship. It does not report whether
 this invocation inserted a new row or reused an existing result because the
@@ -131,11 +135,10 @@ For an existing opposing request, the operation also returns `200 OK` and the
 same persisted relationship. Its original `requesterId` and `recipientId` are
 preserved; the roles are not reversed to match the latest caller.
 
-Reuse is not a `409 Conflict` for this operation.
-
-This implemented subset supports only `status: "pending"`. It does not define
-reuse behavior for future accepted, rejected, removed, or other unimplemented
-relationship states.
+Reuse is not a `409 Conflict` for this operation. A reused relationship may be
+`pending` or `accepted`; the endpoint returns its persisted status without
+changing it. Rejected, removed, and other relationship states remain outside
+this implemented subset.
 
 ### Error Responses
 
@@ -154,7 +157,8 @@ Every error uses the stable envelope defined in [`http.md`](http.md).
 The endpoint does not define an authorization-denial response beyond
 authentication because the current Contact-request behavior has no separate
 Contact authorization outcome. It does not define a conflict response because
-an existing pending relationship is a successful reusable result.
+an existing pending or accepted current relationship is a successful reusable
+result.
 
 #### Validation Example
 
@@ -215,7 +219,7 @@ the caught exception.
 This document does not define:
 
 - incoming or outgoing Contact-request listing;
-- acceptance or rejection;
+- an acceptance or rejection command or endpoint;
 - accepted-Contact listing or removal;
 - Contact blocking, discovery, import, or quotas;
 - Direct or Group Conversation behavior;
