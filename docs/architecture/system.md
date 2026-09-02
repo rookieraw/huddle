@@ -184,6 +184,11 @@ Each bounded context is implemented as a library with its own applicable:
 - persistence mappings;
 - public application capabilities.
 
+"Applicable" does not require every bounded-context library to contain an HTTP
+controller or to mirror another context's adapter folders. HTTP transport
+placement follows the integration-boundary criteria in
+[ADR 0008](../decisions/0008-place-http-transport-by-integration-boundary.md).
+
 The bounded contexts are:
 
 | Context      | Documentation                                                              |
