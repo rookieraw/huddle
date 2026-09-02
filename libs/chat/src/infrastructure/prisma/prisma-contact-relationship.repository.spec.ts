@@ -60,4 +60,28 @@ describe('PrismaContactRelationshipRepository', () => {
     await expect(execution).rejects.toBe(persistenceFailure);
     expect(findFirst).not.toHaveBeenCalled();
   });
+
+  it('rejects an unsupported persisted relationship status', async () => {
+    const findFirst = jest.fn().mockResolvedValue({
+      id: 'relationship-unsupported',
+      requesterId: 'user-requester',
+      recipientId: 'user-recipient',
+      status: 'unsupported',
+    });
+    const prisma = {
+      contactRelationship: {
+        findFirst,
+      },
+    } as unknown as PrismaClient;
+    const repository = new PrismaContactRelationshipRepository(prisma);
+
+    const execution = repository.findCurrentByUserPair(
+      'user-requester',
+      'user-recipient',
+    );
+
+    await expect(execution).rejects.toThrow(
+      'Unsupported persisted ContactRelationship status.',
+    );
+  });
 });

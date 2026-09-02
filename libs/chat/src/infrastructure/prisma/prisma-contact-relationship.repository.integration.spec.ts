@@ -71,6 +71,28 @@ describe('PrismaContactRelationshipRepository (integration)', () => {
     expect(found?.isPending()).toBe(true);
   });
 
+  it('round-trips an accepted relationship through PostgreSQL', async () => {
+    const requesterId = 'user-original-requester';
+    const recipientId = 'user-original-recipient';
+    const relationship = ContactRelationship.create({
+      requesterId,
+      recipientId,
+    });
+    relationship.accept(recipientId);
+
+    await repository.save(relationship);
+    const found = await repository.findCurrentByUserPair(
+      requesterId,
+      recipientId,
+    );
+
+    expect(found?.id).toBe(relationship.id);
+    expect(found?.requesterId).toBe(requesterId);
+    expect(found?.recipientId).toBe(recipientId);
+    expect(found?.isPending()).toBe(false);
+    expect(found?.isAccepted()).toBe(true);
+  });
+
   it('finds the same current relationship when the user pair order is reversed', async () => {
     const relationship = ContactRelationship.create({
       requesterId: 'user-original-requester',
@@ -86,6 +108,27 @@ describe('PrismaContactRelationshipRepository (integration)', () => {
     expect(found?.id).toBe(relationship.id);
     expect(found?.requesterId).toBe('user-original-requester');
     expect(found?.recipientId).toBe('user-original-recipient');
+  });
+
+  it('finds an accepted current relationship when the user pair order is reversed', async () => {
+    const requesterId = 'user-accepted-requester';
+    const recipientId = 'user-accepted-recipient';
+    const relationship = ContactRelationship.create({
+      requesterId,
+      recipientId,
+    });
+    relationship.accept(recipientId);
+    await repository.save(relationship);
+
+    const found = await repository.findCurrentByUserPair(
+      recipientId,
+      requesterId,
+    );
+
+    expect(found?.id).toBe(relationship.id);
+    expect(found?.requesterId).toBe(requesterId);
+    expect(found?.recipientId).toBe(recipientId);
+    expect(found?.isAccepted()).toBe(true);
   });
 
   it('returns the persisted winner for an unordered-pair uniqueness collision', async () => {
