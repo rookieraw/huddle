@@ -40,12 +40,21 @@ export class ContactRequestsController {
       requesterId: request.user.userId,
       targetUserId: dto.targetUserId,
     });
+    let status: 'pending' | 'accepted';
+
+    if (relationship.isPending()) {
+      status = 'pending';
+    } else if (relationship.isAccepted()) {
+      status = 'accepted';
+    } else {
+      throw new Error('Unsupported ContactRelationship status.');
+    }
 
     return {
       id: relationship.id,
       requesterId: relationship.requesterId,
       recipientId: relationship.recipientId,
-      status: 'pending' as const,
+      status,
     };
   }
 }

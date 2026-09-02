@@ -14,12 +14,40 @@ function createSubject() {
 }
 
 describe('ContactRequestsController', () => {
+  it('maps an accepted current relationship to a truthful accepted response', async () => {
+    const { controller, execute } = createSubject();
+    execute.mockResolvedValueOnce({
+      id: 'relationship-accepted',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      isPending: () => false,
+      isAccepted: () => true,
+    });
+
+    await expect(
+      controller.createContactRequest(
+        {
+          headers: {},
+          user: { userId: 'user-original-recipient' },
+        },
+        { targetUserId: 'user-original-requester' },
+      ),
+    ).resolves.toEqual({
+      id: 'relationship-accepted',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      status: 'accepted',
+    });
+  });
+
   it('delegates the verified requester and maps the exact pending response', async () => {
     const { controller, execute } = createSubject();
     execute.mockResolvedValueOnce({
       id: 'relationship-1',
       requesterId: 'user-requester',
       recipientId: 'user-target',
+      isPending: () => true,
+      isAccepted: () => false,
     });
 
     await expect(
@@ -48,6 +76,8 @@ describe('ContactRequestsController', () => {
       id: 'relationship-1',
       requesterId: 'user-original-requester',
       recipientId: 'user-current-requester',
+      isPending: () => true,
+      isAccepted: () => false,
     });
 
     await expect(
