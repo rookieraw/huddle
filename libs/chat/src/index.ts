@@ -9,5 +9,12 @@ export {
   SelfContactRequestError,
   SendContactRequestUseCase,
 } from './application/use-cases/send-contact-request.use-case';
+export {
+  AcceptContactRequestUseCase,
+  ContactRelationshipNotFoundError,
+  ContactRequestAcceptanceNotAuthorizedError,
+  ContactRequestAlreadyAcceptedError,
+  ContactRequestAcceptanceUnavailableError,
+} from './application/use-cases/accept-contact-request.use-case';
 export { ChatPersistenceModule } from './infrastructure/nestjs/chat-persistence.module';
 export { CHAT_PRISMA_CLIENT } from './infrastructure/prisma/chat-prisma-client.provider';

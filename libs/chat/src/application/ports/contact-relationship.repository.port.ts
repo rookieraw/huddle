@@ -5,6 +5,7 @@ export const CONTACT_RELATIONSHIP_REPOSITORY = Symbol(
 );
 
 export interface ContactRelationshipRepository {
+  findById(relationshipId: string): Promise<ContactRelationship | null>;
   findCurrentByUserPair(
     firstUserId: string,
     secondUserId: string,

@@ -53,6 +53,46 @@ describe('PrismaContactRelationshipRepository (integration)', () => {
     expect(found).toBeNull();
   });
 
+  it('returns null when the relationship identifier does not exist', async () => {
+    const found = await repository.findById('relationship-missing');
+
+    expect(found).toBeNull();
+  });
+
+  it('loads a pending relationship by its identifier from PostgreSQL', async () => {
+    const relationship = ContactRelationship.reconstitute({
+      id: 'relationship-pending-by-id',
+      requesterId: 'user-pending-requester',
+      recipientId: 'user-pending-recipient',
+      status: 'pending',
+    });
+    await repository.save(relationship);
+
+    const found = await repository.findById(relationship.id);
+
+    expect(found?.id).toBe(relationship.id);
+    expect(found?.requesterId).toBe('user-pending-requester');
+    expect(found?.recipientId).toBe('user-pending-recipient');
+    expect(found?.isPending()).toBe(true);
+  });
+
+  it('loads an accepted relationship by its identifier from PostgreSQL', async () => {
+    const relationship = ContactRelationship.reconstitute({
+      id: 'relationship-accepted-by-id',
+      requesterId: 'user-accepted-requester',
+      recipientId: 'user-accepted-recipient',
+      status: 'accepted',
+    });
+    await repository.save(relationship);
+
+    const found = await repository.findById(relationship.id);
+
+    expect(found?.id).toBe(relationship.id);
+    expect(found?.requesterId).toBe('user-accepted-requester');
+    expect(found?.recipientId).toBe('user-accepted-recipient');
+    expect(found?.isAccepted()).toBe(true);
+  });
+
   it('round-trips a pending relationship through PostgreSQL', async () => {
     const relationship = ContactRelationship.create({
       requesterId: 'user-requester',

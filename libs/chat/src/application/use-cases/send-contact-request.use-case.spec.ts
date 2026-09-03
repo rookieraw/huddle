@@ -40,6 +40,13 @@ class FailingContactTargetDirectory implements ContactTargetDirectory {
 class RecordingContactRelationshipRepository implements ContactRelationshipRepository {
   private readonly currentRelationships: ContactRelationship[] = [];
 
+  readonly findById = jest.fn(
+    async (relationshipId: string): Promise<ContactRelationship | null> =>
+      this.currentRelationships.find(
+        (relationship) => relationship.id === relationshipId,
+      ) ?? null,
+  );
+
   readonly findCurrentByUserPair = jest.fn(
     async (
       firstUserId: string,
