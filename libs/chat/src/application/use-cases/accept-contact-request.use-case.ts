@@ -66,6 +66,10 @@ export class AcceptContactRequestUseCase {
 
     relationship.accept(input.acceptingUserId);
 
-    return this.contactRelationshipRepository.save(relationship);
+    try {
+      return await this.contactRelationshipRepository.save(relationship);
+    } catch {
+      throw new ContactRequestAcceptanceUnavailableError();
+    }
   }
 }

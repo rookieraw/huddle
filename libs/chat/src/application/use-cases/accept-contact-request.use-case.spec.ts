@@ -179,4 +179,38 @@ describe('AcceptContactRequestUseCase', () => {
     expect(accept).not.toHaveBeenCalled();
     expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
   });
+
+  it('reports save unavailability instead of returning success', async () => {
+    const recipientId = 'user-original-recipient';
+    const relationship = ContactRelationship.reconstitute({
+      id: 'relationship-save-unavailable',
+      requesterId: 'user-original-requester',
+      recipientId,
+      status: 'pending',
+    });
+    const contactRelationshipRepository = {
+      findCurrentByUserPair: jest.fn(),
+      findById: jest.fn().mockResolvedValue(relationship),
+      save: jest.fn().mockRejectedValue(new Error('save unavailable')),
+    };
+    const useCase = new AcceptContactRequestUseCase(
+      contactRelationshipRepository,
+    );
+
+    const execution = useCase.execute({
+      acceptingUserId: recipientId,
+      relationshipId: relationship.id,
+    });
+
+    await expect(execution).rejects.toBeInstanceOf(
+      ContactRequestAcceptanceUnavailableError,
+    );
+    expect(contactRelationshipRepository.findById).toHaveBeenCalledWith(
+      relationship.id,
+    );
+    expect(contactRelationshipRepository.save).toHaveBeenCalledTimes(1);
+    expect(contactRelationshipRepository.save).toHaveBeenCalledWith(
+      relationship,
+    );
+  });
 });
