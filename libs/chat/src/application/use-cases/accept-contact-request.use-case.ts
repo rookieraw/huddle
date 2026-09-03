@@ -27,6 +27,13 @@ export class ContactRequestAlreadyAcceptedError extends Error {
   }
 }
 
+export class ContactRequestAcceptanceUnavailableError extends Error {
+  constructor() {
+    super('Contact request acceptance is temporarily unavailable.');
+    this.name = 'ContactRequestAcceptanceUnavailableError';
+  }
+}
+
 export class AcceptContactRequestUseCase {
   constructor(
     private readonly contactRelationshipRepository: ContactRelationshipRepository,
@@ -35,9 +42,15 @@ export class AcceptContactRequestUseCase {
   async execute(
     input: AcceptContactRequestInput,
   ): Promise<ContactRelationship> {
-    const relationship = await this.contactRelationshipRepository.findById(
-      input.relationshipId,
-    );
+    let relationship: ContactRelationship | null;
+
+    try {
+      relationship = await this.contactRelationshipRepository.findById(
+        input.relationshipId,
+      );
+    } catch {
+      throw new ContactRequestAcceptanceUnavailableError();
+    }
 
     if (!relationship) {
       throw new ContactRelationshipNotFoundError();

@@ -1,6 +1,7 @@
 import { ContactRelationship } from '../../domain/contact-relationship.entity';
 import {
   AcceptContactRequestUseCase,
+  ContactRequestAcceptanceUnavailableError,
   ContactRequestAlreadyAcceptedError,
   ContactRequestAcceptanceNotAuthorizedError,
   ContactRelationshipNotFoundError,
@@ -68,6 +69,32 @@ describe('AcceptContactRequestUseCase', () => {
 
     await expect(execution).rejects.toBeInstanceOf(
       ContactRelationshipNotFoundError,
+    );
+    expect(contactRelationshipRepository.findById).toHaveBeenCalledTimes(1);
+    expect(contactRelationshipRepository.findById).toHaveBeenCalledWith(
+      relationshipId,
+    );
+    expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('reports lookup unavailability without saving', async () => {
+    const relationshipId = 'relationship-unavailable';
+    const contactRelationshipRepository = {
+      findCurrentByUserPair: jest.fn(),
+      findById: jest.fn().mockRejectedValue(new Error('lookup unavailable')),
+      save: jest.fn(),
+    };
+    const useCase = new AcceptContactRequestUseCase(
+      contactRelationshipRepository,
+    );
+
+    const execution = useCase.execute({
+      acceptingUserId: 'user-accepting',
+      relationshipId,
+    });
+
+    await expect(execution).rejects.toBeInstanceOf(
+      ContactRequestAcceptanceUnavailableError,
     );
     expect(contactRelationshipRepository.findById).toHaveBeenCalledTimes(1);
     expect(contactRelationshipRepository.findById).toHaveBeenCalledWith(
