@@ -3,6 +3,32 @@ import { PrismaClient } from './generated/client';
 import { PrismaContactRelationshipRepository } from './prisma-contact-relationship.repository';
 
 describe('PrismaContactRelationshipRepository', () => {
+  it('loads a pending relationship by its identifier', async () => {
+    const findUnique = jest.fn().mockResolvedValue({
+      id: 'relationship-pending',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      status: 'pending',
+    });
+    const prisma = {
+      contactRelationship: {
+        findUnique,
+      },
+    } as unknown as PrismaClient;
+    const repository = new PrismaContactRelationshipRepository(prisma);
+
+    const found = await repository.findById('relationship-pending');
+
+    expect(findUnique).toHaveBeenCalledTimes(1);
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { id: 'relationship-pending' },
+    });
+    expect(found?.id).toBe('relationship-pending');
+    expect(found?.requesterId).toBe('user-original-requester');
+    expect(found?.recipientId).toBe('user-original-recipient');
+    expect(found?.isPending()).toBe(true);
+  });
+
   it('preserves a uniqueness error for an unrelated constraint', async () => {
     const unrelatedCollision = {
       code: 'P2002',

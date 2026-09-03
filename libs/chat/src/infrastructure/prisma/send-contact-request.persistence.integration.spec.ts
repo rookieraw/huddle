@@ -48,6 +48,10 @@ class SaveBarrierContactRelationshipRepository implements ContactRelationshipRep
     return this.blockedSaves;
   }
 
+  async findById(relationshipId: string): Promise<ContactRelationship | null> {
+    return this.realRepository.findById(relationshipId);
+  }
+
   async findCurrentByUserPair(
     firstUserId: string,
     secondUserId: string,

@@ -30,6 +30,18 @@ type PrismaUniqueConstraintError = {
 export class PrismaContactRelationshipRepository implements ContactRelationshipRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  async findById(relationshipId: string): Promise<ContactRelationship | null> {
+    const record = await this.prisma.contactRelationship.findUnique({
+      where: { id: relationshipId },
+    });
+
+    if (!record) {
+      return null;
+    }
+
+    return this.toDomain(record);
+  }
+
   async findCurrentByUserPair(
     firstUserId: string,
     secondUserId: string,
