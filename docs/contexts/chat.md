@@ -1,7 +1,7 @@
 # Chat Context
 
-Status: Accepted target; Contact-request creation and accepted-state persistence implemented
-Last reviewed: 2026-09-02
+Status: Accepted target; Contact-request creation and Application acceptance implemented
+Last reviewed: 2026-09-04
 
 ## Responsibility
 
@@ -39,7 +39,21 @@ Chat does not own:
 | Meeting conversations        | Phase 5        |
 | Notification producer events | Phase 6        |
 
-The Phase 2 Contact-request Domain/Application core and Chat-owned PostgreSQL persistence are implemented and tested. The Domain supports recipient acceptance, and persistence stores and reloads pending or accepted relationships. Contact-request creation still creates pending relationships, rejects self-directed and confirmed missing-target requests, classifies Directory and repository unavailability without relying on exception messages, and reuses a pending or accepted current relationship for sequential duplicate or opposing requests.
+The Phase 2 Contact-request Domain/Application core and Chat-owned PostgreSQL
+persistence are implemented and tested. The Domain supports recipient-only
+pending-to-accepted transition, and persistence stores and reloads pending or
+accepted relationships. Contact-request creation still creates pending
+relationships, rejects self-directed and confirmed missing-target requests,
+classifies Directory and repository unavailability without relying on
+exception messages, and reuses a pending or accepted current relationship for
+sequential duplicate or opposing requests.
+
+The Application acceptance command loads a relationship by its opaque
+identifier, derives authority from the accepting actor `userId`, accepts only
+for the original recipient while pending, and persists the accepted state.
+Named Application outcomes distinguish missing relationships, unauthorized
+actors, repeated acceptance, and repository unavailability without inspecting
+exception messages.
 
 The database constraint enforces one pending-or-accepted current relationship per unordered user pair. Real PostgreSQL integration tests cover additive migration, exact status enforcement, repository mapping, unordered lookup, precise uniqueness-collision handling, and genuinely concurrent same-direction and opposing request convergence.
 
@@ -49,8 +63,9 @@ use case and repository. Authenticated Contact-request creation is
 HTTP-operational. Its exact route, requester translation, and response and
 error mappings belong to [`../contracts/chat-http.md`](../contracts/chat-http.md).
 The existing endpoint truthfully returns a reused pending or accepted current
-relationship. An Application acceptance command, acceptance endpoint, the
-remaining Contacts lifecycle, and frontend delivery are pending.
+relationship. The Application acceptance command is not yet composed or
+delivered over HTTP. An acceptance endpoint, the remaining Contacts lifecycle,
+and frontend delivery are pending.
 
 Accepted target behavior outside this implemented creation subset does not
 imply current implementation.
@@ -67,9 +82,9 @@ Relevant states are equivalent to:
 - Accepted
 - Rejected or removed according to the use case
 
-The pending-to-accepted Domain transition and pending/accepted PostgreSQL
-persistence are implemented. Application and HTTP acceptance operations remain
-unimplemented.
+The pending-to-accepted Domain transition, Application acceptance command, and
+pending/accepted PostgreSQL persistence are implemented. HTTP acceptance and
+the frontend acceptance flow remain unimplemented.
 
 Required invariants:
 
