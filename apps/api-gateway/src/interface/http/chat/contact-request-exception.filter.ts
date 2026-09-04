@@ -1,4 +1,8 @@
 import {
+  ContactRelationshipNotFoundError,
+  ContactRequestAcceptanceNotAuthorizedError,
+  ContactRequestAcceptanceUnavailableError,
+  ContactRequestAlreadyAcceptedError,
   ContactRequestUnavailableError,
   ContactTargetLookupUnavailableError,
   ContactTargetNotFoundError,
@@ -73,6 +77,36 @@ export class ContactRequestExceptionFilter implements ExceptionFilter {
       writeErrorResponse(response, HttpStatus.SERVICE_UNAVAILABLE, {
         code: 'CONTACT_TARGET_LOOKUP_UNAVAILABLE',
         message: 'Contact target validation is temporarily unavailable.',
+      });
+
+      return;
+    }
+
+    if (
+      exception instanceof ContactRelationshipNotFoundError ||
+      exception instanceof ContactRequestAcceptanceNotAuthorizedError
+    ) {
+      writeErrorResponse(response, HttpStatus.NOT_FOUND, {
+        code: 'CONTACT_REQUEST_NOT_FOUND',
+        message: 'Contact request was not found.',
+      });
+
+      return;
+    }
+
+    if (exception instanceof ContactRequestAlreadyAcceptedError) {
+      writeErrorResponse(response, HttpStatus.CONFLICT, {
+        code: 'CONTACT_REQUEST_ALREADY_ACCEPTED',
+        message: 'Contact request has already been accepted.',
+      });
+
+      return;
+    }
+
+    if (exception instanceof ContactRequestAcceptanceUnavailableError) {
+      writeErrorResponse(response, HttpStatus.SERVICE_UNAVAILABLE, {
+        code: 'CONTACT_REQUEST_ACCEPTANCE_UNAVAILABLE',
+        message: 'Contact request acceptance is temporarily unavailable.',
       });
 
       return;

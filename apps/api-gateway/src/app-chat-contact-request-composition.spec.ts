@@ -1,4 +1,8 @@
-import { CHAT_PRISMA_CLIENT, SendContactRequestUseCase } from '@huddle/chat';
+import {
+  AcceptContactRequestUseCase,
+  CHAT_PRISMA_CLIENT,
+  SendContactRequestUseCase,
+} from '@huddle/chat';
 import { DIRECTORY_API } from '@huddle/identity';
 import { ConfigModule } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -43,5 +47,6 @@ describe('AppModule Chat Contact-request composition', () => {
       .compile();
 
     expect(testingModule.get(SendContactRequestUseCase)).toBeDefined();
+    expect(testingModule.get(AcceptContactRequestUseCase)).toBeDefined();
   });
 });

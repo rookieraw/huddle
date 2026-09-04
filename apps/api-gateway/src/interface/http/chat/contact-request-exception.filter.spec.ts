@@ -1,4 +1,8 @@
 import {
+  ContactRelationshipNotFoundError,
+  ContactRequestAcceptanceNotAuthorizedError,
+  ContactRequestAcceptanceUnavailableError,
+  ContactRequestAlreadyAcceptedError,
   ContactRequestUnavailableError,
   ContactTargetLookupUnavailableError,
   ContactTargetNotFoundError,
@@ -106,6 +110,30 @@ describe('ContactRequestExceptionFilter', () => {
       status: HttpStatus.SERVICE_UNAVAILABLE,
       code: 'CONTACT_REQUEST_UNAVAILABLE',
       message: 'Contact request service is temporarily unavailable.',
+    },
+    {
+      exception: new ContactRelationshipNotFoundError(),
+      status: HttpStatus.NOT_FOUND,
+      code: 'CONTACT_REQUEST_NOT_FOUND',
+      message: 'Contact request was not found.',
+    },
+    {
+      exception: new ContactRequestAcceptanceNotAuthorizedError(),
+      status: HttpStatus.NOT_FOUND,
+      code: 'CONTACT_REQUEST_NOT_FOUND',
+      message: 'Contact request was not found.',
+    },
+    {
+      exception: new ContactRequestAlreadyAcceptedError(),
+      status: HttpStatus.CONFLICT,
+      code: 'CONTACT_REQUEST_ALREADY_ACCEPTED',
+      message: 'Contact request has already been accepted.',
+    },
+    {
+      exception: new ContactRequestAcceptanceUnavailableError(),
+      status: HttpStatus.SERVICE_UNAVAILABLE,
+      code: 'CONTACT_REQUEST_ACCEPTANCE_UNAVAILABLE',
+      message: 'Contact request acceptance is temporarily unavailable.',
     },
   ])(
     'returns the fixed $code envelope',

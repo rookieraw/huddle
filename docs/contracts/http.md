@@ -68,14 +68,14 @@ A Planned capability name is not a stable public route.
 
 ## Contract Registry
 
-| Context or capability | State                                                                                             | Contract document                                           |
-| --------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Identity              | Implemented with transitional behavior                                                            | [`identity-http.md`](identity-http.md)                      |
-| Chat                  | Contact-request creation Implemented; acceptance Accepted; remaining Phase 2 capabilities Planned | [`chat-http.md`](chat-http.md)                              |
-| Calling               | Planned for Phase 3                                                                               | Create only if a required HTTP capability is identified     |
-| Billing               | Planned for Phase 4                                                                               | Create when the exact Billing HTTP contract is defined      |
-| Meetings              | Planned for Phase 5                                                                               | Create when the exact Meeting HTTP contract is defined      |
-| Notification          | Planned for Phase 6                                                                               | Create when the exact Notification HTTP contract is defined |
+| Context or capability | State                                                                                       | Contract document                                           |
+| --------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Identity              | Implemented with transitional behavior                                                      | [`identity-http.md`](identity-http.md)                      |
+| Chat                  | Contact-request creation and acceptance Implemented; remaining Phase 2 capabilities Planned | [`chat-http.md`](chat-http.md)                              |
+| Calling               | Planned for Phase 3                                                                         | Create only if a required HTTP capability is identified     |
+| Billing               | Planned for Phase 4                                                                         | Create when the exact Billing HTTP contract is defined      |
+| Meetings              | Planned for Phase 5                                                                         | Create when the exact Meeting HTTP contract is defined      |
+| Notification          | Planned for Phase 6                                                                         | Create when the exact Notification HTTP contract is defined |
 
 Do not create empty Context contract files merely to satisfy this registry.
 
@@ -379,18 +379,18 @@ represented as `403` or `404`.
 
 ### Phase 2 — Chat
 
-The current Chat HTTP subset distinguishes implemented delivery from accepted
-target behavior:
+The current Chat HTTP subset distinguishes implemented delivery from remaining
+planned target behavior:
 
-| Capability                 | State         | Contract                       | Implementation state                                         |
-| -------------------------- | ------------- | ------------------------------ | ------------------------------------------------------------ |
-| Contact-request creation   | `Implemented` | [`chat-http.md`](chat-http.md) | Authenticated HTTP delivery verified                         |
-| Contact-request acceptance | `Accepted`    | [`chat-http.md`](chat-http.md) | Contract decided; composition, endpoint, and evidence absent |
+| Capability                 | State         | Contract                       | Implementation state                 |
+| -------------------------- | ------------- | ------------------------------ | ------------------------------------ |
+| Contact-request creation   | `Implemented` | [`chat-http.md`](chat-http.md) | Authenticated HTTP delivery verified |
+| Contact-request acceptance | `Implemented` | [`chat-http.md`](chat-http.md) | Authenticated HTTP delivery verified |
 
-The implemented subset defines `POST /contact-requests`. The accepted
-acceptance contract defines `POST /contact-requests/{contactRequestId}/accept`
-without claiming executable delivery. No other Contacts, Conversation, Group,
-Message-history, or frontend capability is accepted or implemented here.
+The implemented subset defines `POST /contact-requests` and
+`POST /contact-requests/{contactRequestId}/accept`. No other Contacts,
+Conversation, Group, Message-history, or frontend capability is accepted or
+implemented here.
 
 ## Planned HTTP Capability Registry
 

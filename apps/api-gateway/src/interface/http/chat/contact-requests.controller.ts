@@ -1,9 +1,13 @@
-import { SendContactRequestUseCase } from '@huddle/chat';
+import {
+  AcceptContactRequestUseCase,
+  SendContactRequestUseCase,
+} from '@huddle/chat';
 import {
   Body,
   Controller,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
   Req,
   UseFilters,
@@ -28,7 +32,31 @@ type VerifiedContactRequest = ContactRequestAuthenticatedRequest & {
 export class ContactRequestsController {
   constructor(
     private readonly sendContactRequestUseCase: SendContactRequestUseCase,
+    private readonly acceptContactRequestUseCase: AcceptContactRequestUseCase,
   ) {}
+
+  @Post(':contactRequestId/accept')
+  @HttpCode(HttpStatus.OK)
+  async acceptContactRequest(
+    @Req() request: VerifiedContactRequest,
+    @Param('contactRequestId') contactRequestId: string,
+  ) {
+    const relationship = await this.acceptContactRequestUseCase.execute({
+      acceptingUserId: request.user.userId,
+      relationshipId: contactRequestId,
+    });
+
+    if (!relationship.isAccepted()) {
+      throw new Error('Unsupported ContactRelationship status.');
+    }
+
+    return {
+      id: relationship.id,
+      requesterId: relationship.requesterId,
+      recipientId: relationship.recipientId,
+      status: 'accepted' as const,
+    };
+  }
 
   @Post()
   @HttpCode(HttpStatus.OK)

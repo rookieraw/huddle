@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import {
+  AcceptContactRequestUseCase,
   CONTACT_RELATIONSHIP_REPOSITORY,
   CONTACT_TARGET_DIRECTORY,
   ChatPersistenceModule,
@@ -31,6 +32,13 @@ import { IdentityContactTargetDirectoryAdapter } from './identity-contact-target
     {
       provide: CONTACT_TARGET_DIRECTORY,
       useExisting: IdentityContactTargetDirectoryAdapter,
+    },
+    {
+      provide: AcceptContactRequestUseCase,
+      useFactory: (
+        contactRelationshipRepository: ContactRelationshipRepository,
+      ) => new AcceptContactRequestUseCase(contactRelationshipRepository),
+      inject: [CONTACT_RELATIONSHIP_REPOSITORY],
     },
     {
       provide: SendContactRequestUseCase,

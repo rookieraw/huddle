@@ -1,6 +1,6 @@
 # Phase 2 — Contacts and Chat
 
-Status: In progress — Contact-request creation and Application acceptance implemented; HTTP acceptance contract accepted
+Status: In progress — Contact-request creation and acceptance HTTP implemented
 Depends on: Phase 1 — Identity  
 Next gate: Phase 2.5 — CI/CD and Deployment Foundation
 
@@ -129,14 +129,15 @@ unauthorized actors, repeated acceptance, and repository unavailability.
 PostgreSQL enforces one pending-or-accepted current relationship per unordered user pair. Real PostgreSQL integration tests verify additive migration, exact status enforcement, repository mapping, unordered lookup, precise collision handling, and genuinely concurrent same-direction and opposing request convergence.
 
 The API Gateway application composition boundary now delivers authenticated
-Contact-request creation over HTTP and truthfully returns a reused pending or
-accepted current relationship. The exact route, requester authority,
-validation, response, error, and evidence boundaries belong to
-[`../../contracts/chat-http.md`](../../contracts/chat-http.md). The Application
-acceptance command now has an accepted exact HTTP contract, but it is not yet
-composed or delivered over HTTP. Its API Gateway composition, endpoint,
-transport evidence, and frontend flow remain pending, as do the remaining
-Contacts lifecycle capabilities.
+Contact-request creation and recipient acceptance over HTTP. Creation
+truthfully returns a reused pending or accepted current relationship.
+Acceptance uses the opaque path relationship identifier, derives authority
+only from the verified `userId`, permits only the original recipient to accept
+a pending relationship, and minimizes hidden-resource information through the
+accepted public error contract. The exact routes, authority rules, validation
+or no-body behavior, responses, errors, and evidence boundaries belong to
+[`../../contracts/chat-http.md`](../../contracts/chat-http.md). The frontend
+flow and remaining Contacts lifecycle capabilities remain pending.
 
 The full Phase 2 Contacts scope includes:
 
@@ -410,9 +411,9 @@ Add Chat-owned relational persistence for:
 Contact relationship persistence supports pending and accepted states through
 a Chat-owned schema, additive migration, Prisma repository, and one unordered
 current-pair uniqueness constraint across both states. The Application
-acceptance command is implemented and its exact HTTP contract is accepted; the
-API Gateway composition, endpoint, transport evidence, frontend flow, and the
-remaining relational state above are not yet implemented.
+acceptance command, exact HTTP contract, API Gateway composition, endpoint,
+and transport evidence are implemented. The frontend flow and the remaining
+relational state above are not yet implemented.
 
 ### MongoDB
 
