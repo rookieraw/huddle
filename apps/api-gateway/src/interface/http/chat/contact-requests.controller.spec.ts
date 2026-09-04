@@ -1,22 +1,62 @@
-import type { SendContactRequestUseCase } from '@huddle/chat';
+import type {
+  AcceptContactRequestUseCase,
+  SendContactRequestUseCase,
+} from '@huddle/chat';
 import { ContactRequestsController } from './contact-requests.controller';
 
 function createSubject() {
-  const execute = jest.fn();
   const sendContactRequestUseCase = {
-    execute,
-  } as unknown as SendContactRequestUseCase;
+    execute: jest.fn(),
+  };
+  const acceptContactRequestUseCase = {
+    execute: jest.fn(),
+  };
 
   return {
-    controller: new ContactRequestsController(sendContactRequestUseCase),
-    execute,
+    controller: new ContactRequestsController(
+      sendContactRequestUseCase as unknown as SendContactRequestUseCase,
+      acceptContactRequestUseCase as unknown as AcceptContactRequestUseCase,
+    ),
+    sendExecute: sendContactRequestUseCase.execute,
+    acceptExecute: acceptContactRequestUseCase.execute,
   };
 }
 
 describe('ContactRequestsController', () => {
+  it('delegates acceptance with the verified recipient and path identifier and maps the exact accepted response', async () => {
+    const { controller, acceptExecute } = createSubject();
+    acceptExecute.mockResolvedValueOnce({
+      id: 'relationship-id',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      isPending: () => false,
+      isAccepted: () => true,
+    });
+
+    await expect(
+      controller.acceptContactRequest(
+        {
+          headers: {},
+          user: { userId: 'user-original-recipient' },
+        },
+        'relationship-id',
+      ),
+    ).resolves.toEqual({
+      id: 'relationship-id',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      status: 'accepted',
+    });
+    expect(acceptExecute).toHaveBeenCalledTimes(1);
+    expect(acceptExecute).toHaveBeenCalledWith({
+      acceptingUserId: 'user-original-recipient',
+      relationshipId: 'relationship-id',
+    });
+  });
+
   it('maps an accepted current relationship to a truthful accepted response', async () => {
-    const { controller, execute } = createSubject();
-    execute.mockResolvedValueOnce({
+    const { controller, sendExecute } = createSubject();
+    sendExecute.mockResolvedValueOnce({
       id: 'relationship-accepted',
       requesterId: 'user-original-requester',
       recipientId: 'user-original-recipient',
@@ -41,8 +81,8 @@ describe('ContactRequestsController', () => {
   });
 
   it('delegates the verified requester and maps the exact pending response', async () => {
-    const { controller, execute } = createSubject();
-    execute.mockResolvedValueOnce({
+    const { controller, sendExecute } = createSubject();
+    sendExecute.mockResolvedValueOnce({
       id: 'relationship-1',
       requesterId: 'user-requester',
       recipientId: 'user-target',
@@ -64,15 +104,15 @@ describe('ContactRequestsController', () => {
       recipientId: 'user-target',
       status: 'pending',
     });
-    expect(execute).toHaveBeenCalledWith({
+    expect(sendExecute).toHaveBeenCalledWith({
       requesterId: 'user-requester',
       targetUserId: 'user-target',
     });
   });
 
   it('preserves the persisted roles for an opposing request', async () => {
-    const { controller, execute } = createSubject();
-    execute.mockResolvedValueOnce({
+    const { controller, sendExecute } = createSubject();
+    sendExecute.mockResolvedValueOnce({
       id: 'relationship-1',
       requesterId: 'user-original-requester',
       recipientId: 'user-current-requester',
@@ -94,7 +134,7 @@ describe('ContactRequestsController', () => {
       recipientId: 'user-current-requester',
       status: 'pending',
     });
-    expect(execute).toHaveBeenCalledWith({
+    expect(sendExecute).toHaveBeenCalledWith({
       requesterId: 'user-current-requester',
       targetUserId: 'user-original-requester',
     });

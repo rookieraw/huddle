@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common/constants';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
+  AcceptContactRequestUseCase,
   CHAT_PRISMA_CLIENT,
   CONTACT_RELATIONSHIP_REPOSITORY,
   CONTACT_TARGET_DIRECTORY,
@@ -202,6 +203,78 @@ describe('Chat Contact-request production composition', () => {
       requesterId: 'user-requester',
       recipientId: 'user-target',
     });
+  });
+
+  it('resolves acceptance through the existing Contact relationship repository', async () => {
+    const findUnique = jest.fn().mockResolvedValue({
+      id: 'relationship-id',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      status: 'pending',
+    });
+    const upsert = jest.fn().mockResolvedValue({
+      id: 'relationship-id',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      status: 'accepted',
+    });
+    const prisma = {
+      contactRelationship: {
+        findUnique,
+        upsert,
+      },
+    };
+    testingModule = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          ignoreEnvFile: true,
+          load: [
+            () => ({
+              DATABASE_URL:
+                'postgresql://test:test@localhost:5432/chat-composition',
+              GITHUB_CALLBACK_URL:
+                'http://localhost/auth/oauth/github/callback',
+              GITHUB_CLIENT_ID: 'composition-github-client',
+              GITHUB_CLIENT_SECRET: 'composition-github-secret',
+              GOOGLE_CALLBACK_URL:
+                'http://localhost/auth/oauth/google/callback',
+              GOOGLE_CLIENT_ID: 'composition-google-client',
+              GOOGLE_CLIENT_SECRET: 'composition-google-secret',
+              JWT_SECRET: 'composition-jwt-secret',
+            }),
+          ],
+        }),
+        ChatContactRequestModule,
+      ],
+    })
+      .overrideProvider(DIRECTORY_API)
+      .useValue({ userExists: jest.fn() })
+      .overrideProvider(CHAT_PRISMA_CLIENT)
+      .useValue(prisma)
+      .compile();
+
+    const controller = testingModule.get(ContactRequestsController);
+    expect(testingModule.get(AcceptContactRequestUseCase)).toBeDefined();
+
+    await expect(
+      controller.acceptContactRequest(
+        {
+          headers: {},
+          user: { userId: 'user-original-recipient' },
+        },
+        'relationship-id',
+      ),
+    ).resolves.toEqual({
+      id: 'relationship-id',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      status: 'accepted',
+    });
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { id: 'relationship-id' },
+    });
+    expect(upsert).toHaveBeenCalledTimes(1);
   });
 
   it('runs the registered controller path through the production graph', async () => {
