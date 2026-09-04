@@ -1,6 +1,6 @@
 # Phase 2 — Contacts and Chat
 
-Status: In progress — Contact-request creation and Application acceptance implemented
+Status: In progress — Contact-request creation and Application acceptance implemented; HTTP acceptance contract accepted
 Depends on: Phase 1 — Identity  
 Next gate: Phase 2.5 — CI/CD and Deployment Foundation
 
@@ -133,9 +133,10 @@ Contact-request creation over HTTP and truthfully returns a reused pending or
 accepted current relationship. The exact route, requester authority,
 validation, response, error, and evidence boundaries belong to
 [`../../contracts/chat-http.md`](../../contracts/chat-http.md). The Application
-acceptance command is not yet composed or delivered over HTTP. An acceptance
-endpoint, the remaining Contacts lifecycle, and frontend delivery are still
-pending.
+acceptance command now has an accepted exact HTTP contract, but it is not yet
+composed or delivered over HTTP. Its API Gateway composition, endpoint,
+transport evidence, and frontend flow remain pending, as do the remaining
+Contacts lifecycle capabilities.
 
 The full Phase 2 Contacts scope includes:
 
@@ -409,8 +410,9 @@ Add Chat-owned relational persistence for:
 Contact relationship persistence supports pending and accepted states through
 a Chat-owned schema, additive migration, Prisma repository, and one unordered
 current-pair uniqueness constraint across both states. The Application
-acceptance command is implemented; its HTTP endpoint and the remaining
-relational state above are not yet implemented.
+acceptance command is implemented and its exact HTTP contract is accepted; the
+API Gateway composition, endpoint, transport evidence, frontend flow, and the
+remaining relational state above are not yet implemented.
 
 ### MongoDB
 

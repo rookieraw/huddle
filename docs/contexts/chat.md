@@ -1,6 +1,6 @@
 # Chat Context
 
-Status: Accepted target; Contact-request creation and Application acceptance implemented
+Status: Accepted target; Contact-request creation and Application acceptance implemented; HTTP acceptance contract accepted
 Last reviewed: 2026-09-04
 
 ## Responsibility
@@ -63,9 +63,11 @@ use case and repository. Authenticated Contact-request creation is
 HTTP-operational. Its exact route, requester translation, and response and
 error mappings belong to [`../contracts/chat-http.md`](../contracts/chat-http.md).
 The existing endpoint truthfully returns a reused pending or accepted current
-relationship. The Application acceptance command is not yet composed or
-delivered over HTTP. An acceptance endpoint, the remaining Contacts lifecycle,
-and frontend delivery are pending.
+relationship. The same contract now accepts the exact HTTP behavior for
+recipient acceptance, but that Application command is not yet composed or
+delivered over HTTP. Its API Gateway composition, endpoint, transport evidence,
+and frontend flow remain unimplemented, as do the remaining Contacts lifecycle
+capabilities.
 
 Accepted target behavior outside this implemented creation subset does not
 imply current implementation.
@@ -83,8 +85,9 @@ Relevant states are equivalent to:
 - Rejected or removed according to the use case
 
 The pending-to-accepted Domain transition, Application acceptance command, and
-pending/accepted PostgreSQL persistence are implemented. HTTP acceptance and
-the frontend acceptance flow remain unimplemented.
+pending/accepted PostgreSQL persistence are implemented. The HTTP acceptance
+contract is accepted; its endpoint, transport evidence, and frontend flow
+remain unimplemented.
 
 Required invariants:
 
