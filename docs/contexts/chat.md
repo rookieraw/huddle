@@ -1,6 +1,6 @@
 # Chat Context
 
-Status: Accepted target; Contact-request creation and Application acceptance implemented; HTTP acceptance contract accepted
+Status: Accepted target; Contact-request creation and acceptance HTTP implemented
 Last reviewed: 2026-09-04
 
 ## Responsibility
@@ -59,18 +59,21 @@ The database constraint enforces one pending-or-accepted current relationship pe
 
 The API Gateway application composition boundary connects Identity's public
 Authentication and Directory capabilities to Chat's Contact-request creation
-use case and repository. Authenticated Contact-request creation is
-HTTP-operational. Its exact route, requester translation, and response and
-error mappings belong to [`../contracts/chat-http.md`](../contracts/chat-http.md).
-The existing endpoint truthfully returns a reused pending or accepted current
-relationship. The same contract now accepts the exact HTTP behavior for
-recipient acceptance, but that Application command is not yet composed or
-delivered over HTTP. Its API Gateway composition, endpoint, transport evidence,
-and frontend flow remain unimplemented, as do the remaining Contacts lifecycle
-capabilities.
+use case and repository. It also composes the Contact-request acceptance
+Application command through the existing Contact relationship repository.
+Authenticated Contact-request creation and recipient acceptance are
+HTTP-operational. Their exact routes, principal translations, response
+shapes, error mappings, and evidence boundaries belong to
+[`../contracts/chat-http.md`](../contracts/chat-http.md). The creation endpoint
+truthfully returns a reused pending or accepted current relationship. The
+acceptance endpoint permits only the original recipient to accept a pending
+relationship, preserves original requester and recipient roles, and hides
+missing or unauthorized relationships behind the same public not-found
+response. The frontend flow and remaining Contacts lifecycle capabilities
+remain unimplemented.
 
-Accepted target behavior outside this implemented creation subset does not
-imply current implementation.
+Accepted target behavior outside this implemented Contact-request subset does
+not imply current implementation.
 
 ## Core Concepts
 
@@ -86,8 +89,8 @@ Relevant states are equivalent to:
 
 The pending-to-accepted Domain transition, Application acceptance command, and
 pending/accepted PostgreSQL persistence are implemented. The HTTP acceptance
-contract is accepted; its endpoint, transport evidence, and frontend flow
-remain unimplemented.
+endpoint and transport evidence are implemented; its frontend flow remains
+unimplemented.
 
 Required invariants:
 

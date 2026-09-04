@@ -1,6 +1,6 @@
 # Chat HTTP Contract
 
-Status: Contact-request creation Implemented; Contact-request acceptance Accepted
+Status: Contact-request creation Implemented; Contact-request acceptance Implemented
 Last reviewed: 2026-09-04
 
 ## Purpose
@@ -9,7 +9,7 @@ This document is the authoritative HTTP contract for accepted and implemented
 Chat endpoints.
 
 The contract contains implemented authenticated Contact-request creation and
-accepted, not yet implemented, Contact-request acceptance. A capability
+implemented authenticated Contact-request acceptance. A capability
 appearing in the Chat Context or Phase 2 does not create another HTTP endpoint
 automatically.
 
@@ -50,14 +50,24 @@ status and error envelopes, and information minimization. It is not
 PostgreSQL evidence. Existing Chat integration tests separately verify the
 real persistence mapping, uniqueness, collision, and concurrency behavior.
 
-No frontend Contacts flow or remaining Contacts lifecycle endpoint is
-implemented by this contract.
-
-Contact-request acceptance is accepted at
+Contact-request acceptance is implemented at
 `POST /contact-requests/{contactRequestId}/accept`. Its route, request,
 response, authorization visibility, errors, and retry semantics are decided
-below. The API Gateway composition, controller operation, transport mapping,
-transport evidence, and frontend flow remain unimplemented.
+below and implemented through the API Gateway transport boundary. The runtime
+path includes the public Identity Authentication API binding, verified `userId`
+to accepting-actor translation, opaque path identifier translation, named
+application errors, controller-scoped error translation, production NestJS
+registration, and authenticated HTTP transport evidence.
+
+The acceptance transport evidence boots the real `AppModule` and HTTP server
+while overriding only the Authentication API, Directory API, and Chat Prisma
+client external seams. It proves route, guard, no-body success, ignored
+unsupported body fields, success serialization, exact status and error
+envelopes, authorization visibility, dependency-unavailable mapping, and
+information minimization. It is not PostgreSQL evidence.
+
+No frontend Contacts flow or remaining Contacts lifecycle endpoint is
+implemented by this contract.
 
 ## Create or Return a Contact Request
 
@@ -225,7 +235,7 @@ the caught exception.
 
 ## Accept a Contact Request
 
-Contract state: `Accepted`
+Contract state: `Implemented`
 
 Authentication: Authenticated with resource authorization
 
@@ -254,8 +264,8 @@ Authentication API after access-token verification. A path, body, query, or
 other client-controlled value cannot provide or override the accepting actor or
 recipient identity.
 
-The future API Gateway transport translates the verified principal to the
-minimum Chat Application input. This contract does not expose the concrete
+The API Gateway transport translates the verified principal to the minimum
+Chat Application input. This contract does not expose the concrete
 Application input type, Domain entity, repository, Prisma model, Identity
 internal type, principal email, expiration, or token claims.
 
@@ -378,11 +388,11 @@ This document does not define:
 - Contact blocking, discovery, import, or quotas;
 - Direct or Group Conversation behavior;
 - Messages, history, realtime, events, or frontend routes;
-- API Gateway composition, controller delivery, transport evidence, or
-  generated OpenAPI for the accepted acceptance operation;
+- generated OpenAPI for implemented Chat endpoints;
 - browser token transport, cookie, CSRF, CORS, or storage policy;
 - exact rate-limit values;
-- any additional runtime capability outside the implemented creation endpoint.
+- any additional runtime capability outside the implemented Contact-request
+  endpoints.
 
 Those capabilities require their own Phase-authorized exact contracts and
 implementation outcomes.
