@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { DomainError } from '@huddle/shared-kernel';
 
-type ContactRelationshipStatus = 'pending' | 'accepted';
+type ContactRelationshipStatus = 'pending' | 'accepted' | 'rejected';
 
 type CreateContactRelationshipInput = {
   requesterId: string;
@@ -65,5 +65,21 @@ export class ContactRelationship {
     }
 
     this.status = 'accepted';
+  }
+
+  isRejected(): boolean {
+    return this.status === 'rejected';
+  }
+
+  reject(rejectingUserId: string): void {
+    if (rejectingUserId !== this.recipientId) {
+      throw new DomainError('Only the recipient can reject a Contact request.');
+    }
+
+    if (!this.isPending()) {
+      throw new DomainError('Only a pending Contact request can be rejected.');
+    }
+
+    this.status = 'rejected';
   }
 }

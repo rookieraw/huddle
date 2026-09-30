@@ -113,6 +113,103 @@ describe('ContactRelationship', () => {
     });
   });
 
+  describe('reject', () => {
+    it('allows the original recipient to reject a pending relationship while preserving its identity and roles', () => {
+      const requesterId = 'user-original-requester';
+      const recipientId = 'user-original-recipient';
+      const relationship = ContactRelationship.create({
+        requesterId,
+        recipientId,
+      });
+      const relationshipId = relationship.id;
+
+      relationship.reject(recipientId);
+
+      expect(relationship.id).toBe(relationshipId);
+      expect(relationship.requesterId).toBe(requesterId);
+      expect(relationship.recipientId).toBe(recipientId);
+      expect(relationship.isPending()).toBe(false);
+      expect(relationship.isAccepted()).toBe(false);
+      expect(relationship.isRejected()).toBe(true);
+    });
+
+    it('rejects rejection by the requester while preserving the pending relationship', () => {
+      const requesterId = 'user-original-requester';
+      const recipientId = 'user-original-recipient';
+      const relationship = ContactRelationship.create({
+        requesterId,
+        recipientId,
+      });
+      const relationshipId = relationship.id;
+
+      expect(() => relationship.reject(requesterId)).toThrow(DomainError);
+
+      expect(relationship.id).toBe(relationshipId);
+      expect(relationship.requesterId).toBe(requesterId);
+      expect(relationship.recipientId).toBe(recipientId);
+      expect(relationship.isPending()).toBe(true);
+      expect(relationship.isRejected()).toBe(false);
+    });
+
+    it('rejects rejection by an unrelated user while preserving the pending relationship', () => {
+      const requesterId = 'user-original-requester';
+      const recipientId = 'user-original-recipient';
+      const relationship = ContactRelationship.create({
+        requesterId,
+        recipientId,
+      });
+      const relationshipId = relationship.id;
+
+      expect(() => relationship.reject('user-unrelated')).toThrow(DomainError);
+
+      expect(relationship.id).toBe(relationshipId);
+      expect(relationship.requesterId).toBe(requesterId);
+      expect(relationship.recipientId).toBe(recipientId);
+      expect(relationship.isPending()).toBe(true);
+      expect(relationship.isRejected()).toBe(false);
+    });
+
+    it('rejects repeated rejection while preserving the rejected relationship', () => {
+      const requesterId = 'user-original-requester';
+      const recipientId = 'user-original-recipient';
+      const relationship = ContactRelationship.create({
+        requesterId,
+        recipientId,
+      });
+      relationship.reject(recipientId);
+      const relationshipId = relationship.id;
+
+      expect(() => relationship.reject(recipientId)).toThrow(DomainError);
+
+      expect(relationship.id).toBe(relationshipId);
+      expect(relationship.requesterId).toBe(requesterId);
+      expect(relationship.recipientId).toBe(recipientId);
+      expect(relationship.isPending()).toBe(false);
+      expect(relationship.isAccepted()).toBe(false);
+      expect(relationship.isRejected()).toBe(true);
+    });
+
+    it('rejects rejection of an accepted relationship while preserving the accepted relationship', () => {
+      const requesterId = 'user-original-requester';
+      const recipientId = 'user-original-recipient';
+      const relationship = ContactRelationship.create({
+        requesterId,
+        recipientId,
+      });
+      relationship.accept(recipientId);
+      const relationshipId = relationship.id;
+
+      expect(() => relationship.reject(recipientId)).toThrow(DomainError);
+
+      expect(relationship.id).toBe(relationshipId);
+      expect(relationship.requesterId).toBe(requesterId);
+      expect(relationship.recipientId).toBe(recipientId);
+      expect(relationship.isPending()).toBe(false);
+      expect(relationship.isAccepted()).toBe(true);
+      expect(relationship.isRejected()).toBe(false);
+    });
+  });
+
   describe('reconstitute', () => {
     it('restores a persisted pending relationship with its existing identity and roles', () => {
       const relationship = ContactRelationship.reconstitute({
