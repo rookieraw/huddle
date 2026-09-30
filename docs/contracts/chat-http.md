@@ -1,15 +1,16 @@
 # Chat HTTP Contract
 
-Status: Contact-request creation Implemented; Contact-request acceptance Implemented
-Last reviewed: 2026-09-04
+Status: Contact-request creation Implemented; Contact-request acceptance Implemented; Contact-request rejection Accepted
+Last reviewed: 2026-09-30
 
 ## Purpose
 
 This document is the authoritative HTTP contract for accepted and implemented
 Chat endpoints.
 
-The contract contains implemented authenticated Contact-request creation and
-implemented authenticated Contact-request acceptance. A capability
+The contract contains implemented authenticated Contact-request creation,
+implemented authenticated Contact-request acceptance, and the accepted
+(not yet implemented) authenticated Contact-request rejection. A capability
 appearing in the Chat Context or Phase 2 does not create another HTTP endpoint
 automatically.
 
@@ -65,6 +66,12 @@ client external seams. It proves route, guard, no-body success, ignored
 unsupported body fields, success serialization, exact status and error
 envelopes, authorization visibility, dependency-unavailable mapping, and
 information minimization. It is not PostgreSQL evidence.
+
+Contact-request rejection at
+`POST /contact-requests/{contactRequestId}/reject` is `Accepted`: its route,
+response, authorization visibility, errors, and retry semantics are decided
+below, but no endpoint exists yet. It stays `Accepted` until its controller
+behavior, transport tests, and shared conventions are verified aligned.
 
 No frontend Contacts flow or remaining Contacts lifecycle endpoint is
 implemented by this contract.
@@ -156,8 +163,11 @@ preserved; the roles are not reversed to match the latest caller.
 
 Reuse is not a `409 Conflict` for this operation. A reused relationship may be
 `pending` or `accepted`; the endpoint returns its persisted status without
-changing it. Rejected, removed, and other relationship states remain outside
-this implemented subset.
+changing it. A rejected relationship is not current
+([`../contexts/chat.md`](../contexts/chat.md)): it is never reused by this
+operation, and a request for a pair whose only relationship is rejected
+creates a new pending relationship with a new `id`, in either direction.
+Removed and other relationship states remain outside this implemented subset.
 
 ### Error Responses
 
@@ -235,7 +245,10 @@ the caught exception.
 
 ## Accept a Contact Request
 
-Contract state: `Implemented`
+Contract state: `Implemented`. The rejected-relationship `409
+CONTACT_REQUEST_ALREADY_REJECTED` outcome, the widened `503` cause list, and
+the atomic-resolution statement below are `Accepted` and become implemented
+with Contact-request rejection.
 
 Authentication: Authenticated with resource authorization
 
@@ -317,16 +330,18 @@ The operation preserves the Application command's ordering:
 2. Return the public not-found outcome if it is missing.
 3. Authorize the verified actor as the original recipient.
 4. Return the same public not-found outcome if authorization fails.
-5. Only for the authorized recipient, inspect whether the relationship remains
-   pending.
-6. Persist and return the accepted result, or return the authorized
-   state-conflict outcome.
+5. Only for the authorized recipient, attempt the transition from pending to
+   accepted atomically.
+6. Return the accepted result if the transition applied. If it did not apply
+   because the relationship was already resolved, return the authorized
+   state-conflict outcome for its actual state.
 
 A requester or unrelated user receives the same public response whether the
-identifier is missing, identifies a pending relationship, or identifies an
-accepted relationship. The selected non-recipient outcome is `404`, not `403`.
-An unauthorized actor therefore cannot use this operation to learn resource
-existence or distinguish pending from accepted state.
+identifier is missing, identifies a pending relationship, an accepted
+relationship, or a rejected relationship. The selected non-recipient outcome
+is `404`, not `403`. An unauthorized actor therefore cannot use this operation
+to learn resource existence or distinguish pending, accepted, or rejected
+state.
 
 ### Error Responses
 
@@ -339,15 +354,19 @@ Non-validation errors omit `error.details`.
 | Relationship is missing                                            |         404 | `CONTACT_REQUEST_NOT_FOUND`              | Contact request was not found.                         | Do not retry unchanged; return to a stable Contacts state.                                                           |
 | Verified actor is not the original recipient                       |         404 | `CONTACT_REQUEST_NOT_FOUND`              | Contact request was not found.                         | Do not retry unchanged; return to a stable Contacts state.                                                           |
 | Original recipient repeats acceptance after it is already accepted |         409 | `CONTACT_REQUEST_ALREADY_ACCEPTED`       | Contact request has already been accepted.             | Reconcile the relationship as accepted and do not repeat acceptance unchanged.                                       |
-| Relationship lookup or save is unavailable                         |         503 | `CONTACT_REQUEST_ACCEPTANCE_UNAVAILABLE` | Contact request acceptance is temporarily unavailable. | Do not assume completion; preserve confirmed state and retry the same identifier according to bounded client policy. |
+| Original recipient accepts a relationship that is already rejected |         409 | `CONTACT_REQUEST_ALREADY_REJECTED`       | Contact request has already been rejected.             | Reconcile the relationship as rejected and do not repeat acceptance; a new request would be a new relationship.      |
+| Relationship lookup, transition, or re-read is unavailable         |         503 | `CONTACT_REQUEST_ACCEPTANCE_UNAVAILABLE` | Contact request acceptance is temporarily unavailable. | Do not assume completion; preserve confirmed state and retry the same identifier according to bounded client policy. |
 | Unclassified unexpected failure                                    |         500 | `INTERNAL_ERROR`                         | An unexpected error occurred.                          | Do not assume whether the operation completed; reconcile before presenting a final state or retrying.                |
 
 The two `404` situations intentionally have the same status, code, message, and
 body. The transport maps stable runtime categories rather than inspecting
 exception messages.
 
-Repository lookup and save failures share the same dependency-unavailable
-outcome. Public responses must not disclose raw exception messages, database or
+Repository lookup, transition, and re-read failures share the same
+dependency-unavailable outcome. An unexpected inconsistency after a
+transition that did not apply (for example the relationship no longer being
+readable, or still pending) is reported as this dependency-unavailable
+outcome, never as success. Public responses must not disclose raw exception messages, database or
 driver codes, constraints, tables, columns, indexes, provider or deployment
 details, stack traces, filesystem paths, credentials, tokens, or internal type
 names.
@@ -370,7 +389,9 @@ operation with the same `contactRequestId` according to bounded client policy:
 
 - A later `200` confirms successful acceptance.
 - A later authorized `409 CONTACT_REQUEST_ALREADY_ACCEPTED` reconciles an
-  earlier uncertain save as accepted.
+  earlier uncertain attempt as accepted.
+- A later authorized `409 CONTACT_REQUEST_ALREADY_REJECTED` means the
+  recipient's relationship was rejected instead; reconcile as rejected.
 - A `404 CONTACT_REQUEST_NOT_FOUND` means the client has no visible actionable
   resource and should return to a stable Contacts state.
 - Another `503` remains retryable according to policy.
@@ -378,12 +399,169 @@ operation with the same `contactRequestId` according to bounded client policy:
 The contract does not promise automatic retries, an idempotency key, a second
 transition, or a success response for repeated acceptance.
 
+Resolution is atomic. Acceptance and rejection of one pending relationship
+apply at most one transition, and a concurrent attempt that loses receives the
+authorized state-specific `409` for the state that won, never a contradictory
+success.
+
+## Reject a Contact Request
+
+Contract state: `Accepted`
+
+Authentication: Authenticated with resource authorization
+
+```http
+POST /contact-requests/{contactRequestId}/reject
+Authorization: Bearer <access-token>
+```
+
+The command-style `reject` segment exposes only the bounded rejection
+transition. It does not create a separately addressable rejection resource,
+authorize requester cancellation, or authorize a general relationship-status
+mutation.
+
+### Identifier and Actor Authority
+
+`contactRequestId` is a required path parameter with the same opaque-identifier
+rules as acceptance: any non-empty routed path segment is an opaque string,
+clients must not infer type, ownership, lifecycle state, or authorization from
+its format, and possession of the identifier does not authorize rejection. A
+request without the path segment does not target this operation.
+
+The rejecting actor comes only from the `userId` produced by Identity's public
+Authentication API after access-token verification. A path, body, query, or
+other client-controlled value cannot provide or override the rejecting actor or
+recipient identity. The contract does not expose Application input types,
+Domain entities, repositories, Prisma models, Identity internals, principal
+email, expiration, or token claims.
+
+### Request Body
+
+This operation has no request body and defines no route-specific request DTO.
+Clients should omit the body and do not need to send `Content-Type`. Parsed
+JSON fields are unsupported and ignored under the shared unknown-field
+convention and cannot affect the actor, identifier, authorization, transition,
+or response. No operation-specific `VALIDATION_FAILED` outcome is defined.
+
+### Success
+
+The original recipient rejecting a persisted pending relationship receives:
+
+```http
+200 OK
+```
+
+```json
+{
+  "id": "relationship-id",
+  "requesterId": "user-original-requester",
+  "recipientId": "user-original-recipient",
+  "status": "rejected"
+}
+```
+
+| Field         | Type         | Consumer meaning                                                       |
+| ------------- | ------------ | ---------------------------------------------------------------------- |
+| `id`          | string       | The same stable relationship identity addressed by `contactRequestId`. |
+| `requesterId` | string       | The authoritative user who originally created the request.             |
+| `recipientId` | string       | The authoritative original recipient who rejected it.                  |
+| `status`      | `"rejected"` | The persisted lifecycle state after successful rejection.              |
+
+Success is returned only after the rejected state is persisted. Original
+requester and recipient roles are preserved and no new relationship identity is
+created.
+
+### Authorization and Resource Visibility
+
+The operation follows the same ordering as acceptance:
+
+1. Look up the relationship by opaque identifier.
+2. Return the public not-found outcome if it is missing.
+3. Authorize the verified actor as the original recipient.
+4. Return the same public not-found outcome if authorization fails.
+5. Only for the authorized recipient, attempt the transition from pending to
+   rejected atomically.
+6. Return the rejected result if it applied, or the authorized state-specific
+   conflict if the relationship was already resolved.
+
+The requester, who cannot reject or cancel their own request through this
+operation, and any unrelated user receive the same public response whether the
+identifier is missing or identifies a pending, accepted, or rejected
+relationship. The non-recipient outcome is `404`, not `403`, so the operation
+cannot be used to learn resource existence or state.
+
+### Error Responses
+
+Every error uses the stable envelope defined in [`http.md`](http.md).
+Non-validation errors omit `error.details`.
+
+| Situation                                                          | HTTP status | Stable code                             | Public message                                        | Consumer action                                                                                                      |
+| ------------------------------------------------------------------ | ----------: | --------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Authentication is missing or unusable                              |         401 | `AUTHENTICATION_REQUIRED`               | Authentication is required.                           | Stop the protected interaction and reauthenticate.                                                                   |
+| Relationship is missing                                            |         404 | `CONTACT_REQUEST_NOT_FOUND`             | Contact request was not found.                        | Do not retry unchanged; return to a stable Contacts state.                                                           |
+| Verified actor is not the original recipient                       |         404 | `CONTACT_REQUEST_NOT_FOUND`             | Contact request was not found.                        | Do not retry unchanged; return to a stable Contacts state.                                                           |
+| Original recipient repeats rejection after it is already rejected  |         409 | `CONTACT_REQUEST_ALREADY_REJECTED`      | Contact request has already been rejected.            | Reconcile the relationship as rejected and do not repeat rejection unchanged.                                        |
+| Original recipient rejects a relationship that is already accepted |         409 | `CONTACT_REQUEST_ALREADY_ACCEPTED`      | Contact request has already been accepted.            | Reconcile the relationship as accepted and do not repeat rejection.                                                  |
+| Relationship lookup, transition, or re-read is unavailable         |         503 | `CONTACT_REQUEST_REJECTION_UNAVAILABLE` | Contact request rejection is temporarily unavailable. | Do not assume completion; preserve confirmed state and retry the same identifier according to bounded client policy. |
+| Unclassified unexpected failure                                    |         500 | `INTERNAL_ERROR`                        | An unexpected error occurred.                         | Do not assume whether the operation completed; reconcile before presenting a final state or retrying.                |
+
+The two `404` situations intentionally have the same status, code, message, and
+body, and reuse the acceptance operation's not-found outcome verbatim. The
+transport maps stable runtime categories rather than inspecting exception
+messages.
+
+Repository lookup, transition, and re-read failures share the same
+dependency-unavailable outcome. An unexpected inconsistency after a transition
+that did not apply (the relationship no longer readable, or still pending) is
+reported as that outcome, never as success. Public responses must not disclose
+raw exception messages, database or driver codes, constraints, tables,
+columns, indexes, provider or deployment details, stack traces, filesystem
+paths, credentials, tokens, or internal type names. Unexpected failures remain
+`500 INTERNAL_ERROR` and must not be reported as not-found, authorization
+denial, conflict, or success.
+
+The state-specific `409` responses are returned only to the authorized
+original recipient, who is a party to the relationship, so they do not
+disclose state to any other actor.
+
+### Retry and Reconciliation
+
+A `200 OK` confirms that the identified relationship is persisted as rejected.
+
+After an uncertain client interruption or
+`503 CONTACT_REQUEST_REJECTION_UNAVAILABLE`, the client may retry the same
+operation with the same `contactRequestId` according to bounded client policy:
+
+- A later `200` confirms successful rejection.
+- A later authorized `409 CONTACT_REQUEST_ALREADY_REJECTED` reconciles an
+  earlier uncertain attempt as rejected.
+- A later authorized `409 CONTACT_REQUEST_ALREADY_ACCEPTED` means the
+  relationship was accepted instead; reconcile as accepted and do not repeat
+  rejection.
+- A `404 CONTACT_REQUEST_NOT_FOUND` means the client has no visible actionable
+  resource and should return to a stable Contacts state.
+- Another `503` remains retryable according to policy.
+
+The contract does not promise automatic retries, an idempotency key, or a
+success response for repeated rejection. Resolution is atomic as described in
+the acceptance retry section: a concurrent attempt that loses receives the
+state-specific `409`.
+
+### Re-request After Rejection
+
+A rejected relationship is not current. After rejection, a `POST
+/contact-requests` for the same pair, in either direction, creates a new
+pending relationship with a new `id`. The new `id` indirectly reveals that a
+prior request was resolved, and unbounded re-requesting is a known abuse
+exposure until the deferred rate-limiting and blocking capabilities exist. The
+decision and its limits belong to [`../contexts/chat.md`](../contexts/chat.md).
+
 ## Explicitly Outside This Contract
 
 This document does not define:
 
 - incoming or outgoing Contact-request listing;
-- Contact-request rejection;
+- requester cancellation of a Contact request;
 - accepted-Contact listing or removal;
 - Contact blocking, discovery, import, or quotas;
 - Direct or Group Conversation behavior;
