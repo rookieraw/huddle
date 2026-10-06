@@ -19,6 +19,7 @@ describe('AcceptContactRequestUseCase', () => {
     });
     const accept = jest.spyOn(relationship, 'accept');
     const contactRelationshipRepository = {
+      transitionFromPending: jest.fn(),
       findCurrentByUserPair: jest.fn(),
       findById: jest.fn().mockResolvedValue(relationship),
       save: jest.fn(
@@ -54,6 +55,7 @@ describe('AcceptContactRequestUseCase', () => {
   it('reports a missing relationship without saving', async () => {
     const relationshipId = 'relationship-missing';
     const contactRelationshipRepository = {
+      transitionFromPending: jest.fn(),
       findCurrentByUserPair: jest.fn(),
       findById: jest.fn().mockResolvedValue(null),
       save: jest.fn(),
@@ -80,6 +82,7 @@ describe('AcceptContactRequestUseCase', () => {
   it('reports lookup unavailability without saving', async () => {
     const relationshipId = 'relationship-unavailable';
     const contactRelationshipRepository = {
+      transitionFromPending: jest.fn(),
       findCurrentByUserPair: jest.fn(),
       findById: jest.fn().mockRejectedValue(new Error('lookup unavailable')),
       save: jest.fn(),
@@ -123,6 +126,7 @@ describe('AcceptContactRequestUseCase', () => {
       });
       const accept = jest.spyOn(relationship, 'accept');
       const contactRelationshipRepository = {
+        transitionFromPending: jest.fn(),
         findCurrentByUserPair: jest.fn(),
         findById: jest.fn().mockResolvedValue(relationship),
         save: jest.fn(),
@@ -157,6 +161,7 @@ describe('AcceptContactRequestUseCase', () => {
     });
     const accept = jest.spyOn(relationship, 'accept');
     const contactRelationshipRepository = {
+      transitionFromPending: jest.fn(),
       findCurrentByUserPair: jest.fn(),
       findById: jest.fn().mockResolvedValue(relationship),
       save: jest.fn(),
@@ -189,6 +194,7 @@ describe('AcceptContactRequestUseCase', () => {
       status: 'pending',
     });
     const contactRelationshipRepository = {
+      transitionFromPending: jest.fn(),
       findCurrentByUserPair: jest.fn(),
       findById: jest.fn().mockResolvedValue(relationship),
       save: jest.fn().mockRejectedValue(new Error('save unavailable')),

@@ -107,6 +107,23 @@ export class PrismaContactRelationshipRepository implements ContactRelationshipR
     }
   }
 
+  async transitionFromPending(
+    relationship: ContactRelationship,
+  ): Promise<boolean> {
+    if (relationship.isPending()) {
+      throw new Error(
+        'Only a resolved ContactRelationship can be transitioned from pending.',
+      );
+    }
+
+    const result = await this.prisma.contactRelationship.updateMany({
+      where: { id: relationship.id, status: 'pending' },
+      data: { status: this.toPersistenceStatus(relationship) },
+    });
+
+    return result.count === 1;
+  }
+
   private isCurrentUserPairCollision(error: unknown): boolean {
     const candidate = error as PrismaUniqueConstraintError;
     const driverError = candidate?.meta?.driverAdapterError;
@@ -126,7 +143,11 @@ export class PrismaContactRelationshipRepository implements ContactRelationshipR
   }
 
   private toDomain(record: ContactRelationshipRecord): ContactRelationship {
-    if (record.status !== 'pending' && record.status !== 'accepted') {
+    if (
+      record.status !== 'pending' &&
+      record.status !== 'accepted' &&
+      record.status !== 'rejected'
+    ) {
       throw new Error('Unsupported persisted ContactRelationship status.');
     }
 
@@ -140,13 +161,17 @@ export class PrismaContactRelationshipRepository implements ContactRelationshipR
 
   private toPersistenceStatus(
     relationship: ContactRelationship,
-  ): 'pending' | 'accepted' {
+  ): 'pending' | 'accepted' | 'rejected' {
     if (relationship.isPending()) {
       return 'pending';
     }
 
     if (relationship.isAccepted()) {
       return 'accepted';
+    }
+
+    if (relationship.isRejected()) {
+      return 'rejected';
     }
 
     throw new Error('Unsupported ContactRelationship status.');

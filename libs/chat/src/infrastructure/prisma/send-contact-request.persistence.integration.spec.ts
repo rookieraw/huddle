@@ -80,6 +80,12 @@ class SaveBarrierContactRelationshipRepository implements ContactRelationshipRep
     return this.realRepository.save(relationship);
   }
 
+  async transitionFromPending(
+    relationship: ContactRelationship,
+  ): Promise<boolean> {
+    return this.realRepository.transitionFromPending(relationship);
+  }
+
   async waitUntilBothSavesAreBlocked(): Promise<void> {
     await this.bothSavesBlocked.promise;
   }
