@@ -3,6 +3,7 @@ import type { ContactRelationshipRepository } from '../ports/contact-relationshi
 import {
   ContactRelationshipNotFoundError,
   ContactRequestAlreadyAcceptedError,
+  ContactRequestAlreadyRejectedError,
 } from './contact-request.errors';
 
 type AcceptContactRequestInput = {
@@ -32,15 +33,7 @@ export class AcceptContactRequestUseCase {
   async execute(
     input: AcceptContactRequestInput,
   ): Promise<ContactRelationship> {
-    let relationship: ContactRelationship | null;
-
-    try {
-      relationship = await this.contactRelationshipRepository.findById(
-        input.relationshipId,
-      );
-    } catch {
-      throw new ContactRequestAcceptanceUnavailableError();
-    }
+    const relationship = await this.findRelationship(input.relationshipId);
 
     if (!relationship) {
       throw new ContactRelationshipNotFoundError();
@@ -50,14 +43,49 @@ export class AcceptContactRequestUseCase {
       throw new ContactRequestAcceptanceNotAuthorizedError();
     }
 
-    if (!relationship.isPending()) {
+    if (relationship.isAccepted()) {
       throw new ContactRequestAlreadyAcceptedError();
+    }
+
+    if (relationship.isRejected()) {
+      throw new ContactRequestAlreadyRejectedError();
     }
 
     relationship.accept(input.acceptingUserId);
 
+    let applied: boolean;
+
     try {
-      return await this.contactRelationshipRepository.save(relationship);
+      applied =
+        await this.contactRelationshipRepository.transitionFromPending(
+          relationship,
+        );
+    } catch {
+      throw new ContactRequestAcceptanceUnavailableError();
+    }
+
+    if (!applied) {
+      const current = await this.findRelationship(input.relationshipId);
+
+      if (current?.isAccepted()) {
+        throw new ContactRequestAlreadyAcceptedError();
+      }
+
+      if (current?.isRejected()) {
+        throw new ContactRequestAlreadyRejectedError();
+      }
+
+      throw new ContactRequestAcceptanceUnavailableError();
+    }
+
+    return relationship;
+  }
+
+  private async findRelationship(
+    relationshipId: string,
+  ): Promise<ContactRelationship | null> {
+    try {
+      return await this.contactRelationshipRepository.findById(relationshipId);
     } catch {
       throw new ContactRequestAcceptanceUnavailableError();
     }
