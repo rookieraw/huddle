@@ -2,9 +2,9 @@ import { ContactRelationship } from '../../domain/contact-relationship.entity';
 import {
   ContactRelationshipNotFoundError,
   ContactRequestAlreadyAcceptedError,
-} from './accept-contact-request.use-case';
-import {
   ContactRequestAlreadyRejectedError,
+} from './contact-request.errors';
+import {
   ContactRequestRejectionNotAuthorizedError,
   ContactRequestRejectionUnavailableError,
   RejectContactRequestUseCase,

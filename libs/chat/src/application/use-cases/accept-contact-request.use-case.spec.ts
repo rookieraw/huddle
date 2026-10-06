@@ -2,10 +2,12 @@ import { ContactRelationship } from '../../domain/contact-relationship.entity';
 import {
   AcceptContactRequestUseCase,
   ContactRequestAcceptanceUnavailableError,
-  ContactRequestAlreadyAcceptedError,
   ContactRequestAcceptanceNotAuthorizedError,
-  ContactRelationshipNotFoundError,
 } from './accept-contact-request.use-case';
+import {
+  ContactRelationshipNotFoundError,
+  ContactRequestAlreadyAcceptedError,
+} from './contact-request.errors';
 
 describe('AcceptContactRequestUseCase', () => {
   it('loads, accepts, saves, and returns an existing pending relationship for its original recipient', async () => {

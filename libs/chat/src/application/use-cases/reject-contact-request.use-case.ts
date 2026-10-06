@@ -3,7 +3,8 @@ import type { ContactRelationshipRepository } from '../ports/contact-relationshi
 import {
   ContactRelationshipNotFoundError,
   ContactRequestAlreadyAcceptedError,
-} from './accept-contact-request.use-case';
+  ContactRequestAlreadyRejectedError,
+} from './contact-request.errors';
 
 type RejectContactRequestInput = {
   rejectingUserId: string;
@@ -14,13 +15,6 @@ export class ContactRequestRejectionNotAuthorizedError extends Error {
   constructor() {
     super('Only the recipient can reject a Contact request.');
     this.name = 'ContactRequestRejectionNotAuthorizedError';
-  }
-}
-
-export class ContactRequestAlreadyRejectedError extends Error {
-  constructor() {
-    super('The Contact request has already been rejected.');
-    this.name = 'ContactRequestAlreadyRejectedError';
   }
 }
 

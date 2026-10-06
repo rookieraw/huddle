@@ -6,9 +6,11 @@ import {
 } from '@testcontainers/postgresql';
 import { PrismaPg } from '@prisma/adapter-pg';
 import type { ContactTargetDirectory } from '../../application/ports/contact-target-directory.port';
-import { ContactRequestAlreadyAcceptedError } from '../../application/use-cases/accept-contact-request.use-case';
 import {
+  ContactRequestAlreadyAcceptedError,
   ContactRequestAlreadyRejectedError,
+} from '../../application/use-cases/contact-request.errors';
+import {
   ContactRequestRejectionNotAuthorizedError,
   RejectContactRequestUseCase,
 } from '../../application/use-cases/reject-contact-request.use-case';

@@ -10,14 +10,16 @@ export {
   SendContactRequestUseCase,
 } from './application/use-cases/send-contact-request.use-case';
 export {
-  AcceptContactRequestUseCase,
   ContactRelationshipNotFoundError,
-  ContactRequestAcceptanceNotAuthorizedError,
   ContactRequestAlreadyAcceptedError,
+  ContactRequestAlreadyRejectedError,
+} from './application/use-cases/contact-request.errors';
+export {
+  AcceptContactRequestUseCase,
+  ContactRequestAcceptanceNotAuthorizedError,
   ContactRequestAcceptanceUnavailableError,
 } from './application/use-cases/accept-contact-request.use-case';
 export {
-  ContactRequestAlreadyRejectedError,
   ContactRequestRejectionNotAuthorizedError,
   ContactRequestRejectionUnavailableError,
   RejectContactRequestUseCase,
