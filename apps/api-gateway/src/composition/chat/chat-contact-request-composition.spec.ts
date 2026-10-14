@@ -13,6 +13,7 @@ import {
   CONTACT_TARGET_DIRECTORY,
   ChatPersistenceModule,
   ContactRequestUnavailableError,
+  RejectContactRequestUseCase,
   SendContactRequestUseCase,
 } from '@huddle/chat';
 import { AUTHENTICATION_API, DIRECTORY_API } from '@huddle/identity';
@@ -212,16 +213,11 @@ describe('Chat Contact-request production composition', () => {
       recipientId: 'user-original-recipient',
       status: 'pending',
     });
-    const upsert = jest.fn().mockResolvedValue({
-      id: 'relationship-id',
-      requesterId: 'user-original-requester',
-      recipientId: 'user-original-recipient',
-      status: 'accepted',
-    });
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
     const prisma = {
       contactRelationship: {
         findUnique,
-        upsert,
+        updateMany,
       },
     };
     testingModule = await Test.createTestingModule({
@@ -274,7 +270,82 @@ describe('Chat Contact-request production composition', () => {
     expect(findUnique).toHaveBeenCalledWith({
       where: { id: 'relationship-id' },
     });
-    expect(upsert).toHaveBeenCalledTimes(1);
+    expect(updateMany).toHaveBeenCalledTimes(1);
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: 'relationship-id', status: 'pending' },
+      data: { status: 'accepted' },
+    });
+  });
+
+  it('resolves rejection through the existing Contact relationship repository', async () => {
+    const findUnique = jest.fn().mockResolvedValue({
+      id: 'relationship-id',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      status: 'pending',
+    });
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const prisma = {
+      contactRelationship: {
+        findUnique,
+        updateMany,
+      },
+    };
+    testingModule = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          ignoreEnvFile: true,
+          load: [
+            () => ({
+              DATABASE_URL:
+                'postgresql://test:test@localhost:5432/chat-composition',
+              GITHUB_CALLBACK_URL:
+                'http://localhost/auth/oauth/github/callback',
+              GITHUB_CLIENT_ID: 'composition-github-client',
+              GITHUB_CLIENT_SECRET: 'composition-github-secret',
+              GOOGLE_CALLBACK_URL:
+                'http://localhost/auth/oauth/google/callback',
+              GOOGLE_CLIENT_ID: 'composition-google-client',
+              GOOGLE_CLIENT_SECRET: 'composition-google-secret',
+              JWT_SECRET: 'composition-jwt-secret',
+            }),
+          ],
+        }),
+        ChatContactRequestModule,
+      ],
+    })
+      .overrideProvider(DIRECTORY_API)
+      .useValue({ userExists: jest.fn() })
+      .overrideProvider(CHAT_PRISMA_CLIENT)
+      .useValue(prisma)
+      .compile();
+
+    const controller = testingModule.get(ContactRequestsController);
+    expect(testingModule.get(RejectContactRequestUseCase)).toBeDefined();
+
+    await expect(
+      controller.rejectContactRequest(
+        {
+          headers: {},
+          user: { userId: 'user-original-recipient' },
+        },
+        'relationship-id',
+      ),
+    ).resolves.toEqual({
+      id: 'relationship-id',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      status: 'rejected',
+    });
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { id: 'relationship-id' },
+    });
+    expect(updateMany).toHaveBeenCalledTimes(1);
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: 'relationship-id', status: 'pending' },
+      data: { status: 'rejected' },
+    });
   });
 
   it('runs the registered controller path through the production graph', async () => {

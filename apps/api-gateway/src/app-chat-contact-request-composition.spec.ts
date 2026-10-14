@@ -1,6 +1,7 @@
 import {
   AcceptContactRequestUseCase,
   CHAT_PRISMA_CLIENT,
+  RejectContactRequestUseCase,
   SendContactRequestUseCase,
 } from '@huddle/chat';
 import { DIRECTORY_API } from '@huddle/identity';
@@ -48,5 +49,6 @@ describe('AppModule Chat Contact-request composition', () => {
 
     expect(testingModule.get(SendContactRequestUseCase)).toBeDefined();
     expect(testingModule.get(AcceptContactRequestUseCase)).toBeDefined();
+    expect(testingModule.get(RejectContactRequestUseCase)).toBeDefined();
   });
 });

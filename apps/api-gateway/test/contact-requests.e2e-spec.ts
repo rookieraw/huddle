@@ -56,12 +56,49 @@ const contactRequestAlreadyAcceptedBody = {
   },
 };
 
+const contactRequestAlreadyRejectedBody = {
+  error: {
+    code: 'CONTACT_REQUEST_ALREADY_REJECTED',
+    message: 'Contact request has already been rejected.',
+  },
+};
+
 const contactRequestAcceptanceUnavailableBody = {
   error: {
     code: 'CONTACT_REQUEST_ACCEPTANCE_UNAVAILABLE',
     message: 'Contact request acceptance is temporarily unavailable.',
   },
 };
+
+function createUnexpectedFailure() {
+  const internalValues = {
+    message: 'unexpected verifier failure',
+    providerCode: 'JWT_PROVIDER_FAILURE',
+    principalEmail: 'private@example.com',
+    token: 'secret-access-token',
+    databaseCode: 'P2002',
+    constraint: 'contact_relationships_current_user_pair_key',
+    domainType: 'ContactRelationship',
+    repositoryType: 'PrismaContactRelationshipRepository',
+    stack: 'D:\\internal\\contact-request.ts',
+  };
+
+  const failure = Object.assign(
+    new BadRequestException(internalValues.message),
+    {
+      providerCode: internalValues.providerCode,
+      principalEmail: internalValues.principalEmail,
+      token: internalValues.token,
+      databaseCode: internalValues.databaseCode,
+      constraint: internalValues.constraint,
+      domainType: internalValues.domainType,
+      repositoryType: internalValues.repositoryType,
+      stack: internalValues.stack,
+    },
+  );
+
+  return { failure, internalValues: Object.values(internalValues) };
+}
 
 describe('Contact requests (e2e)', () => {
   let app: INestApplication<App>;
@@ -71,6 +108,7 @@ describe('Contact requests (e2e)', () => {
   const findUnique = jest.fn();
   const findFirst = jest.fn();
   const upsert = jest.fn();
+  const updateMany = jest.fn();
   const transformedRequestBodies: unknown[] = [];
   const observeTransformedBody: PipeTransform = {
     transform(value: unknown, metadata) {
@@ -96,6 +134,7 @@ describe('Contact requests (e2e)', () => {
           findUnique,
           findFirst,
           upsert,
+          updateMany,
         },
       })
       .compile();
@@ -119,6 +158,7 @@ describe('Contact requests (e2e)', () => {
       status: 'pending',
     });
     findFirst.mockReset().mockResolvedValue(null);
+    updateMany.mockReset().mockResolvedValue({ count: 1 });
     upsert.mockReset().mockResolvedValue({
       id: 'relationship-id',
       requesterId: 'user-requester',
@@ -156,12 +196,6 @@ describe('Contact requests (e2e)', () => {
       userId: 'user-original-recipient',
       expiresAt: new Date('2030-01-01T00:00:00.000Z'),
     });
-    upsert.mockResolvedValueOnce({
-      id: 'relationship-id',
-      requesterId: 'user-original-requester',
-      recipientId: 'user-original-recipient',
-      status: 'accepted',
-    });
 
     const response = await request(app.getHttpServer())
       .post('/contact-requests/relationship-id/accept')
@@ -181,19 +215,12 @@ describe('Contact requests (e2e)', () => {
       where: { id: 'relationship-id' },
     });
     expect(findFirst).not.toHaveBeenCalled();
-    expect(upsert).toHaveBeenCalledTimes(1);
-    expect(upsert.mock.calls).toMatchObject([
-      [
-        {
-          where: { id: 'relationship-id' },
-          update: {
-            requesterId: 'user-original-requester',
-            recipientId: 'user-original-recipient',
-            status: 'accepted',
-          },
-        },
-      ],
-    ]);
+    expect(upsert).not.toHaveBeenCalled();
+    expect(updateMany).toHaveBeenCalledTimes(1);
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: 'relationship-id', status: 'pending' },
+      data: { status: 'accepted' },
+    });
   });
 
   it('ignores unsupported acceptance body fields', async () => {
@@ -206,12 +233,6 @@ describe('Contact requests (e2e)', () => {
       requesterId: 'user-original-requester',
       recipientId: 'user-original-recipient',
       status: 'pending',
-    });
-    upsert.mockResolvedValueOnce({
-      id: 'path-relationship-id',
-      requesterId: 'user-original-requester',
-      recipientId: 'user-original-recipient',
-      status: 'accepted',
     });
 
     const response = await request(app.getHttpServer())
@@ -240,18 +261,12 @@ describe('Contact requests (e2e)', () => {
       where: { id: 'path-relationship-id' },
     });
     expect(findFirst).not.toHaveBeenCalled();
-    expect(upsert.mock.calls).toMatchObject([
-      [
-        {
-          where: { id: 'path-relationship-id' },
-          update: {
-            requesterId: 'user-original-requester',
-            recipientId: 'user-original-recipient',
-            status: 'accepted',
-          },
-        },
-      ],
-    ]);
+    expect(upsert).not.toHaveBeenCalled();
+    expect(updateMany).toHaveBeenCalledTimes(1);
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: 'path-relationship-id', status: 'pending' },
+      data: { status: 'accepted' },
+    });
   });
 
   it('requires authentication before accepting a Contact request', async () => {
@@ -266,6 +281,7 @@ describe('Contact requests (e2e)', () => {
     expect(findUnique).not.toHaveBeenCalled();
     expect(findFirst).not.toHaveBeenCalled();
     expect(upsert).not.toHaveBeenCalled();
+    expect(updateMany).not.toHaveBeenCalled();
   });
 
   it('returns authentication required for an unusable acceptance access token', async () => {
@@ -283,6 +299,7 @@ describe('Contact requests (e2e)', () => {
     expect(findUnique).not.toHaveBeenCalled();
     expect(findFirst).not.toHaveBeenCalled();
     expect(upsert).not.toHaveBeenCalled();
+    expect(updateMany).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -334,6 +351,7 @@ describe('Contact requests (e2e)', () => {
       });
       expect(findFirst).not.toHaveBeenCalled();
       expect(upsert).not.toHaveBeenCalled();
+      expect(updateMany).not.toHaveBeenCalled();
     },
   );
 
@@ -363,7 +381,78 @@ describe('Contact requests (e2e)', () => {
     });
     expect(findFirst).not.toHaveBeenCalled();
     expect(upsert).not.toHaveBeenCalled();
+    expect(updateMany).not.toHaveBeenCalled();
   });
+
+  it('returns already rejected for the original recipient accepting a rejected relationship', async () => {
+    verifyAccessToken.mockResolvedValueOnce({
+      userId: 'user-original-recipient',
+      expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+    });
+    findUnique.mockResolvedValueOnce({
+      id: 'relationship-id',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      status: 'rejected',
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/contact-requests/relationship-id/accept')
+      .set('Authorization', 'Bearer recipient-access-token')
+      .expect(409);
+    const body = response.body as ContactRequestErrorBody;
+
+    expect(body).toEqual(contactRequestAlreadyRejectedBody);
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { id: 'relationship-id' },
+    });
+    expect(upsert).not.toHaveBeenCalled();
+    expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      resolved: 'accepted',
+      expectedBody: contactRequestAlreadyAcceptedBody,
+    },
+    {
+      resolved: 'rejected',
+      expectedBody: contactRequestAlreadyRejectedBody,
+    },
+  ])(
+    'returns the $resolved state when a concurrent resolution wins acceptance',
+    async ({ resolved, expectedBody }) => {
+      verifyAccessToken.mockResolvedValueOnce({
+        userId: 'user-original-recipient',
+        expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+      });
+      findUnique
+        .mockResolvedValueOnce({
+          id: 'relationship-id',
+          requesterId: 'user-original-requester',
+          recipientId: 'user-original-recipient',
+          status: 'pending',
+        })
+        .mockResolvedValueOnce({
+          id: 'relationship-id',
+          requesterId: 'user-original-requester',
+          recipientId: 'user-original-recipient',
+          status: resolved,
+        });
+      updateMany.mockResolvedValueOnce({ count: 0 });
+
+      const response = await request(app.getHttpServer())
+        .post('/contact-requests/relationship-id/accept')
+        .set('Authorization', 'Bearer recipient-access-token')
+        .expect(409);
+      const body = response.body as ContactRequestErrorBody;
+
+      expect(body).toEqual(expectedBody);
+      expect(findUnique).toHaveBeenCalledTimes(2);
+      expect(updateMany).toHaveBeenCalledTimes(1);
+      expect(upsert).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([
     {
@@ -372,22 +461,38 @@ describe('Contact requests (e2e)', () => {
         findUnique.mockRejectedValueOnce(new Error(internalMessage));
       },
       expectedFindUniqueCalls: 1,
-      expectedUpsertCalls: 0,
+      expectedUpdateManyCalls: 0,
     },
     {
-      scenario: 'repository save rejection',
+      scenario: 'repository transition rejection',
       arrangeFailure: (internalMessage: string) => {
-        upsert.mockRejectedValueOnce(new Error(internalMessage));
+        updateMany.mockRejectedValueOnce(new Error(internalMessage));
       },
       expectedFindUniqueCalls: 1,
-      expectedUpsertCalls: 1,
+      expectedUpdateManyCalls: 1,
+    },
+    {
+      scenario: 'repository re-read rejection after a lost transition',
+      arrangeFailure: (internalMessage: string) => {
+        updateMany.mockResolvedValueOnce({ count: 0 });
+        findUnique
+          .mockResolvedValueOnce({
+            id: 'relationship-id',
+            requesterId: 'user-original-requester',
+            recipientId: 'user-original-recipient',
+            status: 'pending',
+          })
+          .mockRejectedValueOnce(new Error(internalMessage));
+      },
+      expectedFindUniqueCalls: 2,
+      expectedUpdateManyCalls: 1,
     },
   ])(
     'returns the fixed CONTACT_REQUEST_ACCEPTANCE_UNAVAILABLE response for $scenario',
     async ({
       arrangeFailure,
       expectedFindUniqueCalls,
-      expectedUpsertCalls,
+      expectedUpdateManyCalls,
     }) => {
       const internalMessage = 'private acceptance repository failure';
       verifyAccessToken.mockResolvedValueOnce({
@@ -408,56 +513,349 @@ describe('Contact requests (e2e)', () => {
       expect(userExists).not.toHaveBeenCalled();
       expect(findUnique).toHaveBeenCalledTimes(expectedFindUniqueCalls);
       expect(findFirst).not.toHaveBeenCalled();
-      expect(upsert).toHaveBeenCalledTimes(expectedUpsertCalls);
+      expect(upsert).not.toHaveBeenCalled();
+      expect(updateMany).toHaveBeenCalledTimes(expectedUpdateManyCalls);
     },
   );
 
-  it('returns the fixed internal-error response for unexpected acceptance failure', async () => {
-    const internalValues = [
-      'Unsupported ContactRelationship status.',
-      'ContactRelationship',
-      'PrismaContactRelationshipRepository',
-      'P2002',
-      'contact_relationships_current_user_pair_key',
-      'private@example.com',
-      'secret-access-token',
-      'D:\\internal\\contact-request-acceptance.ts',
-    ];
+  it('rejects a pending relationship without a request body', async () => {
     verifyAccessToken.mockResolvedValueOnce({
       userId: 'user-original-recipient',
       expiresAt: new Date('2030-01-01T00:00:00.000Z'),
     });
-    upsert.mockResolvedValueOnce({
+
+    const response = await request(app.getHttpServer())
+      .post('/contact-requests/relationship-id/reject')
+      .set('Authorization', 'Bearer recipient-access-token')
+      .expect(200);
+    const body = response.body as ContactRequestSuccessBody;
+
+    expect(body).toEqual({
       id: 'relationship-id',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      status: 'rejected',
+    });
+    expect(verifyAccessToken).toHaveBeenCalledWith('recipient-access-token');
+    expect(userExists).not.toHaveBeenCalled();
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { id: 'relationship-id' },
+    });
+    expect(findFirst).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+    expect(updateMany).toHaveBeenCalledTimes(1);
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: 'relationship-id', status: 'pending' },
+      data: { status: 'rejected' },
+    });
+  });
+
+  it('ignores unsupported rejection body fields', async () => {
+    verifyAccessToken.mockResolvedValueOnce({
+      userId: 'user-original-recipient',
+      expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+    });
+    findUnique.mockResolvedValueOnce({
+      id: 'path-relationship-id',
       requesterId: 'user-original-requester',
       recipientId: 'user-original-recipient',
       status: 'pending',
     });
 
     const response = await request(app.getHttpServer())
-      .post('/contact-requests/relationship-id/accept')
-      .set('Authorization', 'Bearer secret-access-token')
-      .expect(500);
-    const body = response.body as ContactRequestErrorBody;
+      .post('/contact-requests/path-relationship-id/reject')
+      .set('Authorization', 'Bearer recipient-access-token')
+      .send({
+        rejectingUserId: 'user-attacker',
+        relationshipId: 'body-relationship-id',
+        requesterId: 'user-attacker',
+        recipientId: 'user-attacker',
+        status: 'accepted',
+      })
+      .expect(200);
+    const body = response.body as ContactRequestSuccessBody;
 
     expect(body).toEqual({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'An unexpected error occurred.',
-      },
+      id: 'path-relationship-id',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      status: 'rejected',
     });
-    const serializedBody = JSON.stringify(body);
-    for (const internalValue of internalValues) {
-      expect(serializedBody).not.toContain(internalValue);
-    }
-    expect(verifyAccessToken).toHaveBeenCalledWith('secret-access-token');
-    expect(userExists).not.toHaveBeenCalled();
+    expect(transformedRequestBodies).toEqual([]);
     expect(findUnique).toHaveBeenCalledWith({
-      where: { id: 'relationship-id' },
+      where: { id: 'path-relationship-id' },
     });
-    expect(findFirst).not.toHaveBeenCalled();
-    expect(upsert).toHaveBeenCalledTimes(1);
+    expect(updateMany).toHaveBeenCalledTimes(1);
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: 'path-relationship-id', status: 'pending' },
+      data: { status: 'rejected' },
+    });
+    expect(upsert).not.toHaveBeenCalled();
   });
+
+  it('requires authentication before rejecting a Contact request', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/contact-requests/relationship-id/reject')
+      .expect(401);
+    const body = response.body as ContactRequestErrorBody;
+
+    expect(body).toEqual(authenticationRequiredBody);
+    expect(verifyAccessToken).not.toHaveBeenCalled();
+    expect(userExists).not.toHaveBeenCalled();
+    expect(findUnique).not.toHaveBeenCalled();
+    expect(findFirst).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+    expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it('returns authentication required for an unusable rejection access token', async () => {
+    verifyAccessToken.mockRejectedValueOnce(new InvalidAccessTokenError());
+
+    const response = await request(app.getHttpServer())
+      .post('/contact-requests/relationship-id/reject')
+      .set('Authorization', 'Bearer unusable-access-token')
+      .expect(401);
+    const body = response.body as ContactRequestErrorBody;
+
+    expect(body).toEqual(authenticationRequiredBody);
+    expect(verifyAccessToken).toHaveBeenCalledWith('unusable-access-token');
+    expect(userExists).not.toHaveBeenCalled();
+    expect(findUnique).not.toHaveBeenCalled();
+    expect(findFirst).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+    expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      scenario: 'a missing relationship',
+      rejectingUserId: 'user-original-recipient',
+      persistedRelationship: null,
+    },
+    {
+      scenario: 'the original requester on a pending relationship',
+      rejectingUserId: 'user-original-requester',
+      persistedRelationship: {
+        id: 'relationship-id',
+        requesterId: 'user-original-requester',
+        recipientId: 'user-original-recipient',
+        status: 'pending',
+      },
+    },
+    {
+      scenario: 'an unrelated actor on an accepted relationship',
+      rejectingUserId: 'user-unrelated',
+      persistedRelationship: {
+        id: 'relationship-id',
+        requesterId: 'user-original-requester',
+        recipientId: 'user-original-recipient',
+        status: 'accepted',
+      },
+    },
+    {
+      scenario: 'an unrelated actor on a rejected relationship',
+      rejectingUserId: 'user-unrelated',
+      persistedRelationship: {
+        id: 'relationship-id',
+        requesterId: 'user-original-requester',
+        recipientId: 'user-original-recipient',
+        status: 'rejected',
+      },
+    },
+  ])(
+    'returns the fixed CONTACT_REQUEST_NOT_FOUND response when rejecting $scenario',
+    async ({ rejectingUserId, persistedRelationship }) => {
+      verifyAccessToken.mockResolvedValueOnce({
+        userId: rejectingUserId,
+        expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+      });
+      findUnique.mockResolvedValueOnce(persistedRelationship);
+
+      const response = await request(app.getHttpServer())
+        .post('/contact-requests/relationship-id/reject')
+        .set('Authorization', 'Bearer access-token')
+        .expect(404);
+      const body = response.body as ContactRequestErrorBody;
+
+      expect(body).toEqual(contactRequestNotFoundBody);
+      expect(verifyAccessToken).toHaveBeenCalledWith('access-token');
+      expect(userExists).not.toHaveBeenCalled();
+      expect(findUnique).toHaveBeenCalledWith({
+        where: { id: 'relationship-id' },
+      });
+      expect(findFirst).not.toHaveBeenCalled();
+      expect(upsert).not.toHaveBeenCalled();
+      expect(updateMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    {
+      persisted: 'accepted',
+      expectedBody: contactRequestAlreadyAcceptedBody,
+    },
+    {
+      persisted: 'rejected',
+      expectedBody: contactRequestAlreadyRejectedBody,
+    },
+  ])(
+    'returns the $persisted state to the original recipient rejecting a resolved relationship',
+    async ({ persisted, expectedBody }) => {
+      verifyAccessToken.mockResolvedValueOnce({
+        userId: 'user-original-recipient',
+        expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+      });
+      findUnique.mockResolvedValueOnce({
+        id: 'relationship-id',
+        requesterId: 'user-original-requester',
+        recipientId: 'user-original-recipient',
+        status: persisted,
+      });
+
+      const response = await request(app.getHttpServer())
+        .post('/contact-requests/relationship-id/reject')
+        .set('Authorization', 'Bearer recipient-access-token')
+        .expect(409);
+      const body = response.body as ContactRequestErrorBody;
+
+      expect(body).toEqual(expectedBody);
+      expect(findUnique).toHaveBeenCalledWith({
+        where: { id: 'relationship-id' },
+      });
+      expect(upsert).not.toHaveBeenCalled();
+      expect(updateMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    {
+      resolved: 'accepted',
+      expectedBody: contactRequestAlreadyAcceptedBody,
+    },
+    {
+      resolved: 'rejected',
+      expectedBody: contactRequestAlreadyRejectedBody,
+    },
+  ])(
+    'returns the $resolved state when a concurrent resolution wins rejection',
+    async ({ resolved, expectedBody }) => {
+      verifyAccessToken.mockResolvedValueOnce({
+        userId: 'user-original-recipient',
+        expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+      });
+      findUnique
+        .mockResolvedValueOnce({
+          id: 'relationship-id',
+          requesterId: 'user-original-requester',
+          recipientId: 'user-original-recipient',
+          status: 'pending',
+        })
+        .mockResolvedValueOnce({
+          id: 'relationship-id',
+          requesterId: 'user-original-requester',
+          recipientId: 'user-original-recipient',
+          status: resolved,
+        });
+      updateMany.mockResolvedValueOnce({ count: 0 });
+
+      const response = await request(app.getHttpServer())
+        .post('/contact-requests/relationship-id/reject')
+        .set('Authorization', 'Bearer recipient-access-token')
+        .expect(409);
+      const body = response.body as ContactRequestErrorBody;
+
+      expect(body).toEqual(expectedBody);
+      expect(findUnique).toHaveBeenCalledTimes(2);
+      expect(updateMany).toHaveBeenCalledTimes(1);
+      expect(upsert).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    {
+      scenario: 'repository lookup rejection',
+      arrangeFailure: (internalMessage: string) => {
+        findUnique.mockRejectedValueOnce(new Error(internalMessage));
+      },
+      expectedFindUniqueCalls: 1,
+      expectedUpdateManyCalls: 0,
+    },
+    {
+      scenario: 'repository transition rejection',
+      arrangeFailure: (internalMessage: string) => {
+        updateMany.mockRejectedValueOnce(new Error(internalMessage));
+      },
+      expectedFindUniqueCalls: 1,
+      expectedUpdateManyCalls: 1,
+    },
+    {
+      scenario: 'repository re-read rejection after a lost transition',
+      arrangeFailure: (internalMessage: string) => {
+        updateMany.mockResolvedValueOnce({ count: 0 });
+        findUnique
+          .mockResolvedValueOnce({
+            id: 'relationship-id',
+            requesterId: 'user-original-requester',
+            recipientId: 'user-original-recipient',
+            status: 'pending',
+          })
+          .mockRejectedValueOnce(new Error(internalMessage));
+      },
+      expectedFindUniqueCalls: 2,
+      expectedUpdateManyCalls: 1,
+    },
+    {
+      scenario:
+        'a lost transition with a relationship that can no longer be read',
+      arrangeFailure: () => {
+        updateMany.mockResolvedValueOnce({ count: 0 });
+        findUnique
+          .mockResolvedValueOnce({
+            id: 'relationship-id',
+            requesterId: 'user-original-requester',
+            recipientId: 'user-original-recipient',
+            status: 'pending',
+          })
+          .mockResolvedValueOnce(null);
+      },
+      expectedFindUniqueCalls: 2,
+      expectedUpdateManyCalls: 1,
+    },
+  ])(
+    'returns the fixed CONTACT_REQUEST_REJECTION_UNAVAILABLE response for $scenario',
+    async ({
+      arrangeFailure,
+      expectedFindUniqueCalls,
+      expectedUpdateManyCalls,
+    }) => {
+      const internalMessage = 'private rejection repository failure';
+      verifyAccessToken.mockResolvedValueOnce({
+        userId: 'user-original-recipient',
+        expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+      });
+      arrangeFailure(internalMessage);
+
+      const response = await request(app.getHttpServer())
+        .post('/contact-requests/relationship-id/reject')
+        .set('Authorization', 'Bearer recipient-access-token')
+        .expect(503);
+      const body = response.body as ContactRequestErrorBody;
+
+      expect(body).toEqual({
+        error: {
+          code: 'CONTACT_REQUEST_REJECTION_UNAVAILABLE',
+          message: 'Contact request rejection is temporarily unavailable.',
+        },
+      });
+      expect(JSON.stringify(body)).not.toContain(internalMessage);
+      expect(verifyAccessToken).toHaveBeenCalledWith('recipient-access-token');
+      expect(userExists).not.toHaveBeenCalled();
+      expect(findUnique).toHaveBeenCalledTimes(expectedFindUniqueCalls);
+      expect(findFirst).not.toHaveBeenCalled();
+      expect(upsert).not.toHaveBeenCalled();
+      expect(updateMany).toHaveBeenCalledTimes(expectedUpdateManyCalls);
+    },
+  );
 
   it('reuses a same-direction pending relationship through the authenticated HTTP route', async () => {
     findFirst.mockResolvedValueOnce({
@@ -765,49 +1163,53 @@ describe('Contact requests (e2e)', () => {
     },
   );
 
-  it('returns only the fixed internal-error response for an unexpected failure', async () => {
-    const internalValues = [
-      'unexpected verifier failure',
-      'JWT_PROVIDER_FAILURE',
-      'private@example.com',
-      'secret-access-token',
-      'P2002',
-      'contact_relationships_current_user_pair_key',
-      'D:\\internal\\contact-request.ts',
-    ];
-    const unexpectedFailure = Object.assign(
-      new BadRequestException(internalValues[0]),
-      {
-        providerCode: internalValues[1],
-        principalEmail: internalValues[2],
-        token: internalValues[3],
-        databaseCode: internalValues[4],
-        constraint: internalValues[5],
-        stack: internalValues[6],
-      },
-    );
-    verifyAccessToken.mockRejectedValueOnce(unexpectedFailure);
+  it.each([
+    {
+      route: 'creation',
+      path: '/contact-requests',
+      body: { targetUserId: 'user-target' },
+    },
+    {
+      route: 'acceptance',
+      path: '/contact-requests/relationship-id/accept',
+      body: undefined,
+    },
+    {
+      route: 'rejection',
+      path: '/contact-requests/relationship-id/reject',
+      body: undefined,
+    },
+  ])(
+    'returns only the fixed internal-error response for an unexpected failure on $route',
+    async ({ path, body: requestBody }) => {
+      const { failure, internalValues } = createUnexpectedFailure();
+      verifyAccessToken.mockRejectedValueOnce(failure);
 
-    const response = await request(app.getHttpServer())
-      .post('/contact-requests')
-      .set('Authorization', 'Bearer secret-access-token')
-      .send({ targetUserId: 'user-target' })
-      .expect(500);
-    const body = response.body as ContactRequestErrorBody;
+      let httpRequest = request(app.getHttpServer())
+        .post(path)
+        .set('Authorization', 'Bearer secret-access-token');
+      if (requestBody) {
+        httpRequest = httpRequest.send(requestBody);
+      }
+      const response = await httpRequest.expect(500);
+      const body = response.body as ContactRequestErrorBody;
 
-    expect(body).toEqual({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'An unexpected error occurred.',
-      },
-    });
-    const serializedBody = JSON.stringify(body);
-    for (const internalValue of internalValues) {
-      expect(serializedBody).not.toContain(internalValue);
-    }
-    expect(verifyAccessToken).toHaveBeenCalledWith('secret-access-token');
-    expect(userExists).not.toHaveBeenCalled();
-    expect(findFirst).not.toHaveBeenCalled();
-    expect(upsert).not.toHaveBeenCalled();
-  });
+      expect(body).toEqual({
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'An unexpected error occurred.',
+        },
+      });
+      const serializedBody = JSON.stringify(body);
+      for (const internalValue of internalValues) {
+        expect(serializedBody).not.toContain(internalValue);
+      }
+      expect(verifyAccessToken).toHaveBeenCalledWith('secret-access-token');
+      expect(userExists).not.toHaveBeenCalled();
+      expect(findUnique).not.toHaveBeenCalled();
+      expect(findFirst).not.toHaveBeenCalled();
+      expect(upsert).not.toHaveBeenCalled();
+      expect(updateMany).not.toHaveBeenCalled();
+    },
+  );
 });
