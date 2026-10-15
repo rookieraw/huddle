@@ -1,7 +1,7 @@
 # Chat HTTP Contract
 
-Status: Contact-request creation Implemented; Contact-request acceptance Implemented; Contact-request rejection Accepted
-Last reviewed: 2026-09-30
+Status: Contact-request creation Implemented; Contact-request acceptance Implemented; Contact-request rejection Implemented
+Last reviewed: 2026-10-15
 
 ## Purpose
 
@@ -9,10 +9,9 @@ This document is the authoritative HTTP contract for accepted and implemented
 Chat endpoints.
 
 The contract contains implemented authenticated Contact-request creation,
-implemented authenticated Contact-request acceptance, and the accepted
-(not yet implemented) authenticated Contact-request rejection. A capability
-appearing in the Chat Context or Phase 2 does not create another HTTP endpoint
-automatically.
+implemented authenticated Contact-request acceptance, and implemented
+authenticated Contact-request rejection. A capability appearing in the Chat
+Context or Phase 2 does not create another HTTP endpoint automatically.
 
 ## Source-of-Truth Boundary
 
@@ -67,11 +66,26 @@ unsupported body fields, success serialization, exact status and error
 envelopes, authorization visibility, dependency-unavailable mapping, and
 information minimization. It is not PostgreSQL evidence.
 
-Contact-request rejection at
-`POST /contact-requests/{contactRequestId}/reject` is `Accepted`: its route,
-response, authorization visibility, errors, and retry semantics are decided
-below, but no endpoint exists yet. It stays `Accepted` until its controller
-behavior, transport tests, and shared conventions are verified aligned.
+Contact-request rejection is implemented at
+`POST /contact-requests/{contactRequestId}/reject`. Its route, response,
+authorization visibility, errors, and retry semantics are decided below and
+implemented through the same API Gateway transport boundary as acceptance. The
+runtime path adds the rejection Application command, verified `userId` to
+rejecting-actor translation, opaque path identifier translation, named
+application errors, controller-scoped error translation, production NestJS
+registration, and authenticated HTTP transport evidence.
+
+Acceptance and rejection resolve a pending relationship through one
+pending-only repository transition, so concurrent resolutions apply at most
+one. The rejection transport evidence uses the same real `AppModule` and
+external-seam boundary as acceptance and proves route, guard, no-body success,
+ignored unsupported body fields, success serialization, exact status and error
+envelopes, identical authorization visibility for missing and non-recipient
+actors, both state-specific conflicts, dependency-unavailable mapping, and
+information minimization. It is not PostgreSQL evidence. Chat integration
+tests separately verify the rejected-state persistence, the pending-only
+transition, genuinely concurrent resolution, and that a rejected relationship
+does not occupy its user pair.
 
 No frontend Contacts flow or remaining Contacts lifecycle endpoint is
 implemented by this contract.
@@ -245,10 +259,7 @@ the caught exception.
 
 ## Accept a Contact Request
 
-Contract state: `Implemented`. The rejected-relationship `409
-CONTACT_REQUEST_ALREADY_REJECTED` outcome, the widened `503` cause list, and
-the atomic-resolution statement below are `Accepted` and become implemented
-with Contact-request rejection.
+Contract state: `Implemented`
 
 Authentication: Authenticated with resource authorization
 
@@ -406,7 +417,7 @@ success.
 
 ## Reject a Contact Request
 
-Contract state: `Accepted`
+Contract state: `Implemented`
 
 Authentication: Authenticated with resource authorization
 
