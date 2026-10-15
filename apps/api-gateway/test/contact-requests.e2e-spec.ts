@@ -328,6 +328,16 @@ describe('Contact requests (e2e)', () => {
         status: 'accepted',
       },
     },
+    {
+      scenario: 'an unrelated actor on a rejected relationship',
+      acceptingUserId: 'user-unrelated',
+      persistedRelationship: {
+        id: 'relationship-id',
+        requesterId: 'user-original-requester',
+        recipientId: 'user-original-recipient',
+        status: 'rejected',
+      },
+    },
   ])(
     'returns the fixed CONTACT_REQUEST_NOT_FOUND response for $scenario',
     async ({ acceptingUserId, persistedRelationship }) => {
@@ -483,6 +493,23 @@ describe('Contact requests (e2e)', () => {
             status: 'pending',
           })
           .mockRejectedValueOnce(new Error(internalMessage));
+      },
+      expectedFindUniqueCalls: 2,
+      expectedUpdateManyCalls: 1,
+    },
+    {
+      scenario:
+        'a lost transition with a relationship that can no longer be read',
+      arrangeFailure: () => {
+        updateMany.mockResolvedValueOnce({ count: 0 });
+        findUnique
+          .mockResolvedValueOnce({
+            id: 'relationship-id',
+            requesterId: 'user-original-requester',
+            recipientId: 'user-original-recipient',
+            status: 'pending',
+          })
+          .mockResolvedValueOnce(null);
       },
       expectedFindUniqueCalls: 2,
       expectedUpdateManyCalls: 1,

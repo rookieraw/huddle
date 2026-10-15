@@ -231,6 +231,43 @@ describe('PrismaContactRelationshipRepository (integration)', () => {
     expect(found?.isAccepted()).toBe(true);
   });
 
+  it('does not resolve a stale copy or duplicate the current relationship when the pair is re-requested between load and write', async () => {
+    const requesterId = 'user-stale-rerequest-requester';
+    const recipientId = 'user-stale-rerequest-recipient';
+    const original = ContactRelationship.create({ requesterId, recipientId });
+    await repository.save(original);
+    const staleCopy = ContactRelationship.reconstitute({
+      id: original.id,
+      requesterId,
+      recipientId,
+      status: 'pending',
+    });
+    original.reject(recipientId);
+    await repository.transitionFromPending(original);
+    const reRequest = ContactRelationship.create({
+      requesterId,
+      recipientId,
+    });
+    await repository.save(reRequest);
+    staleCopy.accept(recipientId);
+
+    const applied = await repository.transitionFromPending(staleCopy);
+
+    const rows = await prisma.contactRelationship.findMany({
+      orderBy: { id: 'asc' },
+    });
+    const current = await repository.findCurrentByUserPair(
+      requesterId,
+      recipientId,
+    );
+    expect(applied).toBe(false);
+    expect(rows).toHaveLength(2);
+    expect(rows.find((row) => row.id === original.id)?.status).toBe('rejected');
+    expect(rows.find((row) => row.id === reRequest.id)?.status).toBe('pending');
+    expect(current?.id).toBe(reRequest.id);
+    expect(current?.isPending()).toBe(true);
+  });
+
   it('reports not applied for a relationship that does not exist', async () => {
     const relationship = ContactRelationship.reconstitute({
       id: 'relationship-never-saved',

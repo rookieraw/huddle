@@ -5,6 +5,7 @@ import {
   StartedPostgreSqlContainer,
 } from '@testcontainers/postgresql';
 import { PrismaPg } from '@prisma/adapter-pg';
+import type { ContactRelationshipRepository } from '../../application/ports/contact-relationship.repository.port';
 import type { ContactTargetDirectory } from '../../application/ports/contact-target-directory.port';
 import {
   AcceptContactRequestUseCase,
@@ -32,6 +33,79 @@ function runMigrateDeploy(databaseUrl: string): void {
     env: { ...process.env, DATABASE_URL: databaseUrl },
     stdio: 'inherit',
   });
+}
+
+function createDeferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+
+  return { promise, resolve };
+}
+
+function withTimeout(
+  promise: Promise<void>,
+  milliseconds: number,
+  message: string,
+): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), milliseconds);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+class LoadBarrierContactRelationshipRepository implements ContactRelationshipRepository {
+  private completedLoads = 0;
+  private findByIdCalls = 0;
+  private readonly allLoaded = createDeferred();
+
+  constructor(
+    private readonly realRepository: ContactRelationshipRepository,
+    private readonly parties = 2,
+  ) {}
+
+  get findByIdCallCount(): number {
+    return this.findByIdCalls;
+  }
+
+  async findById(relationshipId: string): Promise<ContactRelationship | null> {
+    this.findByIdCalls += 1;
+    const relationship = await this.realRepository.findById(relationshipId);
+
+    if (this.completedLoads < this.parties) {
+      this.completedLoads += 1;
+
+      if (this.completedLoads === this.parties) {
+        this.allLoaded.resolve();
+      }
+
+      await withTimeout(
+        this.allLoaded.promise,
+        5000,
+        'Not every concurrent caller loaded the relationship.',
+      );
+    }
+
+    return relationship;
+  }
+
+  findCurrentByUserPair(
+    firstUserId: string,
+    secondUserId: string,
+  ): Promise<ContactRelationship | null> {
+    return this.realRepository.findCurrentByUserPair(firstUserId, secondUserId);
+  }
+
+  save(relationship: ContactRelationship): Promise<ContactRelationship> {
+    return this.realRepository.save(relationship);
+  }
+
+  transitionFromPending(relationship: ContactRelationship): Promise<boolean> {
+    return this.realRepository.transitionFromPending(relationship);
+  }
 }
 
 describe('Contact request resolution with PostgreSQL persistence', () => {
@@ -166,12 +240,17 @@ describe('Contact request resolution with PostgreSQL persistence', () => {
         targetUserId: 'user-recipient',
       });
 
+      const barrierRepository = new LoadBarrierContactRelationshipRepository(
+        repository,
+      );
+      const racingReject = new RejectContactRequestUseCase(barrierRepository);
+
       const outcomes = await Promise.allSettled([
-        rejectContactRequest.execute({
+        racingReject.execute({
           rejectingUserId: 'user-recipient',
           relationshipId: pending.id,
         }),
-        rejectContactRequest.execute({
+        racingReject.execute({
           rejectingUserId: 'user-recipient',
           relationshipId: pending.id,
         }),
@@ -192,6 +271,7 @@ describe('Contact request resolution with PostgreSQL persistence', () => {
         ContactRequestAlreadyRejectedError,
       );
       expect(stored?.status).toBe('rejected');
+      expect(barrierRepository.findByIdCallCount).toBe(3);
     });
 
     it('creates a new pending relationship when the same users request again after rejection', async () => {
@@ -322,12 +402,17 @@ describe('Contact request resolution with PostgreSQL persistence', () => {
         targetUserId: 'user-recipient',
       });
 
+      const barrierRepository = new LoadBarrierContactRelationshipRepository(
+        repository,
+      );
+      const racingAccept = new AcceptContactRequestUseCase(barrierRepository);
+
       const outcomes = await Promise.allSettled([
-        acceptContactRequest.execute({
+        racingAccept.execute({
           acceptingUserId: 'user-recipient',
           relationshipId: pending.id,
         }),
-        acceptContactRequest.execute({
+        racingAccept.execute({
           acceptingUserId: 'user-recipient',
           relationshipId: pending.id,
         }),
@@ -348,6 +433,7 @@ describe('Contact request resolution with PostgreSQL persistence', () => {
         ContactRequestAlreadyAcceptedError,
       );
       expect(stored?.status).toBe('accepted');
+      expect(barrierRepository.findByIdCallCount).toBe(3);
     });
   });
 
@@ -358,12 +444,18 @@ describe('Contact request resolution with PostgreSQL persistence', () => {
         targetUserId: 'user-recipient',
       });
 
+      const barrierRepository = new LoadBarrierContactRelationshipRepository(
+        repository,
+      );
+      const racingAccept = new AcceptContactRequestUseCase(barrierRepository);
+      const racingReject = new RejectContactRequestUseCase(barrierRepository);
+
       const [acceptOutcome, rejectOutcome] = await Promise.allSettled([
-        acceptContactRequest.execute({
+        racingAccept.execute({
           acceptingUserId: 'user-recipient',
           relationshipId: pending.id,
         }),
-        rejectContactRequest.execute({
+        racingReject.execute({
           rejectingUserId: 'user-recipient',
           relationshipId: pending.id,
         }),
@@ -375,6 +467,7 @@ describe('Contact request resolution with PostgreSQL persistence', () => {
       const acceptWon = acceptOutcome.status === 'fulfilled';
       const rejectWon = rejectOutcome.status === 'fulfilled';
       expect([acceptWon, rejectWon].filter(Boolean)).toHaveLength(1);
+      expect(barrierRepository.findByIdCallCount).toBe(3);
       if (acceptWon) {
         expect(stored?.status).toBe('accepted');
         expect(rejectOutcome).toMatchObject({
