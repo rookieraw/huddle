@@ -11,4 +11,5 @@ export interface ContactRelationshipRepository {
     secondUserId: string,
   ): Promise<ContactRelationship | null>;
   save(relationship: ContactRelationship): Promise<ContactRelationship>;
+  transitionFromPending(relationship: ContactRelationship): Promise<boolean>;
 }

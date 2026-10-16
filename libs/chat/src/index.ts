@@ -10,11 +10,19 @@ export {
   SendContactRequestUseCase,
 } from './application/use-cases/send-contact-request.use-case';
 export {
-  AcceptContactRequestUseCase,
   ContactRelationshipNotFoundError,
-  ContactRequestAcceptanceNotAuthorizedError,
   ContactRequestAlreadyAcceptedError,
+  ContactRequestAlreadyRejectedError,
+} from './application/use-cases/contact-request.errors';
+export {
+  AcceptContactRequestUseCase,
+  ContactRequestAcceptanceNotAuthorizedError,
   ContactRequestAcceptanceUnavailableError,
 } from './application/use-cases/accept-contact-request.use-case';
+export {
+  ContactRequestRejectionNotAuthorizedError,
+  ContactRequestRejectionUnavailableError,
+  RejectContactRequestUseCase,
+} from './application/use-cases/reject-contact-request.use-case';
 export { ChatPersistenceModule } from './infrastructure/nestjs/chat-persistence.module';
 export { CHAT_PRISMA_CLIENT } from './infrastructure/prisma/chat-prisma-client.provider';

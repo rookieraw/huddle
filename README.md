@@ -8,26 +8,15 @@ Huddle is under active development. Accepted target capabilities are documented 
 
 ## Current Status
 
-Phase 1 — Identity is complete.
+| Context      | Status      |
+| ------------ | ----------- |
+| Identity     | Complete    |
+| Chat         | In progress |
+| Conferencing | Not started |
+| Billing      | Not started |
+| Notification | Not started |
 
-Implemented capabilities include:
-
-- Email and password registration
-- Email verification
-- Credential login
-- Google OAuth login
-- GitHub OAuth login
-- JWT access tokens
-- Refresh-token rotation
-- Logout and token revocation
-- PostgreSQL Identity persistence
-- Unit, integration, and E2E tests
-
-The next implementation phase is Phase 2 — Contacts and Chat.
-
-See the current implementation state in:
-
-[`docs/delivery/status.md`](docs/delivery/status.md)
+See [`docs/delivery/status.md`](docs/delivery/status.md) for current implementation detail.
 
 ## Product Direction
 
@@ -53,6 +42,25 @@ Committed, deferred, and stretch scope is defined in:
 Free and Pro entitlements are defined in:
 
 [`docs/product/tiers.md`](docs/product/tiers.md)
+
+## Delivery Roadmap
+
+The delivery sequence is:
+
+1. Identity
+2. Contacts and Chat
+3. CI/CD and deployment foundation
+4. Voice and video Calling
+5. Billing and first Portfolio Release
+6. Standalone Meetings
+7. Notification and Slack
+8. Hardening and portfolio preparation
+
+The authoritative roadmap and Phase specifications are available under:
+
+[`docs/delivery/`](docs/delivery/)
+
+The first Portfolio Release is targeted at the end of the Billing phase. Meetings and Notification remain later work.
 
 ## Architecture
 
@@ -169,25 +177,6 @@ The project uses risk-based coverage and regression protection rather than a bla
 See:
 
 [Testing Strategy](docs/engineering/testing.md)
-
-## Delivery Roadmap
-
-The delivery sequence is:
-
-1. Identity
-2. Contacts and Chat
-3. CI/CD and deployment foundation
-4. Voice and video Calling
-5. Billing and first Portfolio Release
-6. Standalone Meetings
-7. Notification and Slack
-8. Hardening and portfolio preparation
-
-The authoritative roadmap and Phase specifications are available under:
-
-[`docs/delivery/`](docs/delivery/)
-
-The first Portfolio Release is targeted at the end of the Billing phase. Meetings and Notification remain later work.
 
 ## Deployment Direction
 

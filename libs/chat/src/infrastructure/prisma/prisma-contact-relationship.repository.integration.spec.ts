@@ -171,6 +171,177 @@ describe('PrismaContactRelationshipRepository (integration)', () => {
     expect(found?.isAccepted()).toBe(true);
   });
 
+  it('persists and reloads a rejected relationship through the pending-only transition', async () => {
+    const requesterId = 'user-rejected-requester';
+    const recipientId = 'user-rejected-recipient';
+    const relationship = ContactRelationship.create({
+      requesterId,
+      recipientId,
+    });
+    await repository.save(relationship);
+    relationship.reject(recipientId);
+
+    const applied = await repository.transitionFromPending(relationship);
+    const found = await repository.findById(relationship.id);
+
+    expect(applied).toBe(true);
+    expect(found?.id).toBe(relationship.id);
+    expect(found?.requesterId).toBe(requesterId);
+    expect(found?.recipientId).toBe(recipientId);
+    expect(found?.isRejected()).toBe(true);
+  });
+
+  it('persists an accepted relationship through the pending-only transition', async () => {
+    const recipientId = 'user-transition-recipient';
+    const relationship = ContactRelationship.create({
+      requesterId: 'user-transition-requester',
+      recipientId,
+    });
+    await repository.save(relationship);
+    relationship.accept(recipientId);
+
+    const applied = await repository.transitionFromPending(relationship);
+    const found = await repository.findById(relationship.id);
+
+    expect(applied).toBe(true);
+    expect(found?.isAccepted()).toBe(true);
+  });
+
+  it('reports not applied and keeps the stored state when the relationship is no longer pending', async () => {
+    const recipientId = 'user-stale-recipient';
+    const relationship = ContactRelationship.create({
+      requesterId: 'user-stale-requester',
+      recipientId,
+    });
+    await repository.save(relationship);
+    const staleCopy = ContactRelationship.reconstitute({
+      id: relationship.id,
+      requesterId: relationship.requesterId,
+      recipientId,
+      status: 'pending',
+    });
+    relationship.accept(recipientId);
+    await repository.transitionFromPending(relationship);
+    staleCopy.reject(recipientId);
+
+    const applied = await repository.transitionFromPending(staleCopy);
+    const found = await repository.findById(relationship.id);
+
+    expect(applied).toBe(false);
+    expect(found?.isAccepted()).toBe(true);
+  });
+
+  it('does not resolve a stale copy or duplicate the current relationship when the pair is re-requested between load and write', async () => {
+    const requesterId = 'user-stale-rerequest-requester';
+    const recipientId = 'user-stale-rerequest-recipient';
+    const original = ContactRelationship.create({ requesterId, recipientId });
+    await repository.save(original);
+    const staleCopy = ContactRelationship.reconstitute({
+      id: original.id,
+      requesterId,
+      recipientId,
+      status: 'pending',
+    });
+    original.reject(recipientId);
+    await repository.transitionFromPending(original);
+    const reRequest = ContactRelationship.create({
+      requesterId,
+      recipientId,
+    });
+    await repository.save(reRequest);
+    staleCopy.accept(recipientId);
+
+    const applied = await repository.transitionFromPending(staleCopy);
+
+    const rows = await prisma.contactRelationship.findMany({
+      orderBy: { id: 'asc' },
+    });
+    const current = await repository.findCurrentByUserPair(
+      requesterId,
+      recipientId,
+    );
+    expect(applied).toBe(false);
+    expect(rows).toHaveLength(2);
+    expect(rows.find((row) => row.id === original.id)?.status).toBe('rejected');
+    expect(rows.find((row) => row.id === reRequest.id)?.status).toBe('pending');
+    expect(current?.id).toBe(reRequest.id);
+    expect(current?.isPending()).toBe(true);
+  });
+
+  it('reports not applied for a relationship that does not exist', async () => {
+    const relationship = ContactRelationship.reconstitute({
+      id: 'relationship-never-saved',
+      requesterId: 'user-missing-requester',
+      recipientId: 'user-missing-recipient',
+      status: 'pending',
+    });
+    relationship.reject('user-missing-recipient');
+
+    const applied = await repository.transitionFromPending(relationship);
+
+    expect(applied).toBe(false);
+  });
+
+  it('lets exactly one of two concurrent resolutions win and keeps the winning state', async () => {
+    const requesterId = 'user-race-requester';
+    const recipientId = 'user-race-recipient';
+    const created = ContactRelationship.create({ requesterId, recipientId });
+    await repository.save(created);
+    const accepting = ContactRelationship.reconstitute({
+      id: created.id,
+      requesterId,
+      recipientId,
+      status: 'pending',
+    });
+    const rejecting = ContactRelationship.reconstitute({
+      id: created.id,
+      requesterId,
+      recipientId,
+      status: 'pending',
+    });
+    accepting.accept(recipientId);
+    rejecting.reject(recipientId);
+
+    const [acceptApplied, rejectApplied] = await Promise.all([
+      repository.transitionFromPending(accepting),
+      repository.transitionFromPending(rejecting),
+    ]);
+    const found = await repository.findById(created.id);
+
+    expect([acceptApplied, rejectApplied].filter(Boolean)).toHaveLength(1);
+    expect(found?.isAccepted()).toBe(acceptApplied);
+    expect(found?.isRejected()).toBe(rejectApplied);
+  });
+
+  it('does not treat a rejected relationship as current and allows a new pending request for the same pair', async () => {
+    const requesterId = 'user-rerequest-requester';
+    const recipientId = 'user-rerequest-recipient';
+    const rejected = ContactRelationship.create({ requesterId, recipientId });
+    await repository.save(rejected);
+    rejected.reject(recipientId);
+    await repository.transitionFromPending(rejected);
+
+    const currentAfterRejection = await repository.findCurrentByUserPair(
+      requesterId,
+      recipientId,
+    );
+    const reRequest = ContactRelationship.create({
+      requesterId: recipientId,
+      recipientId: requesterId,
+    });
+    await repository.save(reRequest);
+    const currentAfterReRequest = await repository.findCurrentByUserPair(
+      requesterId,
+      recipientId,
+    );
+    const previous = await repository.findById(rejected.id);
+
+    expect(currentAfterRejection).toBeNull();
+    expect(currentAfterReRequest?.id).toBe(reRequest.id);
+    expect(currentAfterReRequest?.isPending()).toBe(true);
+    expect(previous?.isRejected()).toBe(true);
+  });
+
   it('returns the persisted winner for an unordered-pair uniqueness collision', async () => {
     const winner = ContactRelationship.create({
       requesterId: 'user-original-requester',

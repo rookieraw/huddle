@@ -17,4 +17,20 @@ describe('@huddle/chat acceptance package boundary', () => {
     );
     expect(chatPackage).not.toHaveProperty('PrismaClient');
   });
+
+  it('exports the rejection Application capability without exposing its implementation', () => {
+    expect(chatPackage).toEqual(
+      expect.objectContaining({
+        RejectContactRequestUseCase: expect.any(Function),
+        ContactRequestRejectionNotAuthorizedError: expect.any(Function),
+        ContactRequestAlreadyRejectedError: expect.any(Function),
+        ContactRequestRejectionUnavailableError: expect.any(Function),
+      }),
+    );
+    expect(chatPackage).not.toHaveProperty('ContactRelationship');
+    expect(chatPackage).not.toHaveProperty(
+      'PrismaContactRelationshipRepository',
+    );
+    expect(chatPackage).not.toHaveProperty('PrismaClient');
+  });
 });

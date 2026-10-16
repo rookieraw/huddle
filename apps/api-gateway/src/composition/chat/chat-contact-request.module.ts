@@ -4,6 +4,7 @@ import {
   CONTACT_RELATIONSHIP_REPOSITORY,
   CONTACT_TARGET_DIRECTORY,
   ChatPersistenceModule,
+  RejectContactRequestUseCase,
   SendContactRequestUseCase,
 } from '@huddle/chat';
 import type {
@@ -38,6 +39,13 @@ import { IdentityContactTargetDirectoryAdapter } from './identity-contact-target
       useFactory: (
         contactRelationshipRepository: ContactRelationshipRepository,
       ) => new AcceptContactRequestUseCase(contactRelationshipRepository),
+      inject: [CONTACT_RELATIONSHIP_REPOSITORY],
+    },
+    {
+      provide: RejectContactRequestUseCase,
+      useFactory: (
+        contactRelationshipRepository: ContactRelationshipRepository,
+      ) => new RejectContactRequestUseCase(contactRelationshipRepository),
       inject: [CONTACT_RELATIONSHIP_REPOSITORY],
     },
     {

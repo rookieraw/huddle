@@ -38,6 +38,7 @@ docker-data/
 
 # Local AI working context; not part of the public documentation
 /docs/ai/
+.claude/
 
 # Local archive of documentation snapshots; not tracked by Git
 /docs/archive/

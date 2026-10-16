@@ -1,5 +1,6 @@
 import {
   AcceptContactRequestUseCase,
+  RejectContactRequestUseCase,
   SendContactRequestUseCase,
 } from '@huddle/chat';
 import {
@@ -33,7 +34,27 @@ export class ContactRequestsController {
   constructor(
     private readonly sendContactRequestUseCase: SendContactRequestUseCase,
     private readonly acceptContactRequestUseCase: AcceptContactRequestUseCase,
+    private readonly rejectContactRequestUseCase: RejectContactRequestUseCase,
   ) {}
+
+  @Post(':contactRequestId/reject')
+  @HttpCode(HttpStatus.OK)
+  async rejectContactRequest(
+    @Req() request: VerifiedContactRequest,
+    @Param('contactRequestId') contactRequestId: string,
+  ) {
+    const relationship = await this.rejectContactRequestUseCase.execute({
+      rejectingUserId: request.user.userId,
+      relationshipId: contactRequestId,
+    });
+
+    return {
+      id: relationship.id,
+      requesterId: relationship.requesterId,
+      recipientId: relationship.recipientId,
+      status: 'rejected' as const,
+    };
+  }
 
   @Post(':contactRequestId/accept')
   @HttpCode(HttpStatus.OK)

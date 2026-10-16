@@ -1,29 +1,20 @@
 import type { ContactRelationship } from '../../domain/contact-relationship.entity';
 import type { ContactRelationshipRepository } from '../ports/contact-relationship.repository.port';
+import {
+  ContactRelationshipNotFoundError,
+  ContactRequestAlreadyAcceptedError,
+  ContactRequestAlreadyRejectedError,
+} from './contact-request.errors';
 
 type AcceptContactRequestInput = {
   acceptingUserId: string;
   relationshipId: string;
 };
 
-export class ContactRelationshipNotFoundError extends Error {
-  constructor() {
-    super('Contact relationship was not found.');
-    this.name = 'ContactRelationshipNotFoundError';
-  }
-}
-
 export class ContactRequestAcceptanceNotAuthorizedError extends Error {
   constructor() {
     super('Only the recipient can accept a Contact request.');
     this.name = 'ContactRequestAcceptanceNotAuthorizedError';
-  }
-}
-
-export class ContactRequestAlreadyAcceptedError extends Error {
-  constructor() {
-    super('The Contact request has already been accepted.');
-    this.name = 'ContactRequestAlreadyAcceptedError';
   }
 }
 
@@ -42,15 +33,7 @@ export class AcceptContactRequestUseCase {
   async execute(
     input: AcceptContactRequestInput,
   ): Promise<ContactRelationship> {
-    let relationship: ContactRelationship | null;
-
-    try {
-      relationship = await this.contactRelationshipRepository.findById(
-        input.relationshipId,
-      );
-    } catch {
-      throw new ContactRequestAcceptanceUnavailableError();
-    }
+    const relationship = await this.findRelationship(input.relationshipId);
 
     if (!relationship) {
       throw new ContactRelationshipNotFoundError();
@@ -60,14 +43,49 @@ export class AcceptContactRequestUseCase {
       throw new ContactRequestAcceptanceNotAuthorizedError();
     }
 
-    if (!relationship.isPending()) {
+    if (relationship.isAccepted()) {
       throw new ContactRequestAlreadyAcceptedError();
+    }
+
+    if (relationship.isRejected()) {
+      throw new ContactRequestAlreadyRejectedError();
     }
 
     relationship.accept(input.acceptingUserId);
 
+    let applied: boolean;
+
     try {
-      return await this.contactRelationshipRepository.save(relationship);
+      applied =
+        await this.contactRelationshipRepository.transitionFromPending(
+          relationship,
+        );
+    } catch {
+      throw new ContactRequestAcceptanceUnavailableError();
+    }
+
+    if (!applied) {
+      const current = await this.findRelationship(input.relationshipId);
+
+      if (current?.isAccepted()) {
+        throw new ContactRequestAlreadyAcceptedError();
+      }
+
+      if (current?.isRejected()) {
+        throw new ContactRequestAlreadyRejectedError();
+      }
+
+      throw new ContactRequestAcceptanceUnavailableError();
+    }
+
+    return relationship;
+  }
+
+  private async findRelationship(
+    relationshipId: string,
+  ): Promise<ContactRelationship | null> {
+    try {
+      return await this.contactRelationshipRepository.findById(relationshipId);
     } catch {
       throw new ContactRequestAcceptanceUnavailableError();
     }

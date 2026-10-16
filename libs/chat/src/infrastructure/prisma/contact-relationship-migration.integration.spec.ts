@@ -19,6 +19,8 @@ const PRISMA_DIR = __dirname;
 const CHAT_PACKAGE_ROOT = resolve(PRISMA_DIR, '../../..');
 const REAL_MIGRATIONS_DIR = join(PRISMA_DIR, 'migrations');
 const INITIAL_MIGRATION = '20260820000000_create_contact_relationships';
+const ACCEPTED_STATUS_MIGRATION =
+  '20260902000000_add_accepted_contact_relationship_status';
 
 const MIGRATION_TEST_SCHEMA = `
 datasource db {
@@ -95,8 +97,35 @@ describe('ContactRelationship migration (integration, via real prisma migrate de
       );
     }
 
+    copyMigration(ACCEPTED_STATUS_MIGRATION, tempMigrationsDir);
+    runMigrateDeploy(schemaPath, container.getConnectionUri());
+
+    const existingAcceptedRow = await container.exec([
+      'psql',
+      '--username',
+      container.getUsername(),
+      '--dbname',
+      container.getDatabase(),
+      '--set',
+      'ON_ERROR_STOP=1',
+      '--command',
+      `INSERT INTO chat.contact_relationships
+         (id, requester_id, recipient_id, status)
+       VALUES
+         ('relationship-accepted-before-rejection-upgrade', 'user-before-c', 'user-before-d', 'accepted')`,
+    ]);
+
+    if (existingAcceptedRow.exitCode !== 0) {
+      throw new Error(
+        `Failed to seed the accepted pre-migration row: ${existingAcceptedRow.output}`,
+      );
+    }
+
     for (const entry of migrationEntries) {
-      if (entry.name !== INITIAL_MIGRATION) {
+      if (
+        entry.name !== INITIAL_MIGRATION &&
+        entry.name !== ACCEPTED_STATUS_MIGRATION
+      ) {
         copyMigration(entry.name, tempMigrationsDir);
       }
     }
@@ -128,6 +157,65 @@ describe('ContactRelationship migration (integration, via real prisma migrate de
     expect(existingRow.output.trim()).toBe(
       'relationship-before-upgrade|user-before-a|user-before-b|pending',
     );
+  });
+
+  it('preserves an existing accepted relationship through the rejected-status migration', async () => {
+    const existingRow = await container.exec([
+      'psql',
+      '--username',
+      container.getUsername(),
+      '--dbname',
+      container.getDatabase(),
+      '--tuples-only',
+      '--no-align',
+      '--command',
+      `SELECT id, requester_id, recipient_id, status
+         FROM chat.contact_relationships
+         WHERE id = 'relationship-accepted-before-rejection-upgrade'`,
+    ]);
+
+    expect(existingRow.exitCode).toBe(0);
+    expect(existingRow.output.trim()).toBe(
+      'relationship-accepted-before-rejection-upgrade|user-before-c|user-before-d|accepted',
+    );
+  });
+
+  it('allows a rejected relationship to coexist with a current relationship for the same user pair', async () => {
+    const insert = async (
+      id: string,
+      requester: string,
+      recipient: string,
+      status: string,
+    ) =>
+      container.exec([
+        'psql',
+        '--username',
+        container.getUsername(),
+        '--dbname',
+        container.getDatabase(),
+        '--set',
+        'ON_ERROR_STOP=1',
+        '--command',
+        `INSERT INTO chat.contact_relationships
+           (id, requester_id, recipient_id, status)
+         VALUES ('${id}', '${requester}', '${recipient}', '${status}')`,
+      ]);
+
+    const rejected = await insert(
+      'relationship-coexist-rejected',
+      'user-coexist-a',
+      'user-coexist-b',
+      'rejected',
+    );
+    const currentAfterwards = await insert(
+      'relationship-coexist-pending',
+      'user-coexist-b',
+      'user-coexist-a',
+      'pending',
+    );
+
+    expect(rejected.exitCode).toBe(0);
+    expect(currentAfterwards.exitCode).toBe(0);
   });
 
   it('creates storage that allows exactly the current relationship statuses', async () => {
@@ -174,6 +262,7 @@ describe('ContactRelationship migration (integration, via real prisma migrate de
     expect(statusConstraint.output).toContain('status');
     expect(statusConstraint.output).toContain('pending');
     expect(statusConstraint.output).toContain('accepted');
+    expect(statusConstraint.output).toContain('rejected');
 
     const acceptedInsert = await container.exec([
       'psql',
@@ -191,6 +280,23 @@ describe('ContactRelationship migration (integration, via real prisma migrate de
     ]);
 
     expect(acceptedInsert.exitCode).toBe(0);
+
+    const rejectedInsert = await container.exec([
+      'psql',
+      '--username',
+      container.getUsername(),
+      '--dbname',
+      container.getDatabase(),
+      '--set',
+      'ON_ERROR_STOP=1',
+      '--command',
+      `INSERT INTO chat.contact_relationships
+         (id, requester_id, recipient_id, status)
+       VALUES
+         ('relationship-status-rejected', 'user-status-e', 'user-status-f', 'rejected')`,
+    ]);
+
+    expect(rejectedInsert.exitCode).toBe(0);
 
     const unsupportedInsert = await container.exec([
       'psql',

@@ -3,6 +3,9 @@ import {
   ContactRequestAcceptanceNotAuthorizedError,
   ContactRequestAcceptanceUnavailableError,
   ContactRequestAlreadyAcceptedError,
+  ContactRequestAlreadyRejectedError,
+  ContactRequestRejectionNotAuthorizedError,
+  ContactRequestRejectionUnavailableError,
   ContactRequestUnavailableError,
   ContactTargetLookupUnavailableError,
   ContactTargetNotFoundError,
@@ -84,7 +87,8 @@ export class ContactRequestExceptionFilter implements ExceptionFilter {
 
     if (
       exception instanceof ContactRelationshipNotFoundError ||
-      exception instanceof ContactRequestAcceptanceNotAuthorizedError
+      exception instanceof ContactRequestAcceptanceNotAuthorizedError ||
+      exception instanceof ContactRequestRejectionNotAuthorizedError
     ) {
       writeErrorResponse(response, HttpStatus.NOT_FOUND, {
         code: 'CONTACT_REQUEST_NOT_FOUND',
@@ -98,6 +102,24 @@ export class ContactRequestExceptionFilter implements ExceptionFilter {
       writeErrorResponse(response, HttpStatus.CONFLICT, {
         code: 'CONTACT_REQUEST_ALREADY_ACCEPTED',
         message: 'Contact request has already been accepted.',
+      });
+
+      return;
+    }
+
+    if (exception instanceof ContactRequestAlreadyRejectedError) {
+      writeErrorResponse(response, HttpStatus.CONFLICT, {
+        code: 'CONTACT_REQUEST_ALREADY_REJECTED',
+        message: 'Contact request has already been rejected.',
+      });
+
+      return;
+    }
+
+    if (exception instanceof ContactRequestRejectionUnavailableError) {
+      writeErrorResponse(response, HttpStatus.SERVICE_UNAVAILABLE, {
+        code: 'CONTACT_REQUEST_REJECTION_UNAVAILABLE',
+        message: 'Contact request rejection is temporarily unavailable.',
       });
 
       return;

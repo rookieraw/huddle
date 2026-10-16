@@ -68,6 +68,8 @@ class RecordingContactRelationshipRepository implements ContactRelationshipRepos
       return relationship;
     },
   );
+
+  readonly transitionFromPending = jest.fn(async (): Promise<boolean> => false);
 }
 
 describe('SendContactRequestUseCase', () => {

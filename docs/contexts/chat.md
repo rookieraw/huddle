@@ -1,7 +1,7 @@
 # Chat Context
 
-Status: Accepted target; Contact-request creation and acceptance HTTP implemented
-Last reviewed: 2026-09-04
+Status: Accepted target; Contact-request creation, acceptance, and rejection HTTP implemented
+Last reviewed: 2026-10-15
 
 ## Responsibility
 
@@ -41,36 +41,39 @@ Chat does not own:
 
 The Phase 2 Contact-request Domain/Application core and Chat-owned PostgreSQL
 persistence are implemented and tested. The Domain supports recipient-only
-pending-to-accepted transition, and persistence stores and reloads pending or
-accepted relationships. Contact-request creation still creates pending
+pending-to-accepted and pending-to-rejected transitions, and persistence stores
+and reloads pending, accepted, or rejected relationships. Contact-request
+creation still creates pending
 relationships, rejects self-directed and confirmed missing-target requests,
 classifies Directory and repository unavailability without relying on
 exception messages, and reuses a pending or accepted current relationship for
 sequential duplicate or opposing requests.
 
-The Application acceptance command loads a relationship by its opaque
-identifier, derives authority from the accepting actor `userId`, accepts only
-for the original recipient while pending, and persists the accepted state.
+The Application acceptance and rejection commands each load a relationship by
+its opaque identifier, derive authority from the acting `userId`, resolve only
+for the original recipient while pending, and persist the resulting state
+through one pending-only repository transition. Concurrent resolution attempts
+apply at most one transition, and the losing attempt reports the winning state.
 Named Application outcomes distinguish missing relationships, unauthorized
-actors, repeated acceptance, and repository unavailability without inspecting
-exception messages.
+actors, already accepted and already rejected relationships, and repository
+unavailability without inspecting exception messages.
 
-The database constraint enforces one pending-or-accepted current relationship per unordered user pair. Real PostgreSQL integration tests cover additive migration, exact status enforcement, repository mapping, unordered lookup, precise uniqueness-collision handling, and genuinely concurrent same-direction and opposing request convergence.
+The database constraint enforces one pending-or-accepted current relationship per unordered user pair; a rejected relationship does not occupy the pair. Real PostgreSQL integration tests cover additive migrations, exact status enforcement, repository mapping, unordered lookup, precise uniqueness-collision handling, the pending-only transition, genuinely concurrent same-direction and opposing request convergence, and genuinely concurrent resolution.
 
 The API Gateway application composition boundary connects Identity's public
 Authentication and Directory capabilities to Chat's Contact-request creation
-use case and repository. It also composes the Contact-request acceptance
-Application command through the existing Contact relationship repository.
-Authenticated Contact-request creation and recipient acceptance are
-HTTP-operational. Their exact routes, principal translations, response
-shapes, error mappings, and evidence boundaries belong to
-[`../contracts/chat-http.md`](../contracts/chat-http.md). The creation endpoint
-truthfully returns a reused pending or accepted current relationship. The
-acceptance endpoint permits only the original recipient to accept a pending
-relationship, preserves original requester and recipient roles, and hides
-missing or unauthorized relationships behind the same public not-found
-response. The frontend flow and remaining Contacts lifecycle capabilities
-remain unimplemented.
+use case and repository. It also composes the Contact-request acceptance and
+rejection Application commands through the existing Contact relationship
+repository. Authenticated Contact-request creation and recipient acceptance
+and rejection are HTTP-operational. Their exact routes, principal
+translations, response shapes, error mappings, and evidence boundaries belong
+to [`../contracts/chat-http.md`](../contracts/chat-http.md). The creation
+endpoint truthfully returns a reused pending or accepted current relationship.
+The acceptance and rejection endpoints permit only the original recipient to
+resolve a pending relationship, preserve original requester and recipient
+roles, and hide missing or unauthorized relationships behind the same public
+not-found response. The frontend flow and remaining Contacts lifecycle
+capabilities remain unimplemented.
 
 Accepted target behavior outside this implemented Contact-request subset does
 not imply current implementation.
@@ -87,10 +90,18 @@ Relevant states are equivalent to:
 - Accepted
 - Rejected or removed according to the use case
 
-The pending-to-accepted Domain transition, Application acceptance command, and
-pending/accepted PostgreSQL persistence are implemented. The HTTP acceptance
-endpoint and transport evidence are implemented; its frontend flow remains
-unimplemented.
+The pending-to-accepted and pending-to-rejected Domain transitions, the
+Application acceptance and rejection commands, and
+pending/accepted/rejected PostgreSQL persistence are implemented. The HTTP
+acceptance and rejection endpoints and their transport evidence are
+implemented; their frontend flow remains unimplemented.
+
+Because a rejected relationship is not current, a requester can send a new request to
+a user who rejected them, and the new relationship identity indirectly reveals
+that a prior request existed and was resolved. Unbounded re-requesting is a
+known abuse exposure until the rate limiting and blocking capabilities that
+[`../architecture/security.md`](../architecture/security.md) defers exist;
+this Context does not design either here.
 
 Required invariants:
 
@@ -99,6 +110,12 @@ Required invariants:
 - Duplicate requests do not create duplicate relationships.
 - Opposing simultaneous requests converge on one relationship.
 - Only the recipient may accept or reject a pending request.
+- A pending request resolves to accepted or rejected exactly once; a resolved
+  relationship is never resolved again. Concurrent resolution attempts on one
+  pending relationship apply at most one transition.
+- A rejected relationship is not current. It does not occupy the unordered
+  user pair, so a later Contact request between the same users, in either
+  direction, creates a new pending relationship with a new identity.
 - Removing a contact does not delete conversations or messages.
 - An existing direct conversation remains writable after contact removal.
 - Blocking is a separate deferred capability.
