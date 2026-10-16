@@ -106,7 +106,8 @@ error contract. Exact runtime behavior and evidence boundaries are recorded in
 [`../contracts/chat-http.md`](../contracts/chat-http.md).
 
 The creation endpoint does not expose Contact-request acceptance or rejection.
-Its HTTP contract remains unchanged.
+Its request, response, and error behavior remain unchanged; it only gains the
+documented rule that a rejected relationship is never reused.
 
 ### Phase 2 — Contact-request Acceptance
 
