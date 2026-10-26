@@ -1,7 +1,7 @@
 # Chat HTTP Contract
 
-Status: Contact-request creation Implemented; Contact-request acceptance Implemented; Contact-request rejection Implemented
-Last reviewed: 2026-10-15
+Status: Contact-request creation Implemented; Contact-request acceptance Implemented; Contact-request rejection Implemented; incoming Contact-request listing Accepted
+Last reviewed: 2026-10-27
 
 ## Purpose
 
@@ -9,9 +9,11 @@ This document is the authoritative HTTP contract for accepted and implemented
 Chat endpoints.
 
 The contract contains implemented authenticated Contact-request creation,
-implemented authenticated Contact-request acceptance, and implemented
-authenticated Contact-request rejection. A capability appearing in the Chat
-Context or Phase 2 does not create another HTTP endpoint automatically.
+implemented authenticated Contact-request acceptance, implemented
+authenticated Contact-request rejection, and the accepted (not yet
+implemented) authenticated listing of incoming Contact requests. A capability
+appearing in the Chat Context or Phase 2 does not create another HTTP endpoint
+automatically.
 
 ## Source-of-Truth Boundary
 
@@ -567,11 +569,201 @@ prior request was resolved, and unbounded re-requesting is a known abuse
 exposure until the deferred rate-limiting and blocking capabilities exist. The
 decision and its limits belong to [`../contexts/chat.md`](../contexts/chat.md).
 
+## List Incoming Contact Requests
+
+Contract state: `Accepted`
+
+Authentication: Authenticated; results are scoped to the verified actor
+
+```http
+GET /contact-requests/incoming?limit=20&cursor=<opaque-cursor>
+Authorization: Bearer <access-token>
+```
+
+The operation returns the pending Contact requests addressed to the verified
+actor so the recipient can obtain the opaque `contactRequestId` required by
+acceptance and rejection. It is a read-only query. It does not list outgoing
+requests, accepted Contacts, or relationships in any other state, and it does
+not accept, reject, or otherwise change a relationship.
+
+### Actor Authority
+
+The recipient comes only from the `userId` produced by Identity's public
+Authentication API after access-token verification. A path, query, or body
+value cannot provide or override it. Undeclared query parameters, including
+`recipientId` or `userId`, are ignored: the operation reads only `limit` and
+`cursor`. The contract does not expose Application input types, Domain
+entities, repositories, Prisma models, Identity internals, principal email,
+expiration, or token claims.
+
+Because the list is scoped to the actor, there is no addressable resource
+whose existence could be hidden. The operation therefore defines no `403` or
+`404` response.
+
+### Query Parameters
+
+| Parameter | Presence | Rule                                                                                                                                                                 |
+| --------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `limit`   | Optional | A single value made only of ASCII digits whose integer value is from 1 to 50. Default `20` when absent. A larger value is rejected, not clamped.                     |
+| `cursor`  | Optional | A single value previously returned as `nextCursor`. Opaque to clients; clients must not construct, parse, or modify it. A value the server cannot decode is invalid. |
+
+A `limit` that is empty, repeated, signed, padded with whitespace,
+hexadecimal, exponential, decimal, zero, negative, or above 50 is invalid. A
+`cursor` that is empty, repeated, malformed, or of an unsupported version is
+invalid.
+
+The shared pagination convention in [`http.md`](http.md) owns the parameter
+names, default, and maximum. This operation does not lower the maximum.
+
+An invalid value returns `400 VALIDATION_FAILED`. When both parameters are
+invalid, `limit` is validated first and the response carries exactly one
+detail, for `limit`. The `401` for a missing or unusable access token takes
+precedence over any `400`, because authentication runs before query
+validation.
+
+### Success
+
+```http
+200 OK
+```
+
+```json
+{
+  "items": [
+    {
+      "id": "relationship-id",
+      "requesterId": "user-requester",
+      "displayName": "Requester Name",
+      "status": "pending"
+    }
+  ],
+  "nextCursor": "opaque-cursor"
+}
+```
+
+| Field                 | Type             | Consumer meaning                                                                                                           |
+| --------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `items`               | array            | At most `limit` pending requests addressed to the verified actor, in the order below. Empty when there are none.           |
+| `items[].id`          | string           | The `contactRequestId` to use with acceptance and rejection.                                                               |
+| `items[].requesterId` | string           | The authoritative user who created the request. This, not `displayName`, identifies the requester.                         |
+| `items[].displayName` | string or `null` | Current presentation text from Identity's public Profile Query API. `null` when Identity has no profile for the requester. |
+| `items[].status`      | `"pending"`      | Always `pending`; no other state is listed.                                                                                |
+| `nextCursor`          | string or `null` | Pass it as `cursor` to read the next page. `null` marks the end of the list.                                               |
+
+`recipientId` is omitted because it is always the verified actor.
+
+`displayName` is non-unique, user-controlled presentation text. It is not an
+identifier and must not be used to authorize or distinguish requesters;
+clients must treat it as untrusted text. A requester without a profile still
+appears in the list with `displayName` present and `null`.
+
+`displayName` comes only from Identity's public Profile Query API under
+[`../decisions/0004-cross-context-integration.md`](../decisions/0004-cross-context-integration.md).
+Chat does not copy it into Chat storage. A Profile Query failure fails the
+whole request; the operation never returns a partially filled list.
+
+### Ordering and Pagination
+
+Items are returned in a stable, server-defined ascending order of the request
+`id`. For unchanged data, consecutive pages contain no duplicates and no gaps.
+The order carries **no chronological meaning**: identifiers are opaque and
+random, and the contract promises no creation-time ordering and no string
+collation a client can reproduce.
+
+The list is paginated rather than bounded. A user can receive an unbounded
+number of pending requests (no rate limiting or blocking exists yet), and a
+fixed cap without a cursor would silently hide requests.
+
+`nextCursor` is non-null exactly when more pending requests exist after the
+returned page and is `null` on the last page. A cursor continues after the last
+returned request. Continuation does not require that request to still exist or
+still be pending, and a cursor from another actor's listing is not an error
+because results stay scoped to the verified actor.
+
+There is no snapshot guarantee. A request created or resolved while a client
+traverses the list may be missed or may disappear. A client discovers new
+requests by restarting from the first page.
+
+### Empty Result
+
+A user with no pending incoming requests receives:
+
+```http
+200 OK
+```
+
+```json
+{
+  "items": [],
+  "nextCursor": null
+}
+```
+
+An empty result is distinct from `503`: it confirms there is nothing to
+display, not that the lookup failed.
+
+### Error Responses
+
+Every error uses the stable envelope defined in [`http.md`](http.md).
+Non-validation errors omit `error.details`.
+
+| Situation                                           | HTTP status | Stable code                           | Public message                                         | Consumer action                                                             |
+| --------------------------------------------------- | ----------: | ------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------- |
+| Authentication is missing or unusable               |         401 | `AUTHENTICATION_REQUIRED`             | Authentication is required.                            | Stop the protected interaction and reauthenticate.                          |
+| `limit` is invalid                                  |         400 | `VALIDATION_FAILED`                   | Request validation failed.                             | Correct `limit`.                                                            |
+| `cursor` is invalid (and `limit` is valid)          |         400 | `VALIDATION_FAILED`                   | Request validation failed.                             | Discard the cursor and restart from the first page.                         |
+| Relationship lookup or Profile Query is unavailable |         503 | `CONTACT_REQUEST_LISTING_UNAVAILABLE` | Incoming Contact requests are temporarily unavailable. | Retry the same request according to bounded client policy.                  |
+| Unclassified unexpected failure                     |         500 | `INTERNAL_ERROR`                      | An unexpected error occurred.                          | Do not assume the list is complete; reload before presenting a final state. |
+
+#### Validation Examples
+
+```http
+400 Bad Request
+```
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "Request validation failed.",
+    "details": [
+      {
+        "field": "limit",
+        "message": "limit must be an integer from 1 to 50."
+      }
+    ]
+  }
+}
+```
+
+An invalid `cursor` returns the same envelope with `field` set to `cursor` and
+`message` set to `cursor must be a valid cursor.` Validation details name only
+`limit` or `cursor` and never repeat the rejected value.
+
+Repository unavailability and Profile Query unavailability share one status,
+code, and public message because the consumer action is identical. The
+operation is read-only, so retrying it is safe. An empty list is never
+reported as `503`, and a `503` is never reported as an empty list.
+
+### Information Minimization
+
+Responses must not expose:
+
+- principal email or token claims;
+- the recipient identifier, or accepted, rejected, or outgoing relationships;
+- any Identity data other than `displayName`;
+- raw repository or Profile Query failures;
+- Identity, Prisma, PostgreSQL, NestJS, or provider internals;
+- database codes, constraint names, stack traces, or filesystem paths.
+
+Public error messages are selected by this contract and never copied from a
+caught exception or echoed from client input.
+
 ## Explicitly Outside This Contract
 
 This document does not define:
 
-- incoming or outgoing Contact-request listing;
+- outgoing Contact-request listing;
 - requester cancellation of a Contact request;
 - accepted-Contact listing or removal;
 - Contact blocking, discovery, import, or quotas;
@@ -581,7 +773,7 @@ This document does not define:
 - browser token transport, cookie, CSRF, CORS, or storage policy;
 - exact rate-limit values;
 - any additional runtime capability outside the implemented Contact-request
-  endpoints.
+  endpoints and the accepted incoming-listing endpoint.
 
 Those capabilities require their own Phase-authorized exact contracts and
 implementation outcomes.
