@@ -301,6 +301,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
     ['an unsupported version', encodeRaw('v2:relationship-1')],
     ['missing the version', encodeRaw('relationship-1')],
     ['missing the id', encodeRaw('v1:')],
+    ['an id containing a NUL character', encodeRaw('v1:relationship-\u0000-1')],
     ['a repeated query key', [encodeRaw('v1:relationship-1'), 'x']],
     ['a number instead of a string', 5],
     ['null', null],

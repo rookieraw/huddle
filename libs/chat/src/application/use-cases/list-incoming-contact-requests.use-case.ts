@@ -82,7 +82,8 @@ function resolveAfterId(rawCursor: unknown): string | undefined {
   if (
     decoded.toString('base64url') !== rawCursor ||
     !text.startsWith(prefix) ||
-    text.length === prefix.length
+    text.length === prefix.length ||
+    text.includes('\u0000')
   ) {
     throw new InvalidIncomingListCursorError();
   }
