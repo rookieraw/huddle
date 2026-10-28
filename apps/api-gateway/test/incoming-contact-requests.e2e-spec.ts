@@ -150,6 +150,65 @@ describe('Incoming Contact requests (e2e)', () => {
     expect(userExists).not.toHaveBeenCalled();
   });
 
+  it('returns an empty page without a profile lookup when nothing is pending', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/contact-requests/incoming')
+      .set('Authorization', 'Bearer access-token')
+      .expect(200);
+    const body = response.body as IncomingContactRequestsBody;
+
+    expect(body).toEqual({ items: [], nextCursor: null });
+    expect(findMany).toHaveBeenCalledTimes(1);
+    expect(getProfiles).not.toHaveBeenCalled();
+  });
+
+  it('serializes a requester without a profile as a null displayName', async () => {
+    findMany.mockResolvedValueOnce([
+      {
+        id: 'relationship-1',
+        requesterId: 'user-requester-missing',
+        recipientId: 'user-recipient',
+        status: 'pending',
+      },
+    ]);
+    getProfiles.mockResolvedValueOnce({
+      profiles: [],
+      missingUserIds: ['user-requester-missing'],
+    });
+
+    const response = await request(app.getHttpServer())
+      .get('/contact-requests/incoming')
+      .set('Authorization', 'Bearer access-token')
+      .expect(200);
+    const body = response.body as IncomingContactRequestsBody;
+
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0]).toHaveProperty('displayName', null);
+    expect(body.items[0]).toEqual({
+      id: 'relationship-1',
+      requesterId: 'user-requester-missing',
+      displayName: null,
+      status: 'pending',
+    });
+  });
+
+  it('ignores client-supplied actor query values and scopes to the verified user', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/contact-requests/incoming')
+      .query({ recipientId: 'user-other', userId: 'user-other' })
+      .set('Authorization', 'Bearer access-token')
+      .expect(200);
+    const body = response.body as IncomingContactRequestsBody;
+
+    expect(body).toEqual({ items: [], nextCursor: null });
+    expect(findMany).toHaveBeenCalledTimes(1);
+    expect(findMany).toHaveBeenCalledWith({
+      where: { recipientId: 'user-recipient', status: 'pending' },
+      orderBy: { id: 'asc' },
+      take: 21,
+    });
+  });
+
   it('pages with limit and continues strictly after the returned cursor', async () => {
     findMany.mockResolvedValueOnce([
       {
