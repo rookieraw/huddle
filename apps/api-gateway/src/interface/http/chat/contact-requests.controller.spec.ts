@@ -1,5 +1,6 @@
 import type {
   AcceptContactRequestUseCase,
+  ListIncomingContactRequestsUseCase,
   RejectContactRequestUseCase,
   SendContactRequestUseCase,
 } from '@huddle/chat';
@@ -15,20 +16,57 @@ function createSubject() {
   const rejectContactRequestUseCase = {
     execute: jest.fn(),
   };
+  const listIncomingContactRequestsUseCase = {
+    execute: jest.fn(),
+  };
 
   return {
     controller: new ContactRequestsController(
       sendContactRequestUseCase as unknown as SendContactRequestUseCase,
       acceptContactRequestUseCase as unknown as AcceptContactRequestUseCase,
       rejectContactRequestUseCase as unknown as RejectContactRequestUseCase,
+      listIncomingContactRequestsUseCase as unknown as ListIncomingContactRequestsUseCase,
     ),
     sendExecute: sendContactRequestUseCase.execute,
     acceptExecute: acceptContactRequestUseCase.execute,
     rejectExecute: rejectContactRequestUseCase.execute,
+    listIncomingExecute: listIncomingContactRequestsUseCase.execute,
   };
 }
 
 describe('ContactRequestsController', () => {
+  it('delegates incoming listing with the verified recipient and raw query values and returns the page unchanged', async () => {
+    const { controller, listIncomingExecute } = createSubject();
+    const page = {
+      items: [
+        {
+          id: 'relationship-1',
+          requesterId: 'user-requester-1',
+          displayName: 'Alice',
+          status: 'pending' as const,
+        },
+      ],
+      nextCursor: 'opaque-cursor',
+    };
+    listIncomingExecute.mockResolvedValueOnce(page);
+
+    await expect(
+      controller.listIncomingContactRequests(
+        {
+          headers: {},
+          user: { userId: 'user-recipient' },
+        },
+        { limit: '5', cursor: 'opaque-cursor-in' },
+      ),
+    ).resolves.toBe(page);
+    expect(listIncomingExecute).toHaveBeenCalledTimes(1);
+    expect(listIncomingExecute).toHaveBeenCalledWith({
+      recipientId: 'user-recipient',
+      limit: '5',
+      cursor: 'opaque-cursor-in',
+    });
+  });
+
   it('delegates rejection with the verified recipient and path identifier and maps the exact rejected response', async () => {
     const { controller, rejectExecute } = createSubject();
     rejectExecute.mockResolvedValueOnce({
