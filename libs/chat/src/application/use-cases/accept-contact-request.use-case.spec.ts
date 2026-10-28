@@ -24,6 +24,7 @@ describe('AcceptContactRequestUseCase', () => {
     const contactRelationshipRepository = {
       transitionFromPending: jest.fn().mockResolvedValue(true),
       findCurrentByUserPair: jest.fn(),
+      findPendingByRecipient: jest.fn(),
       findById: jest.fn().mockResolvedValue(relationship),
       save: jest.fn(),
     };
@@ -59,6 +60,7 @@ describe('AcceptContactRequestUseCase', () => {
     const contactRelationshipRepository = {
       transitionFromPending: jest.fn(),
       findCurrentByUserPair: jest.fn(),
+      findPendingByRecipient: jest.fn(),
       findById: jest.fn().mockResolvedValue(null),
       save: jest.fn(),
     };
@@ -88,6 +90,7 @@ describe('AcceptContactRequestUseCase', () => {
     const contactRelationshipRepository = {
       transitionFromPending: jest.fn(),
       findCurrentByUserPair: jest.fn(),
+      findPendingByRecipient: jest.fn(),
       findById: jest.fn().mockRejectedValue(new Error('lookup unavailable')),
       save: jest.fn(),
     };
@@ -134,6 +137,7 @@ describe('AcceptContactRequestUseCase', () => {
       const contactRelationshipRepository = {
         transitionFromPending: jest.fn(),
         findCurrentByUserPair: jest.fn(),
+        findPendingByRecipient: jest.fn(),
         findById: jest.fn().mockResolvedValue(relationship),
         save: jest.fn(),
       };
@@ -171,6 +175,7 @@ describe('AcceptContactRequestUseCase', () => {
     const contactRelationshipRepository = {
       transitionFromPending: jest.fn(),
       findCurrentByUserPair: jest.fn(),
+      findPendingByRecipient: jest.fn(),
       findById: jest.fn().mockResolvedValue(relationship),
       save: jest.fn(),
     };
@@ -207,6 +212,7 @@ describe('AcceptContactRequestUseCase', () => {
     const contactRelationshipRepository = {
       transitionFromPending: jest.fn(),
       findCurrentByUserPair: jest.fn(),
+      findPendingByRecipient: jest.fn(),
       findById: jest.fn().mockResolvedValue(relationship),
       save: jest.fn(),
     };
@@ -245,6 +251,7 @@ describe('AcceptContactRequestUseCase', () => {
         .fn()
         .mockRejectedValue(new Error('transition unavailable')),
       findCurrentByUserPair: jest.fn(),
+      findPendingByRecipient: jest.fn(),
       findById: jest.fn().mockResolvedValue(relationship),
       save: jest.fn(),
     };
@@ -304,6 +311,7 @@ describe('AcceptContactRequestUseCase', () => {
       const contactRelationshipRepository = {
         transitionFromPending: jest.fn().mockResolvedValue(false),
         findCurrentByUserPair: jest.fn(),
+        findPendingByRecipient: jest.fn(),
         findById: jest
           .fn()
           .mockResolvedValueOnce(loadedPending)
@@ -364,6 +372,7 @@ describe('AcceptContactRequestUseCase', () => {
       const contactRelationshipRepository = {
         transitionFromPending: jest.fn().mockResolvedValue(false),
         findCurrentByUserPair: jest.fn(),
+        findPendingByRecipient: jest.fn(),
         findById: jest
           .fn()
           .mockResolvedValueOnce(loadedPending)
@@ -401,6 +410,7 @@ describe('AcceptContactRequestUseCase', () => {
     const contactRelationshipRepository = {
       transitionFromPending: jest.fn().mockResolvedValue(false),
       findCurrentByUserPair: jest.fn(),
+      findPendingByRecipient: jest.fn(),
       findById: jest
         .fn()
         .mockResolvedValueOnce(relationship)

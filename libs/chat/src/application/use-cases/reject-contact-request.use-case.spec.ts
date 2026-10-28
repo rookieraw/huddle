@@ -13,6 +13,7 @@ import {
 type ContactRelationshipRepositoryMock = {
   findCurrentByUserPair: jest.Mock;
   findById: jest.Mock;
+  findPendingByRecipient: jest.Mock;
   save: jest.Mock;
   transitionFromPending: jest.Mock;
 };
@@ -23,6 +24,7 @@ function createRepository(
   return {
     findCurrentByUserPair: jest.fn(),
     findById: jest.fn(),
+    findPendingByRecipient: jest.fn(),
     save: jest.fn(),
     transitionFromPending: jest.fn(),
     ...overrides,
