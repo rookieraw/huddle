@@ -264,6 +264,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
     ['signed', '+5'],
     ['padded with a space', ' 5'],
     ['in exponent notation', '1e1'],
+    ['hexadecimal', '0x14'],
     ['a repeated query key', ['5', '6']],
     ['a number instead of a string', 5],
     ['null', null],

@@ -464,6 +464,32 @@ describe('PrismaContactRelationshipRepository (integration)', () => {
     ]);
   });
 
+  it('returns exactly 51 of 52 pending relationships in identifier order for the maximum listing lookahead', async () => {
+    const recipientId = 'user-bound-recipient';
+    const boundId = (number: number) =>
+      `relationship-bound-${String(number).padStart(2, '0')}`;
+    for (let number = 51; number >= 0; number -= 1) {
+      await repository.save(
+        ContactRelationship.reconstitute({
+          id: boundId(number),
+          requesterId: `user-bound-requester-${number}`,
+          recipientId,
+          status: 'pending',
+        }),
+      );
+    }
+
+    const found = await repository.findPendingByRecipient({
+      recipientId,
+      take: 51,
+    });
+
+    expect(found).toHaveLength(51);
+    expect(found.map((relationship) => relationship.id)).toEqual(
+      Array.from({ length: 51 }, (_, number) => boundId(number)),
+    );
+  });
+
   it('continues after the given identifier and excludes that row, in identifier order', async () => {
     const recipientId = 'user-continuation-recipient';
     for (const number of [3, 1, 4, 2, 5]) {
