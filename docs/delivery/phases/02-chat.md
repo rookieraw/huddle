@@ -1,6 +1,6 @@
 # Phase 2 — Contacts and Chat
 
-Status: In progress — Contact-request creation, acceptance, and rejection HTTP implemented
+Status: In progress — Contact-request creation, acceptance, rejection, and incoming listing HTTP implemented
 Depends on: Phase 1 — Identity  
 Next gate: Phase 2.5 — CI/CD and Deployment Foundation
 
@@ -130,15 +130,24 @@ state. Named Application outcomes distinguish missing relationships,
 unauthorized actors, already accepted and already rejected relationships, and
 repository unavailability.
 
+The Application incoming-listing query returns the acting user's pending
+requests in stable relationship-identifier order with an opaque cursor, adds
+each requester's current display name through a Chat-owned port, and classifies
+repository and profile failures as one retryable unavailable outcome.
+
 PostgreSQL enforces one pending-or-accepted current relationship per unordered user pair; a rejected relationship does not occupy the pair. Real PostgreSQL integration tests verify additive migrations, exact status enforcement, repository mapping, unordered lookup, precise collision handling, the pending-only transition, genuinely concurrent same-direction and opposing request convergence, and genuinely concurrent resolution.
 
 The API Gateway application composition boundary now delivers authenticated
-Contact-request creation and recipient acceptance and rejection over HTTP.
+Contact-request creation, recipient acceptance and rejection, and listing of
+incoming Contact requests over HTTP.
 Creation truthfully returns a reused pending or accepted current relationship.
 Acceptance and rejection use the opaque path relationship identifier, derive
 authority only from the verified `userId`, permit only the original recipient
 to resolve a pending relationship, and minimize hidden-resource information
-through the accepted public error contract. The exact routes, authority rules, validation
+through the accepted public error contract. The listing derives its recipient
+only from the verified `userId`, takes requester display names from Identity's
+public Profile Query capability, and paginates with the shared cursor
+convention. The exact routes, authority rules, validation
 or no-body behavior, responses, errors, and evidence boundaries belong to
 [`../../contracts/chat-http.md`](../../contracts/chat-http.md). The frontend
 flow and remaining Contacts lifecycle capabilities remain pending.
@@ -415,7 +424,8 @@ Add Chat-owned relational persistence for:
 Contact relationship persistence supports pending, accepted, and rejected
 states through a Chat-owned schema, additive migrations, Prisma repository, and
 one unordered current-pair uniqueness constraint across the pending and
-accepted states. The Application acceptance and rejection commands, exact HTTP
+accepted states, and a pending-by-recipient read query. The Application
+acceptance and rejection commands, the incoming-listing query, exact HTTP
 contract, API Gateway composition, endpoints, and transport evidence are
 implemented. The frontend flow and the remaining
 relational state above are not yet implemented.

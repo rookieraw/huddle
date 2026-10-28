@@ -1,7 +1,7 @@
 # Chat Context
 
-Status: Accepted target; Contact-request creation, acceptance, and rejection HTTP implemented
-Last reviewed: 2026-10-15
+Status: Accepted target; Contact-request creation, acceptance, rejection, and incoming listing HTTP implemented
+Last reviewed: 2026-10-29
 
 ## Responsibility
 
@@ -58,22 +58,38 @@ Named Application outcomes distinguish missing relationships, unauthorized
 actors, already accepted and already rejected relationships, and repository
 unavailability without inspecting exception messages.
 
+The Application incoming-listing query returns the pending relationships
+addressed to the acting `userId`, ordered by relationship identifier and
+paginated with an opaque cursor that encodes the last returned identifier. The
+repository answers a plain pending-by-recipient query and knows nothing about
+pages or cursors; the Application owns the page size, the one-row lookahead, and
+cursor encoding and validation. Each item carries the requester's current
+`displayName`, resolved in one batched call per page through a Chat-owned
+requester-profile port and never stored by Chat. A requester without a profile
+is still listed with a null `displayName`. Repository failure and profile
+failure share one retryable unavailable outcome, classified without inspecting
+exception messages.
+
 The database constraint enforces one pending-or-accepted current relationship per unordered user pair; a rejected relationship does not occupy the pair. Real PostgreSQL integration tests cover additive migrations, exact status enforcement, repository mapping, unordered lookup, precise uniqueness-collision handling, the pending-only transition, genuinely concurrent same-direction and opposing request convergence, and genuinely concurrent resolution.
 
 The API Gateway application composition boundary connects Identity's public
 Authentication and Directory capabilities to Chat's Contact-request creation
 use case and repository. It also composes the Contact-request acceptance and
 rejection Application commands through the existing Contact relationship
-repository. Authenticated Contact-request creation and recipient acceptance
-and rejection are HTTP-operational. Their exact routes, principal
+repository, and the incoming-listing query through the same repository and
+Identity's public Profile Query capability behind the Chat requester-profile
+port. Authenticated Contact-request creation, recipient acceptance and
+rejection, and incoming-request listing are HTTP-operational. Their exact routes, principal
 translations, response shapes, error mappings, and evidence boundaries belong
 to [`../contracts/chat-http.md`](../contracts/chat-http.md). The creation
 endpoint truthfully returns a reused pending or accepted current relationship.
 The acceptance and rejection endpoints permit only the original recipient to
 resolve a pending relationship, preserve original requester and recipient
 roles, and hide missing or unauthorized relationships behind the same public
-not-found response. The frontend flow and remaining Contacts lifecycle
-capabilities remain unimplemented.
+not-found response. The listing returns only the acting user's pending
+incoming requests, so another user's requests are not addressable. The
+frontend flow and remaining Contacts lifecycle capabilities remain
+unimplemented.
 
 Accepted target behavior outside this implemented Contact-request subset does
 not imply current implementation.

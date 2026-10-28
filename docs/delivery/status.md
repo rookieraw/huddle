@@ -1,10 +1,10 @@
 # Project Status
 
-Last updated: 2026-10-15
+Last updated: 2026-10-29
 
 Current implementation phase: Phase 2 — Contacts and Chat
 
-Current activity: Contact-request creation, acceptance, and rejection HTTP delivery implemented and verified
+Current activity: Contact-request creation, acceptance, rejection, and incoming listing HTTP delivery implemented and verified
 
 Portfolio Release target: End of Phase 4
 
@@ -24,22 +24,22 @@ It does not define target architecture, detailed Phase scope, or task-level work
 
 ## Status Summary
 
-| Area                        | Status                                                                                                                            |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Phase 1 Identity            | Completed                                                                                                                         |
-| Phase 2 Identity additions  | `displayName` and the three public application APIs implemented                                                                   |
-| Contacts                    | Creation, acceptance, and rejection HTTP, Application commands, and persistence implemented; remaining lifecycle/frontend pending |
-| Direct and Group Chat       | Not started                                                                                                                       |
-| MongoDB Message persistence | Not started                                                                                                                       |
-| Realtime Chat               | Not started                                                                                                                       |
-| Deployment foundation       | Planned                                                                                                                           |
-| OpenAPI and Swagger UI      | Dependency declared; generation and UI not configured; planned for Phase 2.5                                                      |
-| Voice and Video Calling     | Planned                                                                                                                           |
-| Billing                     | Planned                                                                                                                           |
-| First Portfolio Release     | Planned                                                                                                                           |
-| Meetings                    | Later                                                                                                                             |
-| Notification                | Later                                                                                                                             |
-| Hardening                   | Later                                                                                                                             |
+| Area                        | Status                                                                                                                                                          |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 1 Identity            | Completed                                                                                                                                                       |
+| Phase 2 Identity additions  | `displayName` and the three public application APIs implemented                                                                                                 |
+| Contacts                    | Creation, acceptance, rejection, and incoming-listing HTTP, Application commands and queries, and persistence implemented; remaining lifecycle/frontend pending |
+| Direct and Group Chat       | Not started                                                                                                                                                     |
+| MongoDB Message persistence | Not started                                                                                                                                                     |
+| Realtime Chat               | Not started                                                                                                                                                     |
+| Deployment foundation       | Planned                                                                                                                                                         |
+| OpenAPI and Swagger UI      | Dependency declared; generation and UI not configured; planned for Phase 2.5                                                                                    |
+| Voice and Video Calling     | Planned                                                                                                                                                         |
+| Billing                     | Planned                                                                                                                                                         |
+| First Portfolio Release     | Planned                                                                                                                                                         |
+| Meetings                    | Later                                                                                                                                                           |
+| Notification                | Later                                                                                                                                                           |
+| Hardening                   | Later                                                                                                                                                           |
 
 `Planned` and `Later` do not mean implemented.
 
@@ -155,6 +155,26 @@ controller delivery, transport evidence, and safe public error mapping as
 recorded in [`../contracts/chat-http.md`](../contracts/chat-http.md). It does
 not have a generated OpenAPI operation or frontend flow.
 
+### Phase 2 — Incoming Contact-request Listing
+
+The Chat Application incoming-listing query and authenticated HTTP delivery are
+implemented and verified. The query returns the acting user's pending
+relationships in stable relationship-identifier order with an opaque cursor,
+and the Application owns the one-row lookahead. It adds each requester's
+current `displayName` through a Chat-owned port backed by Identity's public
+Profile Query API; a requester without a profile is still listed with a null
+name. Repository and profile failures share one retryable unavailable outcome.
+The repository's pending-by-recipient query is verified against real
+PostgreSQL.
+
+Its exact authenticated HTTP contract is implemented at
+`GET /contact-requests/incoming`, with composition, controller delivery,
+transport evidence, safe public error mapping, and the shared cursor
+pagination convention as recorded in
+[`../contracts/chat-http.md`](../contracts/chat-http.md) and
+[`../contracts/http.md`](../contracts/http.md). It does not have a generated
+OpenAPI operation or frontend flow.
+
 ## Current Activity
 
 The minimum Identity support required by Phase 2 is implemented and verified: `displayName`, Authentication, Directory, and Profile Query.
@@ -171,13 +191,16 @@ pending or accepted current relationship for duplicate or opposing requests.
 PostgreSQL enforces one pending-or-accepted current relationship per unordered user pair; a rejected relationship does not occupy the pair. Real PostgreSQL integration tests verify additive schema migrations, exact status enforcement, repository mapping, unordered lookup, collision handling, the pending-only transition, genuinely concurrent same-direction and opposing request convergence, and genuinely concurrent resolution.
 
 The API Gateway application composition boundary now delivers authenticated
-Contact-request creation and recipient acceptance and rejection over HTTP.
+Contact-request creation, recipient acceptance and rejection, and incoming
+Contact-request listing over HTTP.
 Creation truthfully returns a reused pending or accepted current relationship.
 Acceptance and rejection use the opaque path relationship identifier, derive
 authority only from the verified `userId`, permit only the original recipient
 to resolve a pending relationship, and map hidden or unavailable outcomes to
-safe public error envelopes. The frontend flow and remaining Contacts lifecycle
-capabilities remain pending.
+safe public error envelopes. The listing derives its recipient only from the
+verified `userId`, names requesters through Identity's public Profile Query
+capability, and paginates with an opaque cursor. The frontend flow and
+remaining Contacts lifecycle capabilities remain pending.
 
 The remaining Phase 2 implementation includes:
 
@@ -241,7 +264,7 @@ Failure at a future gate must be recorded when discovered. It must not be report
 
 Do not currently assume the existence of:
 
-- Remaining Contact management endpoints and frontend delivery;
+- Outgoing Contact-request listing, accepted-Contact listing, Contact removal, and frontend Contacts delivery;
 - Direct or Group Chat;
 - MongoDB Message persistence;
 - Chat Socket.IO events;

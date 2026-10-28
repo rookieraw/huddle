@@ -1,7 +1,7 @@
 # Chat HTTP Contract
 
-Status: Contact-request creation Implemented; Contact-request acceptance Implemented; Contact-request rejection Implemented; incoming Contact-request listing Accepted
-Last reviewed: 2026-10-27
+Status: Contact-request creation Implemented; Contact-request acceptance Implemented; Contact-request rejection Implemented; incoming Contact-request listing Implemented
+Last reviewed: 2026-10-29
 
 ## Purpose
 
@@ -10,8 +10,8 @@ Chat endpoints.
 
 The contract contains implemented authenticated Contact-request creation,
 implemented authenticated Contact-request acceptance, implemented
-authenticated Contact-request rejection, and the accepted (not yet
-implemented) authenticated listing of incoming Contact requests. A capability
+authenticated Contact-request rejection, and implemented authenticated
+listing of incoming Contact requests. A capability
 appearing in the Chat Context or Phase 2 does not create another HTTP endpoint
 automatically.
 
@@ -89,8 +89,32 @@ tests separately verify the rejected-state persistence, the pending-only
 transition, genuinely concurrent resolution, and that a rejected relationship
 does not occupy its user pair.
 
-No frontend Contacts flow or remaining Contacts lifecycle endpoint is
-implemented by this contract.
+Listing of incoming Contact requests is implemented at
+`GET /contact-requests/incoming`. Its route, query parameters, pagination,
+response, errors, and retry semantics are decided below and implemented
+through the same API Gateway transport boundary. The runtime path adds the
+incoming-listing Application query, a Chat-owned requester-profile port whose
+API Gateway adapter calls Identity's public Profile Query API, the pending
+relationship query for the verified recipient, a controller route that passes
+the raw `limit` and `cursor` query values to the Application, controller-scoped
+error translation, production NestJS registration, and authenticated HTTP
+transport evidence.
+
+The listing transport evidence boots the real `AppModule` and HTTP server with
+the production validation pipe registered, while overriding only the
+Authentication API, Directory API, Profile Query API, and Chat Prisma client
+external seams. It proves route, guard, success and empty-page serialization,
+a missing profile serialized as `displayName: null`, ignored client-supplied
+actor query values, a produced cursor accepted on the next request,
+`limit` and `cursor` validation including repeated query keys, `401`
+precedence over `400`, dependency-unavailable mapping for both repository and
+Profile Query failure, the fixed internal error, and information
+minimization. It is not PostgreSQL evidence. Chat integration tests separately
+verify the pending-recipient selection, ordering, requested row count, and
+continuation by `id` against real PostgreSQL.
+
+Outgoing Contact-request listing, accepted-Contact listing, Contact removal,
+and the frontend Contacts flow are not implemented by this contract.
 
 ## Create or Return a Contact Request
 
@@ -571,7 +595,7 @@ decision and its limits belong to [`../contexts/chat.md`](../contexts/chat.md).
 
 ## List Incoming Contact Requests
 
-Contract state: `Accepted`
+Contract state: `Implemented`
 
 Authentication: Authenticated; results are scoped to the verified actor
 
@@ -773,7 +797,7 @@ This document does not define:
 - browser token transport, cookie, CSRF, CORS, or storage policy;
 - exact rate-limit values;
 - any additional runtime capability outside the implemented Contact-request
-  endpoints and the accepted incoming-listing endpoint.
+  endpoints and the implemented incoming-listing endpoint.
 
 Those capabilities require their own Phase-authorized exact contracts and
 implementation outcomes.
