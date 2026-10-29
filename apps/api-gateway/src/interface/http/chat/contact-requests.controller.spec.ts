@@ -35,7 +35,7 @@ function createSubject() {
 }
 
 describe('ContactRequestsController', () => {
-  it('delegates incoming listing with the verified recipient and raw query values and returns the page unchanged', async () => {
+  it('delegates incoming listing with the verified recipient and raw limit and cursor, ignoring client-supplied actor values, and returns the page unchanged', async () => {
     const { controller, listIncomingExecute } = createSubject();
     const page = {
       items: [
@@ -56,7 +56,12 @@ describe('ContactRequestsController', () => {
           headers: {},
           user: { userId: 'user-recipient' },
         },
-        { limit: '5', cursor: 'opaque-cursor-in' },
+        {
+          limit: '5',
+          cursor: 'opaque-cursor-in',
+          recipientId: 'user-other',
+          userId: 'user-other',
+        },
       ),
     ).resolves.toBe(page);
     expect(listIncomingExecute).toHaveBeenCalledTimes(1);
