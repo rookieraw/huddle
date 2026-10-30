@@ -1,7 +1,7 @@
 # Chat Context
 
 Status: Accepted target; Contact-request creation, acceptance, rejection, and incoming listing HTTP implemented
-Last reviewed: 2026-10-29
+Last reviewed: 2026-10-30
 
 ## Responsibility
 
@@ -70,7 +70,7 @@ is still listed with a null `displayName`. Repository failure and profile
 failure share one retryable unavailable outcome, classified without inspecting
 exception messages.
 
-The database constraint enforces one pending-or-accepted current relationship per unordered user pair; a rejected relationship does not occupy the pair. Real PostgreSQL integration tests cover additive migrations, exact status enforcement, repository mapping, unordered lookup, precise uniqueness-collision handling, the pending-only transition, genuinely concurrent same-direction and opposing request convergence, and genuinely concurrent resolution.
+The database constraint enforces one pending-or-accepted current relationship per unordered user pair; a rejected relationship does not occupy the pair. Real PostgreSQL integration tests cover additive migrations, exact status enforcement, repository mapping, unordered lookup, precise uniqueness-collision handling, the pending-only transition, genuinely concurrent same-direction and opposing request convergence, the pending-by-recipient listing query's recipient selection, identifier ordering, requested row count, and continuation by `id`, and genuinely concurrent resolution.
 
 The API Gateway application composition boundary connects Identity's public
 Authentication and Directory capabilities to Chat's Contact-request creation
@@ -409,7 +409,7 @@ Chat stores relational state in PostgreSQL:
 - Invitations
 - Relational quota state
 
-Pending and accepted Contact relationship persistence is implemented in the Chat Context. Conversation, membership, Group administration, invitation, and quota persistence remain target behavior.
+Pending, accepted, and rejected Contact relationship persistence, including the pending-by-recipient listing query, is implemented in the Chat Context. Conversation, membership, Group administration, invitation, and quota persistence remain target behavior.
 
 ### MongoDB
 

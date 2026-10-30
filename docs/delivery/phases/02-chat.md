@@ -135,7 +135,7 @@ requests in stable relationship-identifier order with an opaque cursor, adds
 each requester's current display name through a Chat-owned port, and classifies
 repository and profile failures as one retryable unavailable outcome.
 
-PostgreSQL enforces one pending-or-accepted current relationship per unordered user pair; a rejected relationship does not occupy the pair. Real PostgreSQL integration tests verify additive migrations, exact status enforcement, repository mapping, unordered lookup, precise collision handling, the pending-only transition, genuinely concurrent same-direction and opposing request convergence, and genuinely concurrent resolution.
+PostgreSQL enforces one pending-or-accepted current relationship per unordered user pair; a rejected relationship does not occupy the pair. Real PostgreSQL integration tests verify additive migrations, exact status enforcement, repository mapping, unordered lookup, precise collision handling, the pending-only transition, genuinely concurrent same-direction and opposing request convergence, the pending-by-recipient listing query's recipient selection, identifier ordering, requested row count, and continuation by `id`, and genuinely concurrent resolution.
 
 The API Gateway application composition boundary now delivers authenticated
 Contact-request creation, recipient acceptance and rejection, and listing of

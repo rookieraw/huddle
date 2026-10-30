@@ -1,8 +1,8 @@
 # HTTP Contracts
 
 Status: Shared conventions accepted; Identity endpoints and first Chat subset implemented
-Last reviewed: 2026-10-29
-Last verified against source: 2026-10-15
+Last reviewed: 2026-10-30
+Last verified against source: 2026-10-30
 
 ## Purpose
 

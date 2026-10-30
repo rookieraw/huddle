@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-10-29
+Last updated: 2026-10-30
 
 Current implementation phase: Phase 2 — Contacts and Chat
 
@@ -188,7 +188,7 @@ relationships, rejects self-directed and confirmed missing-target requests,
 classifies Directory and repository unavailability, and reuses an existing
 pending or accepted current relationship for duplicate or opposing requests.
 
-PostgreSQL enforces one pending-or-accepted current relationship per unordered user pair; a rejected relationship does not occupy the pair. Real PostgreSQL integration tests verify additive schema migrations, exact status enforcement, repository mapping, unordered lookup, collision handling, the pending-only transition, genuinely concurrent same-direction and opposing request convergence, and genuinely concurrent resolution.
+PostgreSQL enforces one pending-or-accepted current relationship per unordered user pair; a rejected relationship does not occupy the pair. Real PostgreSQL integration tests verify additive schema migrations, exact status enforcement, repository mapping, unordered lookup, collision handling, the pending-only transition, genuinely concurrent same-direction and opposing request convergence, the pending-by-recipient listing query's recipient selection, identifier ordering, requested row count, and continuation by `id`, and genuinely concurrent resolution.
 
 The API Gateway application composition boundary now delivers authenticated
 Contact-request creation, recipient acceptance and rejection, and incoming
