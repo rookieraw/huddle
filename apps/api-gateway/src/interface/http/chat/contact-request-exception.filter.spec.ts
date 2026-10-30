@@ -4,11 +4,14 @@ import {
   ContactRequestAcceptanceUnavailableError,
   ContactRequestAlreadyAcceptedError,
   ContactRequestAlreadyRejectedError,
+  ContactRequestListingUnavailableError,
   ContactRequestRejectionNotAuthorizedError,
   ContactRequestRejectionUnavailableError,
   ContactRequestUnavailableError,
   ContactTargetLookupUnavailableError,
   ContactTargetNotFoundError,
+  InvalidIncomingListCursorError,
+  InvalidIncomingListLimitError,
   SelfContactRequestError,
 } from '@huddle/chat';
 import {
@@ -72,6 +75,48 @@ describe('ContactRequestExceptionFilter', () => {
     expect(JSON.stringify(response.json.mock.calls)).not.toContain(
       rejectedValue,
     );
+  });
+
+  it('returns the fixed limit validation envelope with a single limit detail', () => {
+    const filter = new ContactRequestExceptionFilter();
+    const { host, response } = createArgumentsHost();
+
+    filter.catch(new InvalidIncomingListLimitError(), host);
+
+    expect(response.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+    expect(response.json).toHaveBeenCalledWith({
+      error: {
+        code: 'VALIDATION_FAILED',
+        message: 'Request validation failed.',
+        details: [
+          {
+            field: 'limit',
+            message: 'limit must be an integer from 1 to 50.',
+          },
+        ],
+      },
+    });
+  });
+
+  it('returns the fixed cursor validation envelope with a single cursor detail', () => {
+    const filter = new ContactRequestExceptionFilter();
+    const { host, response } = createArgumentsHost();
+
+    filter.catch(new InvalidIncomingListCursorError(), host);
+
+    expect(response.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+    expect(response.json).toHaveBeenCalledWith({
+      error: {
+        code: 'VALIDATION_FAILED',
+        message: 'Request validation failed.',
+        details: [
+          {
+            field: 'cursor',
+            message: 'cursor must be a valid cursor.',
+          },
+        ],
+      },
+    });
   });
 
   it('returns the fixed authentication-required envelope', () => {
@@ -155,6 +200,12 @@ describe('ContactRequestExceptionFilter', () => {
       status: HttpStatus.SERVICE_UNAVAILABLE,
       code: 'CONTACT_REQUEST_REJECTION_UNAVAILABLE',
       message: 'Contact request rejection is temporarily unavailable.',
+    },
+    {
+      exception: new ContactRequestListingUnavailableError(),
+      status: HttpStatus.SERVICE_UNAVAILABLE,
+      code: 'CONTACT_REQUEST_LISTING_UNAVAILABLE',
+      message: 'Incoming Contact requests are temporarily unavailable.',
     },
   ])(
     'returns the fixed $code envelope',

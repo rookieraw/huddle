@@ -342,6 +342,245 @@ describe('PrismaContactRelationshipRepository (integration)', () => {
     expect(previous?.isRejected()).toBe(true);
   });
 
+  it('finds only the pending relationships addressed to the recipient', async () => {
+    const recipientId = 'user-listing-recipient';
+    const seeded = [
+      [
+        'relationship-listing-pending-1',
+        'user-listing-requester-1',
+        recipientId,
+        'pending',
+      ],
+      [
+        'relationship-listing-pending-2',
+        'user-listing-requester-2',
+        recipientId,
+        'pending',
+      ],
+      [
+        'relationship-listing-accepted',
+        'user-listing-requester-3',
+        recipientId,
+        'accepted',
+      ],
+      [
+        'relationship-listing-rejected',
+        'user-listing-requester-4',
+        recipientId,
+        'rejected',
+      ],
+      [
+        'relationship-listing-outgoing',
+        recipientId,
+        'user-listing-other-recipient',
+        'pending',
+      ],
+      [
+        'relationship-listing-other',
+        'user-listing-requester-1',
+        'user-listing-other-recipient',
+        'pending',
+      ],
+    ] as const;
+    for (const [id, requesterId, seededRecipientId, status] of seeded) {
+      await repository.save(
+        ContactRelationship.reconstitute({
+          id,
+          requesterId,
+          recipientId: seededRecipientId,
+          status,
+        }),
+      );
+    }
+
+    const found = await repository.findPendingByRecipient({
+      recipientId,
+      take: 50,
+    });
+
+    expect(found.map((relationship) => relationship.id).sort()).toEqual([
+      'relationship-listing-pending-1',
+      'relationship-listing-pending-2',
+    ]);
+    expect(
+      found.every(
+        (relationship) =>
+          relationship.isPending() && relationship.recipientId === recipientId,
+      ),
+    ).toBe(true);
+  });
+
+  it('finds pending relationships for the recipient in ascending identifier order regardless of insertion order', async () => {
+    const recipientId = 'user-ordering-recipient';
+    for (const [id, requesterId] of [
+      ['relationship-ordering-c', 'user-ordering-requester-1'],
+      ['relationship-ordering-a', 'user-ordering-requester-2'],
+      ['relationship-ordering-b', 'user-ordering-requester-3'],
+    ]) {
+      await repository.save(
+        ContactRelationship.reconstitute({
+          id,
+          requesterId,
+          recipientId,
+          status: 'pending',
+        }),
+      );
+    }
+
+    const found = await repository.findPendingByRecipient({
+      recipientId,
+      take: 50,
+    });
+
+    expect(found.map((relationship) => relationship.id)).toEqual([
+      'relationship-ordering-a',
+      'relationship-ordering-b',
+      'relationship-ordering-c',
+    ]);
+  });
+
+  it('finds at most take pending relationships and returns the first ones in identifier order', async () => {
+    const recipientId = 'user-take-recipient';
+    for (const number of [4, 2, 5, 1, 3]) {
+      await repository.save(
+        ContactRelationship.reconstitute({
+          id: `relationship-take-${number}`,
+          requesterId: `user-take-requester-${number}`,
+          recipientId,
+          status: 'pending',
+        }),
+      );
+    }
+
+    const found = await repository.findPendingByRecipient({
+      recipientId,
+      take: 3,
+    });
+
+    expect(found.map((relationship) => relationship.id)).toEqual([
+      'relationship-take-1',
+      'relationship-take-2',
+      'relationship-take-3',
+    ]);
+  });
+
+  it('returns exactly 51 of 52 pending relationships in identifier order for the maximum listing lookahead', async () => {
+    const recipientId = 'user-bound-recipient';
+    const boundId = (number: number) =>
+      `relationship-bound-${String(number).padStart(2, '0')}`;
+    for (let number = 51; number >= 0; number -= 1) {
+      await repository.save(
+        ContactRelationship.reconstitute({
+          id: boundId(number),
+          requesterId: `user-bound-requester-${number}`,
+          recipientId,
+          status: 'pending',
+        }),
+      );
+    }
+
+    const found = await repository.findPendingByRecipient({
+      recipientId,
+      take: 51,
+    });
+
+    expect(found).toHaveLength(51);
+    expect(found.map((relationship) => relationship.id)).toEqual(
+      Array.from({ length: 51 }, (_, number) => boundId(number)),
+    );
+  });
+
+  it('continues after the given identifier and excludes that row, in identifier order', async () => {
+    const recipientId = 'user-continuation-recipient';
+    for (const number of [3, 1, 4, 2, 5]) {
+      await repository.save(
+        ContactRelationship.reconstitute({
+          id: `relationship-continuation-${number}`,
+          requesterId: `user-continuation-requester-${number}`,
+          recipientId,
+          status: 'pending',
+        }),
+      );
+    }
+
+    const found = await repository.findPendingByRecipient({
+      recipientId,
+      take: 2,
+      afterRelationshipId: 'relationship-continuation-2',
+    });
+
+    expect(found.map((relationship) => relationship.id)).toEqual([
+      'relationship-continuation-3',
+      'relationship-continuation-4',
+    ]);
+  });
+
+  it.each([
+    [
+      'a missing row',
+      'relationship-gap-2a',
+      ['relationship-gap-3', 'relationship-gap-4'],
+    ],
+    [
+      'a resolved row',
+      'relationship-gap-2',
+      ['relationship-gap-3', 'relationship-gap-4'],
+    ],
+    [
+      'another recipient’s row',
+      'relationship-gap-0',
+      ['relationship-gap-1', 'relationship-gap-3', 'relationship-gap-4'],
+    ],
+  ])(
+    'continues from the id alone when the continuation id is %s',
+    async (_label, afterId, expectedIds) => {
+      const recipientId = 'user-gap-recipient';
+      const seeded = [
+        ['relationship-gap-0', 'user-gap-other', 'pending'],
+        ['relationship-gap-1', recipientId, 'pending'],
+        ['relationship-gap-2', recipientId, 'rejected'],
+        ['relationship-gap-3', recipientId, 'pending'],
+        ['relationship-gap-4', recipientId, 'pending'],
+      ] as const;
+      for (const [index, [id, seededRecipientId, status]] of seeded.entries()) {
+        await repository.save(
+          ContactRelationship.reconstitute({
+            id,
+            requesterId: `user-gap-requester-${index}`,
+            recipientId: seededRecipientId,
+            status,
+          }),
+        );
+      }
+
+      const found = await repository.findPendingByRecipient({
+        recipientId,
+        take: 10,
+        afterRelationshipId: afterId,
+      });
+
+      expect(found.map((relationship) => relationship.id)).toEqual(expectedIds);
+    },
+  );
+
+  it('returns an empty list when the recipient has no pending requests', async () => {
+    await repository.save(
+      ContactRelationship.reconstitute({
+        id: 'relationship-empty-accepted',
+        requesterId: 'user-empty-requester',
+        recipientId: 'user-empty-recipient',
+        status: 'accepted',
+      }),
+    );
+
+    const found = await repository.findPendingByRecipient({
+      recipientId: 'user-empty-recipient',
+      take: 10,
+    });
+
+    expect(found).toEqual([]);
+  });
+
   it('returns the persisted winner for an unordered-pair uniqueness collision', async () => {
     const winner = ContactRelationship.create({
       requesterId: 'user-original-requester',

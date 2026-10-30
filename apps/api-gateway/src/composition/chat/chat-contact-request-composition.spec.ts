@@ -13,15 +13,22 @@ import {
   CONTACT_TARGET_DIRECTORY,
   ChatPersistenceModule,
   ContactRequestUnavailableError,
+  ListIncomingContactRequestsUseCase,
+  REQUESTER_PROFILE_DIRECTORY,
   RejectContactRequestUseCase,
   SendContactRequestUseCase,
 } from '@huddle/chat';
-import { AUTHENTICATION_API, DIRECTORY_API } from '@huddle/identity';
+import {
+  AUTHENTICATION_API,
+  DIRECTORY_API,
+  PROFILE_QUERY_API,
+} from '@huddle/identity';
 import { ContactRequestAuthenticationGuard } from '../../interface/http/chat/contact-request-authentication.guard';
 import { ContactRequestExceptionFilter } from '../../interface/http/chat/contact-request-exception.filter';
 import { ContactRequestsController } from '../../interface/http/chat/contact-requests.controller';
 import { ChatContactRequestModule } from './chat-contact-request.module';
 import { IdentityContactTargetDirectoryAdapter } from './identity-contact-target-directory.adapter';
+import { IdentityRequesterProfileDirectoryAdapter } from './identity-requester-profile-directory.adapter';
 
 type DisconnectablePrismaClient = {
   $disconnect(): Promise<void>;
@@ -345,6 +352,83 @@ describe('Chat Contact-request production composition', () => {
     expect(updateMany).toHaveBeenCalledWith({
       where: { id: 'relationship-id', status: 'pending' },
       data: { status: 'rejected' },
+    });
+  });
+
+  it('resolves the incoming listing through the Identity profile adapter and both Chat ports', async () => {
+    const getProfiles = jest.fn().mockResolvedValue({
+      profiles: [{ userId: 'user-requester-1', displayName: 'Alice' }],
+      missingUserIds: [],
+    });
+    const findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'relationship-1',
+        requesterId: 'user-requester-1',
+        recipientId: 'user-recipient',
+        status: 'pending',
+      },
+    ]);
+    const prisma = {
+      contactRelationship: {
+        findMany,
+      },
+    };
+    testingModule = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          ignoreEnvFile: true,
+          load: [
+            () => ({
+              DATABASE_URL:
+                'postgresql://test:test@localhost:5432/chat-composition',
+              GITHUB_CALLBACK_URL:
+                'http://localhost/auth/oauth/github/callback',
+              GITHUB_CLIENT_ID: 'composition-github-client',
+              GITHUB_CLIENT_SECRET: 'composition-github-secret',
+              GOOGLE_CALLBACK_URL:
+                'http://localhost/auth/oauth/google/callback',
+              GOOGLE_CLIENT_ID: 'composition-google-client',
+              GOOGLE_CLIENT_SECRET: 'composition-google-secret',
+              JWT_SECRET: 'composition-jwt-secret',
+            }),
+          ],
+        }),
+        ChatContactRequestModule,
+      ],
+    })
+      .overrideProvider(DIRECTORY_API)
+      .useValue({ userExists: jest.fn() })
+      .overrideProvider(PROFILE_QUERY_API)
+      .useValue({ getProfiles })
+      .overrideProvider(CHAT_PRISMA_CLIENT)
+      .useValue(prisma)
+      .compile();
+
+    const adapter = testingModule.get(IdentityRequesterProfileDirectoryAdapter);
+    expect(testingModule.get(REQUESTER_PROFILE_DIRECTORY)).toBe(adapter);
+
+    const useCase = testingModule.get(ListIncomingContactRequestsUseCase);
+    const result = await useCase.execute({ recipientId: 'user-recipient' });
+
+    expect(findMany).toHaveBeenCalledTimes(1);
+    expect(findMany).toHaveBeenCalledWith({
+      where: { recipientId: 'user-recipient', status: 'pending' },
+      orderBy: { id: 'asc' },
+      take: 21,
+    });
+    expect(getProfiles).toHaveBeenCalledTimes(1);
+    expect(getProfiles).toHaveBeenCalledWith(['user-requester-1']);
+    expect(result).toEqual({
+      items: [
+        {
+          id: 'relationship-1',
+          requesterId: 'user-requester-1',
+          displayName: 'Alice',
+          status: 'pending',
+        },
+      ],
+      nextCursor: null,
     });
   });
 

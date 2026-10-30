@@ -1,15 +1,18 @@
 import {
   AcceptContactRequestUseCase,
+  ListIncomingContactRequestsUseCase,
   RejectContactRequestUseCase,
   SendContactRequestUseCase,
 } from '@huddle/chat';
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Param,
   Post,
+  Query,
   Req,
   UseFilters,
   UseGuards,
@@ -35,7 +38,20 @@ export class ContactRequestsController {
     private readonly sendContactRequestUseCase: SendContactRequestUseCase,
     private readonly acceptContactRequestUseCase: AcceptContactRequestUseCase,
     private readonly rejectContactRequestUseCase: RejectContactRequestUseCase,
+    private readonly listIncomingContactRequestsUseCase: ListIncomingContactRequestsUseCase,
   ) {}
+
+  @Get('incoming')
+  listIncomingContactRequests(
+    @Req() request: VerifiedContactRequest,
+    @Query() query: Record<string, unknown>,
+  ) {
+    return this.listIncomingContactRequestsUseCase.execute({
+      recipientId: request.user.userId,
+      limit: query.limit,
+      cursor: query.cursor,
+    });
+  }
 
   @Post(':contactRequestId/reject')
   @HttpCode(HttpStatus.OK)

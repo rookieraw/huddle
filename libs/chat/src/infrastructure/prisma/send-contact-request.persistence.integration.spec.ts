@@ -5,7 +5,10 @@ import {
   StartedPostgreSqlContainer,
 } from '@testcontainers/postgresql';
 import { PrismaPg } from '@prisma/adapter-pg';
-import type { ContactRelationshipRepository } from '../../application/ports/contact-relationship.repository.port';
+import type {
+  ContactRelationshipRepository,
+  FindPendingByRecipientQuery,
+} from '../../application/ports/contact-relationship.repository.port';
 import type { ContactTargetDirectory } from '../../application/ports/contact-target-directory.port';
 import { SendContactRequestUseCase } from '../../application/use-cases/send-contact-request.use-case';
 import type { ContactRelationship } from '../../domain/contact-relationship.entity';
@@ -66,6 +69,12 @@ class SaveBarrierContactRelationshipRepository implements ContactRelationshipRep
     }
 
     return relationship;
+  }
+
+  async findPendingByRecipient(
+    query: FindPendingByRecipientQuery,
+  ): Promise<ContactRelationship[]> {
+    return this.realRepository.findPendingByRecipient(query);
   }
 
   async save(relationship: ContactRelationship): Promise<ContactRelationship> {

@@ -1,8 +1,8 @@
 # HTTP Contracts
 
 Status: Shared conventions accepted; Identity endpoints and first Chat subset implemented
-Last reviewed: 2026-10-15
-Last verified against source: 2026-10-15
+Last reviewed: 2026-10-30
+Last verified against source: 2026-10-30
 
 ## Purpose
 
@@ -68,14 +68,14 @@ A Planned capability name is not a stable public route.
 
 ## Contract Registry
 
-| Context or capability | State                                                                                                   | Contract document                                           |
-| --------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Identity              | Implemented with transitional behavior                                                                  | [`identity-http.md`](identity-http.md)                      |
-| Chat                  | Contact-request creation, acceptance, and rejection Implemented; remaining Phase 2 capabilities Planned | [`chat-http.md`](chat-http.md)                              |
-| Calling               | Planned for Phase 3                                                                                     | Create only if a required HTTP capability is identified     |
-| Billing               | Planned for Phase 4                                                                                     | Create when the exact Billing HTTP contract is defined      |
-| Meetings              | Planned for Phase 5                                                                                     | Create when the exact Meeting HTTP contract is defined      |
-| Notification          | Planned for Phase 6                                                                                     | Create when the exact Notification HTTP contract is defined |
+| Context or capability | State                                                                                                                     | Contract document                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Identity              | Implemented with transitional behavior                                                                                    | [`identity-http.md`](identity-http.md)                      |
+| Chat                  | Contact-request creation, acceptance, rejection, and incoming listing Implemented; remaining Phase 2 capabilities Planned | [`chat-http.md`](chat-http.md)                              |
+| Calling               | Planned for Phase 3                                                                                                       | Create only if a required HTTP capability is identified     |
+| Billing               | Planned for Phase 4                                                                                                       | Create when the exact Billing HTTP contract is defined      |
+| Meetings              | Planned for Phase 5                                                                                                       | Create when the exact Meeting HTTP contract is defined      |
+| Notification          | Planned for Phase 6                                                                                                       | Create when the exact Notification HTTP contract is defined |
 
 Do not create empty Context contract files merely to satisfy this registry.
 
@@ -382,15 +382,18 @@ represented as `403` or `404`.
 The current Chat HTTP subset distinguishes implemented delivery from remaining
 planned target behavior:
 
-| Capability                 | State         | Contract                       | Implementation state                 |
-| -------------------------- | ------------- | ------------------------------ | ------------------------------------ |
-| Contact-request creation   | `Implemented` | [`chat-http.md`](chat-http.md) | Authenticated HTTP delivery verified |
-| Contact-request acceptance | `Implemented` | [`chat-http.md`](chat-http.md) | Authenticated HTTP delivery verified |
-| Contact-request rejection  | `Implemented` | [`chat-http.md`](chat-http.md) | Authenticated HTTP delivery verified |
+| Capability                       | State         | Contract                       | Implementation state                 |
+| -------------------------------- | ------------- | ------------------------------ | ------------------------------------ |
+| Contact-request creation         | `Implemented` | [`chat-http.md`](chat-http.md) | Authenticated HTTP delivery verified |
+| Contact-request acceptance       | `Implemented` | [`chat-http.md`](chat-http.md) | Authenticated HTTP delivery verified |
+| Contact-request rejection        | `Implemented` | [`chat-http.md`](chat-http.md) | Authenticated HTTP delivery verified |
+| Incoming Contact-request listing | `Implemented` | [`chat-http.md`](chat-http.md) | Authenticated HTTP delivery verified |
 
 The implemented subset defines `POST /contact-requests`,
-`POST /contact-requests/{contactRequestId}/accept`, and
-`POST /contact-requests/{contactRequestId}/reject`. No other Contacts,
+`POST /contact-requests/{contactRequestId}/accept`,
+`POST /contact-requests/{contactRequestId}/reject`, and
+`GET /contact-requests/incoming`, which lists pending Contact requests
+addressed to the verified actor with cursor pagination. No other Contacts,
 Conversation, Group, Message-history, or frontend capability is accepted or
 implemented here.
 
@@ -413,7 +416,6 @@ capabilities.
 
 #### Contacts
 
-- List incoming Contact requests
 - List outgoing Contact requests
 - List accepted Contacts
 - Remove Contact
@@ -531,6 +533,23 @@ Before the first paginated endpoint is implemented, the shared contract must def
 - Stable ordering
 - Invalid-cursor response
 - End-of-list representation
+
+Decided shared convention (first consumer: incoming Contact-request listing,
+[`chat-http.md`](chat-http.md)):
+
+| Item                  | Decision                                                                                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cursor parameter      | `cursor` query parameter: a single, opaque value previously returned as `nextCursor`.                                                                                                       |
+| Limit parameter       | `limit` query parameter: a single value of ASCII digits and an integer from 1 to the maximum.                                                                                               |
+| Default limit         | `20`.                                                                                                                                                                                       |
+| Maximum limit         | `50`. A larger value is rejected, not clamped. An owning contract may set a lower maximum, never a higher one.                                                                              |
+| Response envelope     | `{ "items": [...], "nextCursor": string \| null }`. The owning contract defines the item shape.                                                                                             |
+| Stable ordering       | Defined by the owning contract and applied identically across consecutive pages.                                                                                                            |
+| Invalid-cursor result | `400 VALIDATION_FAILED` with one detail naming `cursor`; the rejected value is never repeated. An invalid `limit` likewise names `limit`. When both are invalid, `limit` is reported first. |
+| End-of-list           | `nextCursor` is `null`.                                                                                                                                                                     |
+
+The default and maximum are defined once here and are not selected
+independently by a controller.
 
 Cursors must be opaque to clients.
 

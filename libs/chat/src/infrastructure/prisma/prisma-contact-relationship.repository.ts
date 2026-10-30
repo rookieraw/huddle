@@ -1,4 +1,7 @@
-import type { ContactRelationshipRepository } from '../../application/ports/contact-relationship.repository.port';
+import type {
+  ContactRelationshipRepository,
+  FindPendingByRecipientQuery,
+} from '../../application/ports/contact-relationship.repository.port';
 import { ContactRelationship } from '../../domain/contact-relationship.entity';
 import { PrismaClient } from './generated/client';
 
@@ -67,6 +70,24 @@ export class PrismaContactRelationshipRepository implements ContactRelationshipR
     }
 
     return this.toDomain(record);
+  }
+
+  async findPendingByRecipient(
+    query: FindPendingByRecipientQuery,
+  ): Promise<ContactRelationship[]> {
+    const records = await this.prisma.contactRelationship.findMany({
+      where: {
+        recipientId: query.recipientId,
+        status: 'pending',
+        ...(query.afterRelationshipId !== undefined && {
+          id: { gt: query.afterRelationshipId },
+        }),
+      },
+      orderBy: { id: 'asc' },
+      take: query.take,
+    });
+
+    return records.map((record) => this.toDomain(record));
   }
 
   async save(relationship: ContactRelationship): Promise<ContactRelationship> {
