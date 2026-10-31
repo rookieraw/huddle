@@ -90,6 +90,8 @@ Required invariants:
 - An existing direct conversation remains writable after contact removal.
 - Blocking is a separate deferred capability.
 
+Contacts and conversations are separate concepts.
+
 #### Application Behavior
 
 Contact-request creation creates pending relationships, rejects self-directed
@@ -117,8 +119,6 @@ requester-profile port and never stored by Chat. A requester without a profile
 is still listed with a null `displayName`. Repository failure and profile
 failure share one retryable unavailable outcome, classified without inspecting
 exception messages.
-
-Contacts and conversations are separate concepts.
 
 ### Conversation
 
