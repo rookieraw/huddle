@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-10-30
+Last updated: 2026-11-01
 
 Current implementation phase: Phase 2 — Contacts and Chat
 
@@ -96,111 +96,22 @@ The completed implementation includes:
 
 The public boundary does not add Chat production adapters, directory or profile HTTP endpoints, Identity Integration Events, an Outbox, profile projections, or caches.
 
-### Phase 2 — Contact-request Creation HTTP Delivery
+### Phase 2 — Contacts
 
-The authenticated `POST /contact-requests` endpoint is implemented and
-verified. It derives requester authority from the verified principal, supports
-first creation and pending-or-accepted current-relationship reuse, and returns
-the persisted relationship's truthful status through the stable success and
-error contract. Exact runtime behavior and evidence boundaries are recorded in
-[`../contracts/chat-http.md`](../contracts/chat-http.md).
+| Capability                                                                     | Contract                                                 |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| Contact-request creation, `POST /contact-requests`                             | [`../contracts/chat-http.md`](../contracts/chat-http.md) |
+| Contact-request acceptance, `POST /contact-requests/{contactRequestId}/accept` | [`../contracts/chat-http.md`](../contracts/chat-http.md) |
+| Contact-request rejection, `POST /contact-requests/{contactRequestId}/reject`  | [`../contracts/chat-http.md`](../contracts/chat-http.md) |
+| Incoming Contact-request listing, `GET /contact-requests/incoming`             | [`../contracts/chat-http.md`](../contracts/chat-http.md) |
 
-The creation endpoint does not expose Contact-request acceptance or rejection.
-Its request, response, and error behavior remain unchanged; it only gains the
-documented rule that a rejected relationship is never reused.
-
-### Phase 2 — Contact-request Acceptance
-
-The Chat Application acceptance command and authenticated HTTP delivery are
-implemented and verified. The command loads a persisted relationship by opaque
-identifier, derives authority only from the accepting actor `userId`, permits
-only the original recipient to accept a pending request, and persists the
-accepted relationship through the pending-only repository transition. Named
-Application outcomes distinguish missing relationships, unauthorized actors,
-already accepted and already rejected relationships, and repository lookup,
-transition, or re-read unavailability.
-
-Its exact authenticated HTTP contract is implemented at
-`POST /contact-requests/{contactRequestId}/accept`. The contract fixes and
-the API Gateway transport implements the opaque path identifier, no-body
-request, persisted accepted response, authorization visibility, public errors,
-and retry semantics in
-[`../contracts/chat-http.md`](../contracts/chat-http.md).
-
-The endpoint has API Gateway composition, controller delivery, transport
-evidence, and safe public error mapping. It does not have a generated OpenAPI
-operation or frontend flow.
-
-### Phase 2 — Contact-request Rejection
-
-The Chat Domain rejection transition, Application rejection command, and
-authenticated HTTP delivery are implemented and verified. The command loads a
-persisted relationship by opaque identifier, derives authority only from the
-rejecting actor `userId`, permits only the original recipient to reject a
-pending request, and persists the rejected relationship through the same
-pending-only repository transition as acceptance, so concurrent resolutions
-apply at most one and the losing attempt reports the winning state. Named
-Application outcomes distinguish missing relationships, unauthorized actors,
-already accepted and already rejected relationships, and repository lookup,
-transition, or re-read unavailability.
-
-PostgreSQL persistence stores and reloads the rejected status through an
-additive migration. A rejected relationship does not occupy the unordered user
-pair, so a later request between the same users creates a new pending
-relationship.
-
-Its exact authenticated HTTP contract is implemented at
-`POST /contact-requests/{contactRequestId}/reject`, with composition,
-controller delivery, transport evidence, and safe public error mapping as
-recorded in [`../contracts/chat-http.md`](../contracts/chat-http.md). It does
-not have a generated OpenAPI operation or frontend flow.
-
-### Phase 2 — Incoming Contact-request Listing
-
-The Chat Application incoming-listing query and authenticated HTTP delivery are
-implemented and verified. The query returns the acting user's pending
-relationships in stable relationship-identifier order with an opaque cursor,
-and the Application owns the one-row lookahead. It adds each requester's
-current `displayName` through a Chat-owned port backed by Identity's public
-Profile Query API; a requester without a profile is still listed with a null
-name. Repository and profile failures share one retryable unavailable outcome.
-The repository's pending-by-recipient query is verified against real
-PostgreSQL.
-
-Its exact authenticated HTTP contract is implemented at
-`GET /contact-requests/incoming`, with composition, controller delivery,
-transport evidence, safe public error mapping, and the shared cursor
-pagination convention as recorded in
-[`../contracts/chat-http.md`](../contracts/chat-http.md) and
-[`../contracts/http.md`](../contracts/http.md). It does not have a generated
-OpenAPI operation or frontend flow.
+The Contact-request Domain, Application commands and query, and Chat-owned PostgreSQL persistence are implemented. Persistence is verified against real PostgreSQL integration tests under `libs/chat`. The Contacts HTTP operations have no generated OpenAPI operation and no frontend flow.
 
 ## Current Activity
 
 The minimum Identity support required by Phase 2 is implemented and verified: `displayName`, Authentication, Directory, and Profile Query.
 
-The Contact-request Domain/Application core and Chat-owned PostgreSQL
-persistence are implemented and verified. The Domain supports recipient-only
-acceptance and rejection, the Application commands orchestrate and classify
-those transitions, and the repository persists and reloads pending, accepted,
-or rejected relationships. Contact-request creation still creates pending
-relationships, rejects self-directed and confirmed missing-target requests,
-classifies Directory and repository unavailability, and reuses an existing
-pending or accepted current relationship for duplicate or opposing requests.
-
-PostgreSQL enforces one pending-or-accepted current relationship per unordered user pair; a rejected relationship does not occupy the pair. Real PostgreSQL integration tests verify additive schema migrations, exact status enforcement, repository mapping, unordered lookup, collision handling, the pending-only transition, genuinely concurrent same-direction and opposing request convergence, the pending-by-recipient listing query's recipient selection, identifier ordering, requested row count, and continuation by `id`, and genuinely concurrent resolution.
-
-The API Gateway application composition boundary now delivers authenticated
-Contact-request creation, recipient acceptance and rejection, and incoming
-Contact-request listing over HTTP.
-Creation truthfully returns a reused pending or accepted current relationship.
-Acceptance and rejection use the opaque path relationship identifier, derive
-authority only from the verified `userId`, permit only the original recipient
-to resolve a pending relationship, and map hidden or unavailable outcomes to
-safe public error envelopes. The listing derives its recipient only from the
-verified `userId`, names requesters through Identity's public Profile Query
-capability, and paginates with an opaque cursor. The frontend flow and
-remaining Contacts lifecycle capabilities remain pending.
+Contacts state is recorded under Implemented; the frontend flow and remaining Contacts lifecycle capabilities remain pending.
 
 The remaining Phase 2 implementation includes:
 

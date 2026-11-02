@@ -32,6 +32,20 @@ Examples:
 - operational procedures belong in `operations/`;
 - decision rationale belongs in Architecture Decision Records.
 
+#### Ownership by Kind of Fact
+
+This model governs new and changed content. Existing text that predates it is brought into line by a dedicated documentation outcome, not as a side effect of an unrelated edit.
+
+| Document kind  | Owns                                                                                                                                                                                 | Does not restate                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| Context        | Responsibilities, invariants, application behavior, ownership, cross-context capabilities. May carry a delivery-phase table, a `Status:` header, and a link to `delivery/status.md`. | Current implementation state in prose, payloads and error codes, test evidence                   |
+| Contract       | The exact interface of each operation, its `Implemented`/`Accepted` marker, and the rule that keeps that marker aligned with the controller and tests.                               | How the endpoint is built, which tests prove it                                                  |
+| Roadmap        | Delivery order, gates, and Portfolio Release sequence                                                                                                                                | Scope detail or current state                                                                    |
+| Phase          | What may be implemented in the Phase, and its gates. May carry its own `Status:` header. A completed Phase may keep its historical boundary and completion record.                   | A description of what is implemented, beyond the `Status:` header and a completed Phase's record |
+| Status         | Project-level implementation state, current activity, next work, and blockers, with links to the owning contract                                                                     | Mechanism narrative, test lists, work items                                                      |
+| Code and tests | Implemented behavior and its evidence                                                                                                                                                | n/a (authoritative)                                                                              |
+| ADR            | Why a durable decision was made, and its `Status:`                                                                                                                                   | Current implementation state                                                                     |
+
 ### Task-oriented Reading
 
 Read only the documents relevant to the current question or task.
@@ -376,6 +390,7 @@ When changing documentation, verify:
 - copied rules were not introduced elsewhere;
 - target behavior is not described as implemented;
 - current status remains in `delivery/status.md`;
+- mechanism and test evidence are not restated in Context, Phase, or Contract documents, and implementation state appears only where the ownership table allows it (for example `Status:` headers, delivery-phase tables, contract markers, the status document itself, and a completed Phase's record); link to the owning document;
 - future work remains constrained by its Phase;
 - public contracts match implementation where implemented;
 - an implementation-status change is followed by a search for stale planned, deferred, not-implemented, and current-activity statements in every affected owning document;

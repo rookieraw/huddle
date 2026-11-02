@@ -111,46 +111,9 @@ Do not introduce an Identity Outbox, profile projection, event bus, or profile c
 
 ### Contacts
 
-The Contact-request Domain/Application core and Chat-owned PostgreSQL
-persistence are implemented. The Domain supports recipient-only
-pending-to-accepted and pending-to-rejected transitions, and the repository
-persists and reloads pending, accepted, or rejected relationships. The
-existing creation use case creates pending
-requests between distinct users, checks the untrusted target through a
-Chat-owned port, classifies target-lookup and repository unavailability, and
-reuses a pending or accepted current relationship for sequential duplicate or
-opposing requests.
-
-The Application acceptance and rejection commands each load an existing
-relationship by opaque identifier, use only the acting `userId` as authority,
-and permit only the original recipient to resolve it while pending. Both
-persist through one pending-only repository transition, so concurrent
-resolutions apply at most one, and the losing attempt reports the winning
-state. Named Application outcomes distinguish missing relationships,
-unauthorized actors, already accepted and already rejected relationships, and
-repository unavailability.
-
-The Application incoming-listing query returns the acting user's pending
-requests in stable relationship-identifier order with an opaque cursor, adds
-each requester's current display name through a Chat-owned port, and classifies
-repository and profile failures as one retryable unavailable outcome.
-
-PostgreSQL enforces one pending-or-accepted current relationship per unordered user pair; a rejected relationship does not occupy the pair. Real PostgreSQL integration tests verify additive migrations, exact status enforcement, repository mapping, unordered lookup, precise collision handling, the pending-only transition, genuinely concurrent same-direction and opposing request convergence, the pending-by-recipient listing query's recipient selection, identifier ordering, requested row count, and continuation by `id`, and genuinely concurrent resolution.
-
-The API Gateway application composition boundary now delivers authenticated
-Contact-request creation, recipient acceptance and rejection, and listing of
-incoming Contact requests over HTTP.
-Creation truthfully returns a reused pending or accepted current relationship.
-Acceptance and rejection use the opaque path relationship identifier, derive
-authority only from the verified `userId`, permit only the original recipient
-to resolve a pending relationship, and minimize hidden-resource information
-through the accepted public error contract. The listing derives its recipient
-only from the verified `userId`, takes requester display names from Identity's
-public Profile Query capability, and paginates with the shared cursor
-convention. The exact routes, authority rules, validation
+The exact routes, authority rules, validation
 or no-body behavior, responses, errors, and evidence boundaries belong to
-[`../../contracts/chat-http.md`](../../contracts/chat-http.md). The frontend
-flow and remaining Contacts lifecycle capabilities remain pending.
+[`../../contracts/chat-http.md`](../../contracts/chat-http.md).
 
 The full Phase 2 Contacts scope includes:
 
@@ -328,8 +291,7 @@ Shared HTTP conventions belong in `contracts/http.md`. Exact request, response,
 pagination, and transport-error shapes belong in the owning Context-specific
 HTTP contract, including `contracts/chat-http.md` for Chat.
 
-The first Phase 2 Chat controller and exact contract are implemented. Before
-an additional Chat controller or consuming frontend slice:
+Before an additional Chat controller or consuming frontend slice:
 
 - the stable shared error envelope must be accepted;
 - its exact Chat HTTP contract must be created;
@@ -420,15 +382,6 @@ Add Chat-owned relational persistence for:
 - invitation permissions;
 - invitations;
 - relational quota state.
-
-Contact relationship persistence supports pending, accepted, and rejected
-states through a Chat-owned schema, additive migrations, Prisma repository, and
-one unordered current-pair uniqueness constraint across the pending and
-accepted states, and a pending-by-recipient read query. The Application
-acceptance and rejection commands, the incoming-listing query, exact HTTP
-contract, API Gateway composition, endpoints, and transport evidence are
-implemented. The frontend flow and the remaining
-relational state above are not yet implemented.
 
 ### MongoDB
 
