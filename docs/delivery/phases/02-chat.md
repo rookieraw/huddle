@@ -63,7 +63,7 @@ A completed Phase 1 backend does not automatically establish a browser-safe Auth
 | Task                   | Read these documents                                                                                                                           |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | Identity `displayName` | This phase file and `contexts/identity.md`                                                                                                     |
-| Contacts               | This phase file, `contexts/chat.md`, `contracts/http.md`, and `contracts/chat-http.md`                                                         |
+| Contacts               | This phase file, `contexts/chat.md`, `contracts/http.md`, `contracts/chat-http.md` (index), and `contracts/chat-contacts-http.md`              |
 | Direct Conversation    | This phase file, `contexts/chat.md`, and `contracts/http.md`                                                                                   |
 | Group Conversation     | This phase file, `contexts/chat.md`, and `product/tiers.md` when quota-related                                                                 |
 | Message persistence    | This phase file, `contexts/chat.md`, `architecture/data-and-consistency.md`, and ADR 0003                                                      |
@@ -112,8 +112,8 @@ Do not introduce an Identity Outbox, profile projection, event bus, or profile c
 ### Contacts
 
 The exact routes, authority rules, validation
-or no-body behavior, responses, errors, and evidence boundaries belong to
-[`../../contracts/chat-http.md`](../../contracts/chat-http.md).
+or no-body behavior, responses, and errors belong to
+[`../../contracts/chat-contacts-http.md`](../../contracts/chat-contacts-http.md).
 
 The full Phase 2 Contacts scope includes:
 
@@ -289,7 +289,7 @@ Create or update public HTTP contracts for:
 
 Shared HTTP conventions belong in `contracts/http.md`. Exact request, response,
 pagination, and transport-error shapes belong in the owning Context-specific
-HTTP contract, including `contracts/chat-http.md` for Chat.
+HTTP contract, including the files indexed by `contracts/chat-http.md` for Chat.
 
 Before an additional Chat controller or consuming frontend slice:
 

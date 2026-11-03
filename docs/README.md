@@ -216,17 +216,18 @@ They do not own exact HTTP paths, Socket.IO event names, or tier values.
 
 ## Contracts
 
-| Document                                                                   | Responsibility                                                                  | Update when                                      |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------ |
-| [`contracts/http.md`](contracts/http.md)                                   | Shared HTTP conventions, OpenAPI relationship, errors, pagination, and registry | A shared HTTP, OpenAPI, or registry rule changes |
-| [`contracts/identity-http.md`](contracts/identity-http.md)                 | Implemented Identity HTTP endpoints and transitional behavior                   | An Identity HTTP endpoint changes                |
-| [`contracts/chat-http.md`](contracts/chat-http.md)                         | Accepted and implemented Chat HTTP endpoints                                    | A Chat HTTP endpoint changes                     |
-| [`contracts/chat-realtime.md`](contracts/chat-realtime.md)                 | `/chat` namespace, Message events, acknowledgements, and reconnect behavior     | Chat realtime behavior changes                   |
-| [`contracts/conferencing-realtime.md`](contracts/conferencing-realtime.md) | Shared `/conferencing` connection, session, participant, and lifecycle events   | Shared Conferencing realtime behavior changes    |
-| [`contracts/conferencing-p2p.md`](contracts/conferencing-p2p.md)           | Direct Call SDP offer, answer, and ICE signaling                                | Direct Call P2P signaling changes                |
-| [`contracts/conferencing-sfu.md`](contracts/conferencing-sfu.md)           | mediasoup transport, Producer, and Consumer signaling                           | Group Call or Meeting SFU signaling changes      |
-| [`contracts/meeting-realtime.md`](contracts/meeting-realtime.md)           | Meeting lobby and Meeting-specific realtime notifications                       | Meeting realtime behavior changes                |
-| [`contracts/integration-events.md`](contracts/integration-events.md)       | Versioned cross-context event envelope, catalog, payloads, and consumers        | An Integration Event is added or changed         |
+| Document                                                                   | Responsibility                                                                  | Update when                                                    |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| [`contracts/http.md`](contracts/http.md)                                   | Shared HTTP conventions, OpenAPI relationship, errors, pagination, and registry | A shared HTTP, OpenAPI, or registry rule changes               |
+| [`contracts/identity-http.md`](contracts/identity-http.md)                 | Implemented Identity HTTP endpoints and transitional behavior                   | An Identity HTTP endpoint changes                              |
+| [`contracts/chat-http.md`](contracts/chat-http.md)                         | Chat HTTP index and Chat-wide transport rules                                   | A Chat contract file is added or a Chat-wide HTTP rule changes |
+| [`contracts/chat-contacts-http.md`](contracts/chat-contacts-http.md)       | Accepted and implemented Contact HTTP endpoints                                 | A Contact HTTP endpoint changes                                |
+| [`contracts/chat-realtime.md`](contracts/chat-realtime.md)                 | `/chat` namespace, Message events, acknowledgements, and reconnect behavior     | Chat realtime behavior changes                                 |
+| [`contracts/conferencing-realtime.md`](contracts/conferencing-realtime.md) | Shared `/conferencing` connection, session, participant, and lifecycle events   | Shared Conferencing realtime behavior changes                  |
+| [`contracts/conferencing-p2p.md`](contracts/conferencing-p2p.md)           | Direct Call SDP offer, answer, and ICE signaling                                | Direct Call P2P signaling changes                              |
+| [`contracts/conferencing-sfu.md`](contracts/conferencing-sfu.md)           | mediasoup transport, Producer, and Consumer signaling                           | Group Call or Meeting SFU signaling changes                    |
+| [`contracts/meeting-realtime.md`](contracts/meeting-realtime.md)           | Meeting lobby and Meeting-specific realtime notifications                       | Meeting realtime behavior changes                              |
+| [`contracts/integration-events.md`](contracts/integration-events.md)       | Versioned cross-context event envelope, catalog, payloads, and consumers        | An Integration Event is added or changed                       |
 
 Contracts answer:
 

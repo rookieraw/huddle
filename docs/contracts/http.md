@@ -1,8 +1,8 @@
 # HTTP Contracts
 
 Status: Shared conventions accepted; Identity endpoints and first Chat subset implemented
-Last reviewed: 2026-10-30
-Last verified against source: 2026-10-30
+Last reviewed: 2026-11-03
+Last verified against source: 2026-11-03
 
 ## Purpose
 
@@ -29,7 +29,8 @@ A capability appearing in a Context or Phase document does not create an HTTP en
 Before implementing a new controller operation:
 
 1. Confirm that the active Phase authorizes the capability.
-2. Define its exact contract in the owning Context’s HTTP contract file.
+2. Define its exact contract in the owning Context’s HTTP contract file (for
+   Chat, the file that [`chat-http.md`](chat-http.md) lists for the capability).
 3. Register that contract in this document.
 4. Implement the controller and DTO.
 5. Add contract, controller, and E2E tests.
@@ -68,19 +69,22 @@ A Planned capability name is not a stable public route.
 
 ## Contract Registry
 
-| Context or capability | State                                                                                                                     | Contract document                                           |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Identity              | Implemented with transitional behavior                                                                                    | [`identity-http.md`](identity-http.md)                      |
-| Chat                  | Contact-request creation, acceptance, rejection, and incoming listing Implemented; remaining Phase 2 capabilities Planned | [`chat-http.md`](chat-http.md)                              |
-| Calling               | Planned for Phase 3                                                                                                       | Create only if a required HTTP capability is identified     |
-| Billing               | Planned for Phase 4                                                                                                       | Create when the exact Billing HTTP contract is defined      |
-| Meetings              | Planned for Phase 5                                                                                                       | Create when the exact Meeting HTTP contract is defined      |
-| Notification          | Planned for Phase 6                                                                                                       | Create when the exact Notification HTTP contract is defined |
+| Context or capability | State                                                                                                                     | Contract document                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Identity              | Implemented with transitional behavior                                                                                    | [`identity-http.md`](identity-http.md)                                                      |
+| Chat                  | Contact-request creation, acceptance, rejection, and incoming listing Implemented; remaining Phase 2 capabilities Planned | [`chat-http.md`](chat-http.md) (index) and [`chat-contacts-http.md`](chat-contacts-http.md) |
+| Calling               | Planned for Phase 3                                                                                                       | Create only if a required HTTP capability is identified                                     |
+| Billing               | Planned for Phase 4                                                                                                       | Create when the exact Billing HTTP contract is defined                                      |
+| Meetings              | Planned for Phase 5                                                                                                       | Create when the exact Meeting HTTP contract is defined                                      |
+| Notification          | Planned for Phase 6                                                                                                       | Create when the exact Notification HTTP contract is defined                                 |
 
 Do not create empty Context contract files merely to satisfy this registry.
 
 A Context-specific contract file is created when its first exact endpoint is
-designed as part of an authorized contract or implementation task.
+designed as part of an authorized contract or implementation task. A Context
+may list several contract files through its own index file; when to split a
+document is governed by
+[Avoid Over-fragmentation](../README.md#avoid-over-fragmentation).
 
 ## OpenAPI Documentation Direction
 
@@ -382,12 +386,12 @@ represented as `403` or `404`.
 The current Chat HTTP subset distinguishes implemented delivery from remaining
 planned target behavior:
 
-| Capability                       | State         | Contract                       | Implementation state                 |
-| -------------------------------- | ------------- | ------------------------------ | ------------------------------------ |
-| Contact-request creation         | `Implemented` | [`chat-http.md`](chat-http.md) | Authenticated HTTP delivery verified |
-| Contact-request acceptance       | `Implemented` | [`chat-http.md`](chat-http.md) | Authenticated HTTP delivery verified |
-| Contact-request rejection        | `Implemented` | [`chat-http.md`](chat-http.md) | Authenticated HTTP delivery verified |
-| Incoming Contact-request listing | `Implemented` | [`chat-http.md`](chat-http.md) | Authenticated HTTP delivery verified |
+| Capability                       | State         | Contract                                         | Implementation state                 |
+| -------------------------------- | ------------- | ------------------------------------------------ | ------------------------------------ |
+| Contact-request creation         | `Implemented` | [`chat-contacts-http.md`](chat-contacts-http.md) | Authenticated HTTP delivery verified |
+| Contact-request acceptance       | `Implemented` | [`chat-contacts-http.md`](chat-contacts-http.md) | Authenticated HTTP delivery verified |
+| Contact-request rejection        | `Implemented` | [`chat-contacts-http.md`](chat-contacts-http.md) | Authenticated HTTP delivery verified |
+| Incoming Contact-request listing | `Implemented` | [`chat-contacts-http.md`](chat-contacts-http.md) | Authenticated HTTP delivery verified |
 
 The implemented subset defines `POST /contact-requests`,
 `POST /contact-requests/{contactRequestId}/accept`,
@@ -535,7 +539,7 @@ Before the first paginated endpoint is implemented, the shared contract must def
 - End-of-list representation
 
 Decided shared convention (first consumer: incoming Contact-request listing,
-[`chat-http.md`](chat-http.md)):
+[`chat-contacts-http.md`](chat-contacts-http.md)):
 
 | Item                  | Decision                                                                                                                                                                                    |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -600,6 +604,7 @@ A new endpoint for one of these capabilities requires an explicit Product Scope 
 
 - [Identity HTTP Contract](identity-http.md)
 - [Chat HTTP Contract](chat-http.md)
+- [Chat Contacts HTTP Contract](chat-contacts-http.md)
 - [Chat Realtime Contract](chat-realtime.md)
 - [Shared Conferencing Realtime Contract](conferencing-realtime.md)
 - [Conferencing P2P Contract](conferencing-p2p.md)
