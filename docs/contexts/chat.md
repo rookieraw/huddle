@@ -1,7 +1,7 @@
 # Chat Context
 
 Status: Accepted target; Contact-request creation, acceptance, rejection, and incoming listing HTTP implemented
-Last reviewed: 2026-11-01
+Last reviewed: 2026-11-03
 
 ## Responsibility
 
@@ -43,7 +43,7 @@ Current implementation state is recorded in
 [`../delivery/status.md`](../delivery/status.md). The exact routes, principal
 translations, response shapes, and error mappings of the implemented Contacts
 HTTP operations belong to
-[`../contracts/chat-http.md`](../contracts/chat-http.md).
+[`../contracts/chat-contacts-http.md`](../contracts/chat-contacts-http.md).
 
 Accepted target behavior outside this implemented Contact-request subset does
 not imply current implementation.

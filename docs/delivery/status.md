@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-11-01
+Last updated: 2026-11-03
 
 Current implementation phase: Phase 2 — Contacts and Chat
 
@@ -98,12 +98,12 @@ The public boundary does not add Chat production adapters, directory or profile 
 
 ### Phase 2 — Contacts
 
-| Capability                                                                     | Contract                                                 |
-| ------------------------------------------------------------------------------ | -------------------------------------------------------- |
-| Contact-request creation, `POST /contact-requests`                             | [`../contracts/chat-http.md`](../contracts/chat-http.md) |
-| Contact-request acceptance, `POST /contact-requests/{contactRequestId}/accept` | [`../contracts/chat-http.md`](../contracts/chat-http.md) |
-| Contact-request rejection, `POST /contact-requests/{contactRequestId}/reject`  | [`../contracts/chat-http.md`](../contracts/chat-http.md) |
-| Incoming Contact-request listing, `GET /contact-requests/incoming`             | [`../contracts/chat-http.md`](../contracts/chat-http.md) |
+| Capability                                                                     | Contract                                                                   |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| Contact-request creation, `POST /contact-requests`                             | [`../contracts/chat-contacts-http.md`](../contracts/chat-contacts-http.md) |
+| Contact-request acceptance, `POST /contact-requests/{contactRequestId}/accept` | [`../contracts/chat-contacts-http.md`](../contracts/chat-contacts-http.md) |
+| Contact-request rejection, `POST /contact-requests/{contactRequestId}/reject`  | [`../contracts/chat-contacts-http.md`](../contracts/chat-contacts-http.md) |
+| Incoming Contact-request listing, `GET /contact-requests/incoming`             | [`../contracts/chat-contacts-http.md`](../contracts/chat-contacts-http.md) |
 
 The Contact-request Domain, Application commands and query, and Chat-owned PostgreSQL persistence are implemented. Persistence is verified against real PostgreSQL integration tests under `libs/chat`. The Contacts HTTP operations have no generated OpenAPI operation and no frontend flow.
 
