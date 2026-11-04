@@ -228,4 +228,31 @@ describe('PrismaContactRelationshipRepository', () => {
     ]);
     expect(found.every((relationship) => relationship.isPending())).toBe(true);
   });
+
+  it('continues pending relationships created by the requester strictly after the given identifier', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const prisma = {
+      contactRelationship: {
+        findMany,
+      },
+    } as unknown as PrismaClient;
+    const repository = new PrismaContactRelationshipRepository(prisma);
+
+    await repository.findPendingByRequester({
+      requesterId: 'user-requester',
+      take: 21,
+      afterRelationshipId: 'relationship-b',
+    });
+
+    expect(findMany).toHaveBeenCalledTimes(1);
+    expect(findMany).toHaveBeenCalledWith({
+      where: {
+        requesterId: 'user-requester',
+        status: 'pending',
+        id: { gt: 'relationship-b' },
+      },
+      orderBy: { id: 'asc' },
+      take: 21,
+    });
+  });
 });

@@ -95,7 +95,13 @@ export class PrismaContactRelationshipRepository implements ContactRelationshipR
     query: FindPendingByRequesterQuery,
   ): Promise<ContactRelationship[]> {
     const records = await this.prisma.contactRelationship.findMany({
-      where: { requesterId: query.requesterId, status: 'pending' },
+      where: {
+        requesterId: query.requesterId,
+        status: 'pending',
+        ...(query.afterRelationshipId !== undefined && {
+          id: { gt: query.afterRelationshipId },
+        }),
+      },
       orderBy: { id: 'asc' },
       take: query.take,
     });

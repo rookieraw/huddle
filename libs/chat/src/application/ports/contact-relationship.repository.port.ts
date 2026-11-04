@@ -13,6 +13,7 @@ export type FindPendingByRecipientQuery = {
 export type FindPendingByRequesterQuery = {
   requesterId: string;
   take: number;
+  afterRelationshipId?: string;
 };
 
 export interface ContactRelationshipRepository {
