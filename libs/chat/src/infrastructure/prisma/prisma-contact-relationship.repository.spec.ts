@@ -184,4 +184,48 @@ describe('PrismaContactRelationshipRepository', () => {
       'Unsupported persisted ContactRelationship status.',
     );
   });
+
+  it('finds pending relationships created by the requester in ascending identifier order limited to take', async () => {
+    const findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'relationship-a',
+        requesterId: 'user-requester',
+        recipientId: 'user-recipient-a',
+        status: 'pending',
+      },
+      {
+        id: 'relationship-b',
+        requesterId: 'user-requester',
+        recipientId: 'user-recipient-b',
+        status: 'pending',
+      },
+    ]);
+    const prisma = {
+      contactRelationship: {
+        findMany,
+      },
+    } as unknown as PrismaClient;
+    const repository = new PrismaContactRelationshipRepository(prisma);
+
+    const found = await repository.findPendingByRequester({
+      requesterId: 'user-requester',
+      take: 21,
+    });
+
+    expect(findMany).toHaveBeenCalledTimes(1);
+    expect(findMany).toHaveBeenCalledWith({
+      where: { requesterId: 'user-requester', status: 'pending' },
+      orderBy: { id: 'asc' },
+      take: 21,
+    });
+    expect(found.map((relationship) => relationship.id)).toEqual([
+      'relationship-a',
+      'relationship-b',
+    ]);
+    expect(found.map((relationship) => relationship.recipientId)).toEqual([
+      'user-recipient-a',
+      'user-recipient-b',
+    ]);
+    expect(found.every((relationship) => relationship.isPending())).toBe(true);
+  });
 });

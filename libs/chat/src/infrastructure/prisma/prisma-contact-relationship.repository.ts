@@ -1,6 +1,7 @@
 import type {
   ContactRelationshipRepository,
   FindPendingByRecipientQuery,
+  FindPendingByRequesterQuery,
 } from '../../application/ports/contact-relationship.repository.port';
 import { ContactRelationship } from '../../domain/contact-relationship.entity';
 import { PrismaClient } from './generated/client';
@@ -83,6 +84,18 @@ export class PrismaContactRelationshipRepository implements ContactRelationshipR
           id: { gt: query.afterRelationshipId },
         }),
       },
+      orderBy: { id: 'asc' },
+      take: query.take,
+    });
+
+    return records.map((record) => this.toDomain(record));
+  }
+
+  async findPendingByRequester(
+    query: FindPendingByRequesterQuery,
+  ): Promise<ContactRelationship[]> {
+    const records = await this.prisma.contactRelationship.findMany({
+      where: { requesterId: query.requesterId, status: 'pending' },
       orderBy: { id: 'asc' },
       take: query.take,
     });
