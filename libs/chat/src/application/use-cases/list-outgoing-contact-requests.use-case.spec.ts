@@ -87,4 +87,52 @@ describe('ListOutgoingContactRequestsUseCase', () => {
       contactRelationshipRepository.transitionFromPending,
     ).not.toHaveBeenCalled();
   });
+
+  it('requests one more row than the default limit of 20 from the repository', async () => {
+    const contactRelationshipRepository = createRepository({
+      findPendingByRequester: jest.fn().mockResolvedValue([]),
+    });
+    const useCase = new ListOutgoingContactRequestsUseCase(
+      contactRelationshipRepository,
+      profileDirectory,
+    );
+
+    await useCase.execute({ requesterId: 'user-requester' });
+
+    expect(
+      contactRelationshipRepository.findPendingByRequester,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      contactRelationshipRepository.findPendingByRequester,
+    ).toHaveBeenCalledWith({ requesterId: 'user-requester', take: 21 });
+  });
+
+  it('returns only the first 20 items and drops the lookahead row when the repository returns 21', async () => {
+    const requesterId = 'user-requester';
+    const relationships = Array.from({ length: 21 }, (_, index) =>
+      ContactRelationship.reconstitute({
+        id: `relationship-${index + 1}`,
+        requesterId,
+        recipientId: `user-recipient-${index + 1}`,
+        status: 'pending',
+      }),
+    );
+    const contactRelationshipRepository = createRepository({
+      findPendingByRequester: jest.fn().mockResolvedValue(relationships),
+    });
+    const useCase = new ListOutgoingContactRequestsUseCase(
+      contactRelationshipRepository,
+      profileDirectory,
+    );
+
+    const result = await useCase.execute({ requesterId });
+
+    expect(result.items).toHaveLength(20);
+    expect(result.items.map((item) => item.id)).toEqual(
+      relationships.slice(0, 20).map((relationship) => relationship.id),
+    );
+    expect(result.items.map((item) => item.id)).not.toContain(
+      'relationship-21',
+    );
+  });
 });

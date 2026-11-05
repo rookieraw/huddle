@@ -28,14 +28,15 @@ export class ListOutgoingContactRequestsUseCase {
   async execute(
     input: ListOutgoingContactRequestsInput,
   ): Promise<OutgoingContactRequestPage> {
+    const limit = OUTGOING_CONTACT_REQUEST_DEFAULT_LIMIT;
     const relationships =
       await this.contactRelationshipRepository.findPendingByRequester({
         requesterId: input.requesterId,
-        take: OUTGOING_CONTACT_REQUEST_DEFAULT_LIMIT,
+        take: limit + 1,
       });
 
     return {
-      items: relationships.map((relationship) => ({
+      items: relationships.slice(0, limit).map((relationship) => ({
         id: relationship.id,
         recipientId: relationship.recipientId,
         displayName: null,
