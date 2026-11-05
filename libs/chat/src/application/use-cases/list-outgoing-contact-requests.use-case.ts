@@ -3,6 +3,14 @@ import type { RequesterProfileDirectory } from '../ports/requester-profile-direc
 
 export const OUTGOING_CONTACT_REQUEST_DEFAULT_LIMIT = 20;
 
+const CURSOR_VERSION = 'v1';
+
+function encodeCursor(relationshipId: string): string {
+  return Buffer.from(`${CURSOR_VERSION}:${relationshipId}`, 'utf8').toString(
+    'base64url',
+  );
+}
+
 type ListOutgoingContactRequestsInput = {
   requesterId: string;
 };
@@ -35,14 +43,17 @@ export class ListOutgoingContactRequestsUseCase {
         take: limit + 1,
       });
 
+    const items = relationships.slice(0, limit).map((relationship) => ({
+      id: relationship.id,
+      recipientId: relationship.recipientId,
+      displayName: null,
+      status: 'pending' as const,
+    }));
+    const hasMore = relationships.length > limit;
+
     return {
-      items: relationships.slice(0, limit).map((relationship) => ({
-        id: relationship.id,
-        recipientId: relationship.recipientId,
-        displayName: null,
-        status: 'pending' as const,
-      })),
-      nextCursor: null,
+      items,
+      nextCursor: hasMore ? encodeCursor(items[items.length - 1].id) : null,
     };
   }
 }
