@@ -1,5 +1,8 @@
 import { ContactRelationship } from '../../domain/contact-relationship.entity';
-import { InvalidIncomingListCursorError } from './list-incoming-contact-requests.use-case';
+import {
+  InvalidIncomingListCursorError,
+  InvalidIncomingListLimitError,
+} from './list-incoming-contact-requests.use-case';
 import { ListOutgoingContactRequestsUseCase } from './list-outgoing-contact-requests.use-case';
 
 type ContactRelationshipRepositoryMock = {
@@ -280,6 +283,43 @@ describe('ListOutgoingContactRequestsUseCase', () => {
     },
   );
 
+  it.each([
+    ['zero', '0'],
+    ['above the maximum', '51'],
+    ['negative', '-1'],
+    ['a decimal', '1.5'],
+    ['non-numeric', 'abc'],
+    ['empty', ''],
+    ['signed', '+5'],
+    ['padded with a space', ' 5'],
+    ['in exponent notation', '1e1'],
+    ['hexadecimal', '0x14'],
+    ['a repeated query key', ['5', '6']],
+    ['a number instead of a string', 5],
+    ['null', null],
+  ])(
+    'rejects a limit that is %s without querying the repository',
+    async (_label, limit) => {
+      const contactRelationshipRepository = createRepository();
+      const useCase = new ListOutgoingContactRequestsUseCase(
+        contactRelationshipRepository,
+        profileDirectory,
+      );
+
+      const error: unknown = await useCase
+        .execute({ requesterId: 'user-requester', limit })
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(InvalidIncomingListLimitError);
+      expect((error as Error).message).toBe(
+        'limit must be an integer from 1 to 50.',
+      );
+      expect(
+        contactRelationshipRepository.findPendingByRequester,
+      ).not.toHaveBeenCalled();
+    },
+  );
+
   const encodeRaw = (value: string) =>
     Buffer.from(value, 'utf8').toString('base64url');
 
@@ -315,4 +355,21 @@ describe('ListOutgoingContactRequestsUseCase', () => {
       ).not.toHaveBeenCalled();
     },
   );
+
+  it('reports the invalid limit and not the invalid cursor when both are invalid', async () => {
+    const contactRelationshipRepository = createRepository();
+    const useCase = new ListOutgoingContactRequestsUseCase(
+      contactRelationshipRepository,
+      profileDirectory,
+    );
+
+    const error: unknown = await useCase
+      .execute({ requesterId: 'user-requester', limit: '0', cursor: '' })
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(InvalidIncomingListLimitError);
+    expect(
+      contactRelationshipRepository.findPendingByRequester,
+    ).not.toHaveBeenCalled();
+  });
 });

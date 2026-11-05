@@ -1,15 +1,29 @@
 import type { ContactRelationshipRepository } from '../ports/contact-relationship.repository.port';
-import { InvalidIncomingListCursorError } from './list-incoming-contact-requests.use-case';
+import {
+  InvalidIncomingListCursorError,
+  InvalidIncomingListLimitError,
+} from './list-incoming-contact-requests.use-case';
 import type { RequesterProfileDirectory } from '../ports/requester-profile-directory.port';
 
 export const OUTGOING_CONTACT_REQUEST_DEFAULT_LIMIT = 20;
+const OUTGOING_CONTACT_REQUEST_MAX_LIMIT = 50;
 
 function resolveLimit(rawLimit: unknown): number {
-  if (typeof rawLimit !== 'string') {
+  if (rawLimit === undefined) {
     return OUTGOING_CONTACT_REQUEST_DEFAULT_LIMIT;
   }
 
-  return Number(rawLimit);
+  if (typeof rawLimit !== 'string' || !/^[0-9]+$/.test(rawLimit)) {
+    throw new InvalidIncomingListLimitError();
+  }
+
+  const limit = Number(rawLimit);
+
+  if (limit < 1 || limit > OUTGOING_CONTACT_REQUEST_MAX_LIMIT) {
+    throw new InvalidIncomingListLimitError();
+  }
+
+  return limit;
 }
 
 const CURSOR_VERSION = 'v1';
