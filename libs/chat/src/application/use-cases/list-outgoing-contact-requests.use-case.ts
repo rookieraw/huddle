@@ -4,6 +4,14 @@ import type { RequesterProfileDirectory } from '../ports/requester-profile-direc
 
 export const OUTGOING_CONTACT_REQUEST_DEFAULT_LIMIT = 20;
 
+function resolveLimit(rawLimit: unknown): number {
+  if (typeof rawLimit !== 'string') {
+    return OUTGOING_CONTACT_REQUEST_DEFAULT_LIMIT;
+  }
+
+  return Number(rawLimit);
+}
+
 const CURSOR_VERSION = 'v1';
 
 function encodeCursor(relationshipId: string): string {
@@ -39,6 +47,7 @@ function resolveAfterId(rawCursor: unknown): string | undefined {
 
 type ListOutgoingContactRequestsInput = {
   requesterId: string;
+  limit?: unknown;
   cursor?: unknown;
 };
 
@@ -63,7 +72,7 @@ export class ListOutgoingContactRequestsUseCase {
   async execute(
     input: ListOutgoingContactRequestsInput,
   ): Promise<OutgoingContactRequestPage> {
-    const limit = OUTGOING_CONTACT_REQUEST_DEFAULT_LIMIT;
+    const limit = resolveLimit(input.limit);
     const afterId = resolveAfterId(input.cursor);
     const relationships =
       await this.contactRelationshipRepository.findPendingByRequester({

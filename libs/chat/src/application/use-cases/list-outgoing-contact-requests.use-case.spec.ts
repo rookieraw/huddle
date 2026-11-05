@@ -222,6 +222,64 @@ describe('ListOutgoingContactRequestsUseCase', () => {
     });
   });
 
+  it('uses an explicit limit for the page size and the lookahead row', async () => {
+    const requesterId = 'user-requester';
+    const relationships = Array.from({ length: 6 }, (_, index) =>
+      ContactRelationship.reconstitute({
+        id: `relationship-${index + 1}`,
+        requesterId,
+        recipientId: `user-recipient-${index + 1}`,
+        status: 'pending',
+      }),
+    );
+    const contactRelationshipRepository = createRepository({
+      findPendingByRequester: jest.fn().mockResolvedValue(relationships),
+    });
+    const useCase = new ListOutgoingContactRequestsUseCase(
+      contactRelationshipRepository,
+      profileDirectory,
+    );
+
+    const result = await useCase.execute({ requesterId, limit: '5' });
+
+    expect(
+      contactRelationshipRepository.findPendingByRequester,
+    ).toHaveBeenCalledWith({ requesterId, take: 6 });
+    expect(result.items.map((item) => item.id)).toEqual([
+      'relationship-1',
+      'relationship-2',
+      'relationship-3',
+      'relationship-4',
+      'relationship-5',
+    ]);
+    expect(result.nextCursor).toEqual(expect.any(String));
+  });
+
+  it.each([
+    ['1', 2],
+    ['50', 51],
+  ])(
+    'accepts the limit %s and asks the repository for take %i',
+    async (limit, expectedTake) => {
+      const contactRelationshipRepository = createRepository({
+        findPendingByRequester: jest.fn().mockResolvedValue([]),
+      });
+      const useCase = new ListOutgoingContactRequestsUseCase(
+        contactRelationshipRepository,
+        profileDirectory,
+      );
+
+      await useCase.execute({ requesterId: 'user-requester', limit });
+
+      expect(
+        contactRelationshipRepository.findPendingByRequester,
+      ).toHaveBeenCalledWith({
+        requesterId: 'user-requester',
+        take: expectedTake,
+      });
+    },
+  );
+
   const encodeRaw = (value: string) =>
     Buffer.from(value, 'utf8').toString('base64url');
 
