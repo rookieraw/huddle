@@ -1,4 +1,5 @@
 import { ContactRelationship } from '../../domain/contact-relationship.entity';
+import { InvalidIncomingListCursorError } from './list-incoming-contact-requests.use-case';
 import { ListOutgoingContactRequestsUseCase } from './list-outgoing-contact-requests.use-case';
 
 type ContactRelationshipRepositoryMock = {
@@ -220,4 +221,40 @@ describe('ListOutgoingContactRequestsUseCase', () => {
       afterRelationshipId: 'relationship-20',
     });
   });
+
+  const encodeRaw = (value: string) =>
+    Buffer.from(value, 'utf8').toString('base64url');
+
+  it.each([
+    ['empty', ''],
+    ['not base64url', 'not a cursor!'],
+    ['base64 with padding', `${encodeRaw('v1:relationship-1')}=`],
+    ['plain text', 'relationship-1'],
+    ['an unsupported version', encodeRaw('v2:relationship-1')],
+    ['missing the version', encodeRaw('relationship-1')],
+    ['missing the id', encodeRaw('v1:')],
+    ['an id containing a NUL character', encodeRaw('v1:relationship-\u0000-1')],
+    ['a repeated query key', [encodeRaw('v1:relationship-1'), 'x']],
+    ['a number instead of a string', 5],
+    ['null', null],
+  ])(
+    'rejects a cursor that is %s without querying the repository',
+    async (_label, cursor) => {
+      const contactRelationshipRepository = createRepository();
+      const useCase = new ListOutgoingContactRequestsUseCase(
+        contactRelationshipRepository,
+        profileDirectory,
+      );
+
+      const error: unknown = await useCase
+        .execute({ requesterId: 'user-requester', cursor })
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(InvalidIncomingListCursorError);
+      expect((error as Error).message).toBe('cursor must be a valid cursor.');
+      expect(
+        contactRelationshipRepository.findPendingByRequester,
+      ).not.toHaveBeenCalled();
+    },
+  );
 });

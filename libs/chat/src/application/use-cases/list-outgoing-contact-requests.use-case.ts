@@ -1,4 +1,5 @@
 import type { ContactRelationshipRepository } from '../ports/contact-relationship.repository.port';
+import { InvalidIncomingListCursorError } from './list-incoming-contact-requests.use-case';
 import type { RequesterProfileDirectory } from '../ports/requester-profile-directory.port';
 
 export const OUTGOING_CONTACT_REQUEST_DEFAULT_LIMIT = 20;
@@ -12,13 +13,28 @@ function encodeCursor(relationshipId: string): string {
 }
 
 function resolveAfterId(rawCursor: unknown): string | undefined {
-  if (typeof rawCursor !== 'string') {
+  if (rawCursor === undefined) {
     return undefined;
   }
 
-  return Buffer.from(rawCursor, 'base64url')
-    .toString('utf8')
-    .slice(`${CURSOR_VERSION}:`.length);
+  if (typeof rawCursor !== 'string' || !/^[A-Za-z0-9_-]+$/.test(rawCursor)) {
+    throw new InvalidIncomingListCursorError();
+  }
+
+  const decoded = Buffer.from(rawCursor, 'base64url');
+  const text = decoded.toString('utf8');
+  const prefix = `${CURSOR_VERSION}:`;
+
+  if (
+    decoded.toString('base64url') !== rawCursor ||
+    !text.startsWith(prefix) ||
+    text.length === prefix.length ||
+    text.includes('\u0000')
+  ) {
+    throw new InvalidIncomingListCursorError();
+  }
+
+  return text.slice(prefix.length);
 }
 
 type ListOutgoingContactRequestsInput = {
