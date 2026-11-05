@@ -184,4 +184,40 @@ describe('ListOutgoingContactRequestsUseCase', () => {
     expect(result.nextCursor).not.toBe('relationship-20');
     expect(result.nextCursor).not.toContain('relationship-20');
   });
+
+  it('passes the id decoded from a returned nextCursor to the repository as the continuation point', async () => {
+    const requesterId = 'user-requester';
+    const relationships = Array.from({ length: 21 }, (_, index) =>
+      ContactRelationship.reconstitute({
+        id: `relationship-${index + 1}`,
+        requesterId,
+        recipientId: `user-recipient-${index + 1}`,
+        status: 'pending',
+      }),
+    );
+    const contactRelationshipRepository = createRepository({
+      findPendingByRequester: jest
+        .fn()
+        .mockResolvedValueOnce(relationships)
+        .mockResolvedValueOnce([]),
+    });
+    const useCase = new ListOutgoingContactRequestsUseCase(
+      contactRelationshipRepository,
+      profileDirectory,
+    );
+
+    const firstPage = await useCase.execute({ requesterId });
+    await useCase.execute({ requesterId, cursor: firstPage.nextCursor });
+
+    expect(
+      contactRelationshipRepository.findPendingByRequester,
+    ).toHaveBeenCalledTimes(2);
+    expect(
+      contactRelationshipRepository.findPendingByRequester,
+    ).toHaveBeenLastCalledWith({
+      requesterId,
+      take: 21,
+      afterRelationshipId: 'relationship-20',
+    });
+  });
 });

@@ -11,8 +11,19 @@ function encodeCursor(relationshipId: string): string {
   );
 }
 
+function resolveAfterId(rawCursor: unknown): string | undefined {
+  if (typeof rawCursor !== 'string') {
+    return undefined;
+  }
+
+  return Buffer.from(rawCursor, 'base64url')
+    .toString('utf8')
+    .slice(`${CURSOR_VERSION}:`.length);
+}
+
 type ListOutgoingContactRequestsInput = {
   requesterId: string;
+  cursor?: unknown;
 };
 
 export type OutgoingContactRequestItem = {
@@ -37,10 +48,12 @@ export class ListOutgoingContactRequestsUseCase {
     input: ListOutgoingContactRequestsInput,
   ): Promise<OutgoingContactRequestPage> {
     const limit = OUTGOING_CONTACT_REQUEST_DEFAULT_LIMIT;
+    const afterId = resolveAfterId(input.cursor);
     const relationships =
       await this.contactRelationshipRepository.findPendingByRequester({
         requesterId: input.requesterId,
         take: limit + 1,
+        ...(afterId !== undefined && { afterRelationshipId: afterId }),
       });
 
     const items = relationships.slice(0, limit).map((relationship) => ({
