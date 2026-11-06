@@ -95,10 +95,23 @@ export class ListOutgoingContactRequestsUseCase {
         ...(afterId !== undefined && { afterRelationshipId: afterId }),
       });
 
-    const items = relationships.slice(0, limit).map((relationship) => ({
+    const page = relationships.slice(0, limit);
+    const displayNames = new Map<string, string>();
+
+    if (page.length > 0) {
+      const profiles = await this.profileDirectory.findProfiles(
+        page.map((relationship) => relationship.recipientId),
+      );
+
+      for (const profile of profiles) {
+        displayNames.set(profile.userId, profile.displayName);
+      }
+    }
+
+    const items = page.map((relationship) => ({
       id: relationship.id,
       recipientId: relationship.recipientId,
-      displayName: null,
+      displayName: displayNames.get(relationship.recipientId) ?? null,
       status: 'pending' as const,
     }));
     const hasMore = relationships.length > limit;

@@ -372,4 +372,118 @@ describe('ListOutgoingContactRequestsUseCase', () => {
       contactRelationshipRepository.findPendingByRequester,
     ).not.toHaveBeenCalled();
   });
+
+  it('looks up the recipient profiles once and gives each item its own recipient display name regardless of the returned order', async () => {
+    const requesterId = 'user-requester';
+    const relationships = [1, 2].map((number) =>
+      ContactRelationship.reconstitute({
+        id: `relationship-${number}`,
+        requesterId,
+        recipientId: `user-recipient-${number}`,
+        status: 'pending',
+      }),
+    );
+    const contactRelationshipRepository = createRepository({
+      findPendingByRequester: jest.fn().mockResolvedValue(relationships),
+    });
+    const directory = createProfileDirectory({
+      findProfiles: jest.fn().mockResolvedValue([
+        { userId: 'user-recipient-2', displayName: 'Bob' },
+        { userId: 'user-recipient-1', displayName: 'Alice' },
+      ]),
+    });
+    const useCase = new ListOutgoingContactRequestsUseCase(
+      contactRelationshipRepository,
+      directory,
+    );
+
+    const result = await useCase.execute({ requesterId });
+
+    expect(directory.findProfiles).toHaveBeenCalledTimes(1);
+    expect(directory.findProfiles).toHaveBeenCalledWith([
+      'user-recipient-1',
+      'user-recipient-2',
+    ]);
+    expect(result.items).toMatchObject([
+      { id: 'relationship-1', displayName: 'Alice' },
+      { id: 'relationship-2', displayName: 'Bob' },
+    ]);
+  });
+
+  it('lists a request with a null display name when its recipient has no profile and keeps the other names matched by user id', async () => {
+    const requesterId = 'user-requester';
+    const relationships = [1, 2, 3].map((number) =>
+      ContactRelationship.reconstitute({
+        id: `relationship-${number}`,
+        requesterId,
+        recipientId: `user-recipient-${number}`,
+        status: 'pending',
+      }),
+    );
+    const contactRelationshipRepository = createRepository({
+      findPendingByRequester: jest.fn().mockResolvedValue(relationships),
+    });
+    const directory = createProfileDirectory({
+      findProfiles: jest.fn().mockResolvedValue([
+        { userId: 'user-recipient-3', displayName: 'Carol' },
+        { userId: 'user-recipient-1', displayName: 'Alice' },
+      ]),
+    });
+    const useCase = new ListOutgoingContactRequestsUseCase(
+      contactRelationshipRepository,
+      directory,
+    );
+
+    const result = await useCase.execute({ requesterId });
+
+    expect(result.items).toMatchObject([
+      { id: 'relationship-1', displayName: 'Alice' },
+      { id: 'relationship-2', displayName: null },
+      { id: 'relationship-3', displayName: 'Carol' },
+    ]);
+  });
+
+  it('sends at most 50 recipient ids to the profile directory and excludes the lookahead row at the maximum limit', async () => {
+    const requesterId = 'user-requester';
+    const relationships = Array.from({ length: 51 }, (_, index) =>
+      ContactRelationship.reconstitute({
+        id: `relationship-${index + 1}`,
+        requesterId,
+        recipientId: `user-recipient-${index + 1}`,
+        status: 'pending',
+      }),
+    );
+    const contactRelationshipRepository = createRepository({
+      findPendingByRequester: jest.fn().mockResolvedValue(relationships),
+    });
+    const useCase = new ListOutgoingContactRequestsUseCase(
+      contactRelationshipRepository,
+      profileDirectory,
+    );
+
+    const result = await useCase.execute({ requesterId, limit: '50' });
+
+    expect(profileDirectory.findProfiles).toHaveBeenCalledTimes(1);
+    const requestedIds = profileDirectory.findProfiles.mock
+      .calls[0][0] as string[];
+    expect(requestedIds).toHaveLength(50);
+    expect(requestedIds).not.toContain('user-recipient-51');
+    expect(result.items).toHaveLength(50);
+    expect(result.nextCursor).toEqual(expect.any(String));
+  });
+
+  it('returns an empty page without calling the profile directory when there are no pending requests', async () => {
+    const contactRelationshipRepository = createRepository({
+      findPendingByRequester: jest.fn().mockResolvedValue([]),
+    });
+    const useCase = new ListOutgoingContactRequestsUseCase(
+      contactRelationshipRepository,
+      profileDirectory,
+    );
+
+    const result = await useCase.execute({ requesterId: 'user-requester' });
+
+    expect(result).toEqual({ items: [], nextCursor: null });
+    expect(profileDirectory.findProfiles).not.toHaveBeenCalled();
+  });
 });
