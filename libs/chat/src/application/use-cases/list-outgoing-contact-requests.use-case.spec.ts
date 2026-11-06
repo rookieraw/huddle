@@ -259,31 +259,6 @@ describe('ListOutgoingContactRequestsUseCase', () => {
   });
 
   it.each([
-    ['1', 2],
-    ['50', 51],
-  ])(
-    'accepts the limit %s and asks the repository for take %i',
-    async (limit, expectedTake) => {
-      const contactRelationshipRepository = createRepository({
-        findPendingByRequester: jest.fn().mockResolvedValue([]),
-      });
-      const useCase = new ListOutgoingContactRequestsUseCase(
-        contactRelationshipRepository,
-        profileDirectory,
-      );
-
-      await useCase.execute({ requesterId: 'user-requester', limit });
-
-      expect(
-        contactRelationshipRepository.findPendingByRequester,
-      ).toHaveBeenCalledWith({
-        requesterId: 'user-requester',
-        take: expectedTake,
-      });
-    },
-  );
-
-  it.each([
     ['zero', '0'],
     ['above the maximum', '51'],
     ['negative', '-1'],
@@ -472,21 +447,6 @@ describe('ListOutgoingContactRequestsUseCase', () => {
     expect(result.nextCursor).toEqual(expect.any(String));
   });
 
-  it('returns an empty page without calling the profile directory when there are no pending requests', async () => {
-    const contactRelationshipRepository = createRepository({
-      findPendingByRequester: jest.fn().mockResolvedValue([]),
-    });
-    const useCase = new ListOutgoingContactRequestsUseCase(
-      contactRelationshipRepository,
-      profileDirectory,
-    );
-
-    const result = await useCase.execute({ requesterId: 'user-requester' });
-
-    expect(result).toEqual({ items: [], nextCursor: null });
-    expect(profileDirectory.findProfiles).not.toHaveBeenCalled();
-  });
-
   it('reports the listing as unavailable without calling the profile directory when the repository fails', async () => {
     const contactRelationshipRepository = createRepository({
       findPendingByRequester: jest
@@ -537,4 +497,44 @@ describe('ListOutgoingContactRequestsUseCase', () => {
       'Outgoing Contact requests are temporarily unavailable.',
     );
   });
+
+  it('returns an empty page without calling the profile directory when there are no pending requests', async () => {
+    const contactRelationshipRepository = createRepository({
+      findPendingByRequester: jest.fn().mockResolvedValue([]),
+    });
+    const useCase = new ListOutgoingContactRequestsUseCase(
+      contactRelationshipRepository,
+      profileDirectory,
+    );
+
+    const result = await useCase.execute({ requesterId: 'user-requester' });
+
+    expect(result).toEqual({ items: [], nextCursor: null });
+    expect(profileDirectory.findProfiles).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['1', 2],
+    ['50', 51],
+  ])(
+    'accepts the limit %s and asks the repository for take %i',
+    async (limit, expectedTake) => {
+      const contactRelationshipRepository = createRepository({
+        findPendingByRequester: jest.fn().mockResolvedValue([]),
+      });
+      const useCase = new ListOutgoingContactRequestsUseCase(
+        contactRelationshipRepository,
+        profileDirectory,
+      );
+
+      await useCase.execute({ requesterId: 'user-requester', limit });
+
+      expect(
+        contactRelationshipRepository.findPendingByRequester,
+      ).toHaveBeenCalledWith({
+        requesterId: 'user-requester',
+        take: expectedTake,
+      });
+    },
+  );
 });

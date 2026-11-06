@@ -4,8 +4,8 @@ import {
   InvalidContactRequestListLimitError,
 } from './contact-request-list-pagination';
 import {
-  IncomingContactRequestListingUnavailableError,
   ListIncomingContactRequestsUseCase,
+  IncomingContactRequestListingUnavailableError,
 } from './list-incoming-contact-requests.use-case';
 
 type ContactRelationshipRepositoryMock = {
