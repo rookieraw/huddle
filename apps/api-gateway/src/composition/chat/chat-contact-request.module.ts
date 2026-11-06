@@ -5,6 +5,7 @@ import {
   CONTACT_TARGET_DIRECTORY,
   ChatPersistenceModule,
   ListIncomingContactRequestsUseCase,
+  ListOutgoingContactRequestsUseCase,
   REQUESTER_PROFILE_DIRECTORY,
   RejectContactRequestUseCase,
   SendContactRequestUseCase,
@@ -63,11 +64,23 @@ import { IdentityRequesterProfileDirectoryAdapter } from './identity-requester-p
       provide: ListIncomingContactRequestsUseCase,
       useFactory: (
         contactRelationshipRepository: ContactRelationshipRepository,
-        requesterProfileDirectory: RequesterProfileDirectory,
+        profileDirectory: RequesterProfileDirectory,
       ) =>
         new ListIncomingContactRequestsUseCase(
           contactRelationshipRepository,
-          requesterProfileDirectory,
+          profileDirectory,
+        ),
+      inject: [CONTACT_RELATIONSHIP_REPOSITORY, REQUESTER_PROFILE_DIRECTORY],
+    },
+    {
+      provide: ListOutgoingContactRequestsUseCase,
+      useFactory: (
+        contactRelationshipRepository: ContactRelationshipRepository,
+        profileDirectory: RequesterProfileDirectory,
+      ) =>
+        new ListOutgoingContactRequestsUseCase(
+          contactRelationshipRepository,
+          profileDirectory,
         ),
       inject: [CONTACT_RELATIONSHIP_REPOSITORY, REQUESTER_PROFILE_DIRECTORY],
     },

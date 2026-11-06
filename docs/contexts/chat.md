@@ -1,7 +1,7 @@
 # Chat Context
 
-Status: Accepted target; Contact-request creation, acceptance, rejection, and incoming listing HTTP implemented
-Last reviewed: 2026-11-03
+Status: Accepted target; Contact-request creation, acceptance, rejection, incoming listing, and outgoing listing HTTP implemented
+Last reviewed: 2026-11-07
 
 ## Responsibility
 
@@ -73,6 +73,11 @@ known abuse exposure until the rate limiting and blocking capabilities that
 [`../architecture/security.md`](../architecture/security.md) defers exist;
 this Context does not design either here.
 
+A pending-only outgoing listing lets a requester observe that a sent request is
+no longer pending. The listing does not distinguish an accepted request from a
+rejected one, and this limit applies to that listing only; it does not decide
+what an accepted-Contact listing reveals.
+
 Required invariants:
 
 - A user cannot contact themselves.
@@ -119,6 +124,14 @@ requester-profile port and never stored by Chat. A requester without a profile
 is still listed with a null `displayName`. Repository failure and profile
 failure share one retryable unavailable outcome, classified without inspecting
 exception messages.
+
+The Application outgoing-listing query returns the pending relationships
+created by the acting `userId` with the same ordering and pagination as the
+incoming-listing query. Each item carries the recipient's current
+`displayName`, resolved through the same Chat-owned profile port and never
+stored by Chat. A recipient without a profile is still listed with a null
+`displayName`. Repository failure and profile failure share one retryable
+unavailable outcome that is separate from the incoming listing's.
 
 ### Conversation
 

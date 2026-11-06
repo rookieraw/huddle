@@ -1,6 +1,7 @@
 import type {
   AcceptContactRequestUseCase,
   ListIncomingContactRequestsUseCase,
+  ListOutgoingContactRequestsUseCase,
   RejectContactRequestUseCase,
   SendContactRequestUseCase,
 } from '@huddle/chat';
@@ -19,6 +20,9 @@ function createSubject() {
   const listIncomingContactRequestsUseCase = {
     execute: jest.fn(),
   };
+  const listOutgoingContactRequestsUseCase = {
+    execute: jest.fn(),
+  };
 
   return {
     controller: new ContactRequestsController(
@@ -26,11 +30,13 @@ function createSubject() {
       acceptContactRequestUseCase as unknown as AcceptContactRequestUseCase,
       rejectContactRequestUseCase as unknown as RejectContactRequestUseCase,
       listIncomingContactRequestsUseCase as unknown as ListIncomingContactRequestsUseCase,
+      listOutgoingContactRequestsUseCase as unknown as ListOutgoingContactRequestsUseCase,
     ),
     sendExecute: sendContactRequestUseCase.execute,
     acceptExecute: acceptContactRequestUseCase.execute,
     rejectExecute: rejectContactRequestUseCase.execute,
     listIncomingExecute: listIncomingContactRequestsUseCase.execute,
+    listOutgoingExecute: listOutgoingContactRequestsUseCase.execute,
   };
 }
 
@@ -67,6 +73,43 @@ describe('ContactRequestsController', () => {
     expect(listIncomingExecute).toHaveBeenCalledTimes(1);
     expect(listIncomingExecute).toHaveBeenCalledWith({
       recipientId: 'user-recipient',
+      limit: '5',
+      cursor: 'opaque-cursor-in',
+    });
+  });
+
+  it('delegates outgoing listing with the verified requester and raw limit and cursor, ignoring client-supplied actor values, and returns the page unchanged', async () => {
+    const { controller, listOutgoingExecute } = createSubject();
+    const page = {
+      items: [
+        {
+          id: 'relationship-1',
+          recipientId: 'user-recipient-1',
+          displayName: 'Alice',
+          status: 'pending' as const,
+        },
+      ],
+      nextCursor: 'opaque-cursor',
+    };
+    listOutgoingExecute.mockResolvedValueOnce(page);
+
+    await expect(
+      controller.listOutgoingContactRequests(
+        {
+          headers: {},
+          user: { userId: 'user-requester' },
+        },
+        {
+          limit: '5',
+          cursor: 'opaque-cursor-in',
+          requesterId: 'user-other',
+          userId: 'user-other',
+        },
+      ),
+    ).resolves.toBe(page);
+    expect(listOutgoingExecute).toHaveBeenCalledTimes(1);
+    expect(listOutgoingExecute).toHaveBeenCalledWith({
+      requesterId: 'user-requester',
       limit: '5',
       cursor: 'opaque-cursor-in',
     });

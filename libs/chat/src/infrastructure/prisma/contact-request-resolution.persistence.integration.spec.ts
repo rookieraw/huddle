@@ -8,6 +8,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import type {
   ContactRelationshipRepository,
   FindPendingByRecipientQuery,
+  FindPendingByRequesterQuery,
 } from '../../application/ports/contact-relationship.repository.port';
 import type { ContactTargetDirectory } from '../../application/ports/contact-target-directory.port';
 import {
@@ -106,6 +107,12 @@ class LoadBarrierContactRelationshipRepository implements ContactRelationshipRep
     query: FindPendingByRecipientQuery,
   ): Promise<ContactRelationship[]> {
     return this.realRepository.findPendingByRecipient(query);
+  }
+
+  findPendingByRequester(
+    query: FindPendingByRequesterQuery,
+  ): Promise<ContactRelationship[]> {
+    return this.realRepository.findPendingByRequester(query);
   }
 
   save(relationship: ContactRelationship): Promise<ContactRelationship> {

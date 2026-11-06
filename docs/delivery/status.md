@@ -1,10 +1,10 @@
 # Project Status
 
-Last updated: 2026-11-03
+Last updated: 2026-11-07
 
 Current implementation phase: Phase 2 — Contacts and Chat
 
-Current activity: Contact-request creation, acceptance, rejection, and incoming listing HTTP delivery implemented and verified
+Current activity: Contact-request creation, acceptance, rejection, incoming listing, and outgoing listing HTTP delivery implemented and verified
 
 Portfolio Release target: End of Phase 4
 
@@ -24,22 +24,22 @@ It does not define target architecture, detailed Phase scope, or task-level work
 
 ## Status Summary
 
-| Area                        | Status                                                                                                                                                          |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Phase 1 Identity            | Completed                                                                                                                                                       |
-| Phase 2 Identity additions  | `displayName` and the three public application APIs implemented                                                                                                 |
-| Contacts                    | Creation, acceptance, rejection, and incoming-listing HTTP, Application commands and queries, and persistence implemented; remaining lifecycle/frontend pending |
-| Direct and Group Chat       | Not started                                                                                                                                                     |
-| MongoDB Message persistence | Not started                                                                                                                                                     |
-| Realtime Chat               | Not started                                                                                                                                                     |
-| Deployment foundation       | Planned                                                                                                                                                         |
-| OpenAPI and Swagger UI      | Dependency declared; generation and UI not configured; planned for Phase 2.5                                                                                    |
-| Voice and Video Calling     | Planned                                                                                                                                                         |
-| Billing                     | Planned                                                                                                                                                         |
-| First Portfolio Release     | Planned                                                                                                                                                         |
-| Meetings                    | Later                                                                                                                                                           |
-| Notification                | Later                                                                                                                                                           |
-| Hardening                   | Later                                                                                                                                                           |
+| Area                        | Status                                                                                                                                                                            |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 1 Identity            | Completed                                                                                                                                                                         |
+| Phase 2 Identity additions  | `displayName` and the three public application APIs implemented                                                                                                                   |
+| Contacts                    | Creation, acceptance, rejection, incoming-listing, and outgoing-listing HTTP, Application commands and queries, and persistence implemented; remaining lifecycle/frontend pending |
+| Direct and Group Chat       | Not started                                                                                                                                                                       |
+| MongoDB Message persistence | Not started                                                                                                                                                                       |
+| Realtime Chat               | Not started                                                                                                                                                                       |
+| Deployment foundation       | Planned                                                                                                                                                                           |
+| OpenAPI and Swagger UI      | Dependency declared; generation and UI not configured; planned for Phase 2.5                                                                                                      |
+| Voice and Video Calling     | Planned                                                                                                                                                                           |
+| Billing                     | Planned                                                                                                                                                                           |
+| First Portfolio Release     | Planned                                                                                                                                                                           |
+| Meetings                    | Later                                                                                                                                                                             |
+| Notification                | Later                                                                                                                                                                             |
+| Hardening                   | Later                                                                                                                                                                             |
 
 `Planned` and `Later` do not mean implemented.
 
@@ -104,8 +104,9 @@ The public boundary does not add Chat production adapters, directory or profile 
 | Contact-request acceptance, `POST /contact-requests/{contactRequestId}/accept` | [`../contracts/chat-contacts-http.md`](../contracts/chat-contacts-http.md) |
 | Contact-request rejection, `POST /contact-requests/{contactRequestId}/reject`  | [`../contracts/chat-contacts-http.md`](../contracts/chat-contacts-http.md) |
 | Incoming Contact-request listing, `GET /contact-requests/incoming`             | [`../contracts/chat-contacts-http.md`](../contracts/chat-contacts-http.md) |
+| Outgoing Contact-request listing, `GET /contact-requests/outgoing`             | [`../contracts/chat-contacts-http.md`](../contracts/chat-contacts-http.md) |
 
-The Contact-request Domain, Application commands and query, and Chat-owned PostgreSQL persistence are implemented. Persistence is verified against real PostgreSQL integration tests under `libs/chat`. The Contacts HTTP operations have no generated OpenAPI operation and no frontend flow.
+The Contact-request Domain, Application commands and queries, and Chat-owned PostgreSQL persistence are implemented. Persistence is verified against real PostgreSQL integration tests under `libs/chat`. The Contacts HTTP operations have no generated OpenAPI operation and no frontend flow.
 
 ## Current Activity
 
@@ -175,7 +176,7 @@ Failure at a future gate must be recorded when discovered. It must not be report
 
 Do not currently assume the existence of:
 
-- Outgoing Contact-request listing, accepted-Contact listing, Contact removal, and frontend Contacts delivery;
+- Accepted-Contact listing, Contact removal, and frontend Contacts delivery;
 - Direct or Group Chat;
 - MongoDB Message persistence;
 - Chat Socket.IO events;

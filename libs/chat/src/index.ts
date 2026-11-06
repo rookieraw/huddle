@@ -29,15 +29,25 @@ export type {
   RequesterProfileDirectory,
 } from './application/ports/requester-profile-directory.port';
 export { REQUESTER_PROFILE_DIRECTORY } from './application/ports/requester-profile-directory.port';
+export {
+  InvalidContactRequestListCursorError,
+  InvalidContactRequestListLimitError,
+} from './application/use-cases/contact-request-list-pagination';
 export type {
   IncomingContactRequestItem,
   IncomingContactRequestPage,
 } from './application/use-cases/list-incoming-contact-requests.use-case';
 export {
-  ContactRequestListingUnavailableError,
-  InvalidIncomingListCursorError,
-  InvalidIncomingListLimitError,
   ListIncomingContactRequestsUseCase,
+  IncomingContactRequestListingUnavailableError,
 } from './application/use-cases/list-incoming-contact-requests.use-case';
+export type {
+  OutgoingContactRequestItem,
+  OutgoingContactRequestPage,
+} from './application/use-cases/list-outgoing-contact-requests.use-case';
+export {
+  ListOutgoingContactRequestsUseCase,
+  OutgoingContactRequestListingUnavailableError,
+} from './application/use-cases/list-outgoing-contact-requests.use-case';
 export { ChatPersistenceModule } from './infrastructure/nestjs/chat-persistence.module';
 export { CHAT_PRISMA_CLIENT } from './infrastructure/prisma/chat-prisma-client.provider';

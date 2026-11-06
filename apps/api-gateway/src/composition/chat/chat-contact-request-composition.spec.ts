@@ -14,6 +14,7 @@ import {
   ChatPersistenceModule,
   ContactRequestUnavailableError,
   ListIncomingContactRequestsUseCase,
+  ListOutgoingContactRequestsUseCase,
   REQUESTER_PROFILE_DIRECTORY,
   RejectContactRequestUseCase,
   SendContactRequestUseCase,
@@ -424,6 +425,80 @@ describe('Chat Contact-request production composition', () => {
         {
           id: 'relationship-1',
           requesterId: 'user-requester-1',
+          displayName: 'Alice',
+          status: 'pending',
+        },
+      ],
+      nextCursor: null,
+    });
+  });
+
+  it('resolves the outgoing listing through the Identity profile adapter and both Chat ports', async () => {
+    const getProfiles = jest.fn().mockResolvedValue({
+      profiles: [{ userId: 'user-recipient-1', displayName: 'Alice' }],
+      missingUserIds: [],
+    });
+    const findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'relationship-1',
+        requesterId: 'user-requester',
+        recipientId: 'user-recipient-1',
+        status: 'pending',
+      },
+    ]);
+    const prisma = {
+      contactRelationship: {
+        findMany,
+      },
+    };
+    testingModule = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          ignoreEnvFile: true,
+          load: [
+            () => ({
+              DATABASE_URL:
+                'postgresql://test:test@localhost:5432/chat-composition',
+              GITHUB_CALLBACK_URL:
+                'http://localhost/auth/oauth/github/callback',
+              GITHUB_CLIENT_ID: 'composition-github-client',
+              GITHUB_CLIENT_SECRET: 'composition-github-secret',
+              GOOGLE_CALLBACK_URL:
+                'http://localhost/auth/oauth/google/callback',
+              GOOGLE_CLIENT_ID: 'composition-google-client',
+              GOOGLE_CLIENT_SECRET: 'composition-google-secret',
+              JWT_SECRET: 'composition-jwt-secret',
+            }),
+          ],
+        }),
+        ChatContactRequestModule,
+      ],
+    })
+      .overrideProvider(DIRECTORY_API)
+      .useValue({ userExists: jest.fn() })
+      .overrideProvider(PROFILE_QUERY_API)
+      .useValue({ getProfiles })
+      .overrideProvider(CHAT_PRISMA_CLIENT)
+      .useValue(prisma)
+      .compile();
+
+    const useCase = testingModule.get(ListOutgoingContactRequestsUseCase);
+    const result = await useCase.execute({ requesterId: 'user-requester' });
+
+    expect(findMany).toHaveBeenCalledTimes(1);
+    expect(findMany).toHaveBeenCalledWith({
+      where: { requesterId: 'user-requester', status: 'pending' },
+      orderBy: { id: 'asc' },
+      take: 21,
+    });
+    expect(getProfiles).toHaveBeenCalledTimes(1);
+    expect(getProfiles).toHaveBeenCalledWith(['user-recipient-1']);
+    expect(result).toEqual({
+      items: [
+        {
+          id: 'relationship-1',
+          recipientId: 'user-recipient-1',
           displayName: 'Alice',
           status: 'pending',
         },

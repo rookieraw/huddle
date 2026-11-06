@@ -10,6 +10,12 @@ export type FindPendingByRecipientQuery = {
   afterRelationshipId?: string;
 };
 
+export type FindPendingByRequesterQuery = {
+  requesterId: string;
+  take: number;
+  afterRelationshipId?: string;
+};
+
 export interface ContactRelationshipRepository {
   findById(relationshipId: string): Promise<ContactRelationship | null>;
   findCurrentByUserPair(
@@ -18,6 +24,9 @@ export interface ContactRelationshipRepository {
   ): Promise<ContactRelationship | null>;
   findPendingByRecipient(
     query: FindPendingByRecipientQuery,
+  ): Promise<ContactRelationship[]>;
+  findPendingByRequester(
+    query: FindPendingByRequesterQuery,
   ): Promise<ContactRelationship[]>;
   save(relationship: ContactRelationship): Promise<ContactRelationship>;
   transitionFromPending(relationship: ContactRelationship): Promise<boolean>;
