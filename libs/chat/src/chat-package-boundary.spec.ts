@@ -56,4 +56,21 @@ describe('@huddle/chat acceptance package boundary', () => {
       'INCOMING_CONTACT_REQUEST_MAX_LIMIT',
     );
   });
+
+  it('exports the outgoing listing Application capability without exposing its implementation', () => {
+    expect(chatPackage).toEqual(
+      expect.objectContaining({
+        ListOutgoingContactRequestsUseCase: expect.any(Function),
+        OutgoingContactRequestListingUnavailableError: expect.any(Function),
+      }),
+    );
+    expect(chatPackage).not.toHaveProperty('ContactRelationship');
+    expect(chatPackage).not.toHaveProperty(
+      'PrismaContactRelationshipRepository',
+    );
+    expect(chatPackage).not.toHaveProperty('PrismaClient');
+    expect(chatPackage).not.toHaveProperty(
+      'OUTGOING_CONTACT_REQUEST_DEFAULT_LIMIT',
+    );
+  });
 });

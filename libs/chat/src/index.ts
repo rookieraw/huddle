@@ -39,5 +39,13 @@ export {
   InvalidIncomingListLimitError,
   ListIncomingContactRequestsUseCase,
 } from './application/use-cases/list-incoming-contact-requests.use-case';
+export type {
+  OutgoingContactRequestItem,
+  OutgoingContactRequestPage,
+} from './application/use-cases/list-outgoing-contact-requests.use-case';
+export {
+  ListOutgoingContactRequestsUseCase,
+  OutgoingContactRequestListingUnavailableError,
+} from './application/use-cases/list-outgoing-contact-requests.use-case';
 export { ChatPersistenceModule } from './infrastructure/nestjs/chat-persistence.module';
 export { CHAT_PRISMA_CLIENT } from './infrastructure/prisma/chat-prisma-client.provider';
