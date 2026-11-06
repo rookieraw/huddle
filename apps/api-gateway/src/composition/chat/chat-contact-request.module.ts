@@ -64,11 +64,11 @@ import { IdentityRequesterProfileDirectoryAdapter } from './identity-requester-p
       provide: ListIncomingContactRequestsUseCase,
       useFactory: (
         contactRelationshipRepository: ContactRelationshipRepository,
-        requesterProfileDirectory: RequesterProfileDirectory,
+        profileDirectory: RequesterProfileDirectory,
       ) =>
         new ListIncomingContactRequestsUseCase(
           contactRelationshipRepository,
-          requesterProfileDirectory,
+          profileDirectory,
         ),
       inject: [CONTACT_RELATIONSHIP_REPOSITORY, REQUESTER_PROFILE_DIRECTORY],
     },

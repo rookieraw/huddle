@@ -34,11 +34,13 @@ export type {
   IncomingContactRequestPage,
 } from './application/use-cases/list-incoming-contact-requests.use-case';
 export {
-  ContactRequestListingUnavailableError,
-  InvalidIncomingListCursorError,
-  InvalidIncomingListLimitError,
+  IncomingContactRequestListingUnavailableError,
   ListIncomingContactRequestsUseCase,
 } from './application/use-cases/list-incoming-contact-requests.use-case';
+export {
+  InvalidContactRequestListCursorError,
+  InvalidContactRequestListLimitError,
+} from './application/use-cases/contact-request-list-pagination';
 export type {
   OutgoingContactRequestItem,
   OutgoingContactRequestPage,

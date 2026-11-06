@@ -3,74 +3,21 @@ import type {
   ContactRelationshipRepository,
   FindPendingByRequesterQuery,
 } from '../ports/contact-relationship.repository.port';
-import {
-  InvalidIncomingListCursorError,
-  InvalidIncomingListLimitError,
-} from './list-incoming-contact-requests.use-case';
 import type {
   RequesterProfile,
   RequesterProfileDirectory,
 } from '../ports/requester-profile-directory.port';
-
-export const OUTGOING_CONTACT_REQUEST_DEFAULT_LIMIT = 20;
-const OUTGOING_CONTACT_REQUEST_MAX_LIMIT = 50;
+import {
+  encodeCursor,
+  resolveAfterId,
+  resolveLimit,
+} from './contact-request-list-pagination';
 
 export class OutgoingContactRequestListingUnavailableError extends Error {
   constructor() {
     super('Outgoing Contact requests are temporarily unavailable.');
     this.name = 'OutgoingContactRequestListingUnavailableError';
   }
-}
-
-function resolveLimit(rawLimit: unknown): number {
-  if (rawLimit === undefined) {
-    return OUTGOING_CONTACT_REQUEST_DEFAULT_LIMIT;
-  }
-
-  if (typeof rawLimit !== 'string' || !/^[0-9]+$/.test(rawLimit)) {
-    throw new InvalidIncomingListLimitError();
-  }
-
-  const limit = Number(rawLimit);
-
-  if (limit < 1 || limit > OUTGOING_CONTACT_REQUEST_MAX_LIMIT) {
-    throw new InvalidIncomingListLimitError();
-  }
-
-  return limit;
-}
-
-const CURSOR_VERSION = 'v1';
-
-function encodeCursor(relationshipId: string): string {
-  return Buffer.from(`${CURSOR_VERSION}:${relationshipId}`, 'utf8').toString(
-    'base64url',
-  );
-}
-
-function resolveAfterId(rawCursor: unknown): string | undefined {
-  if (rawCursor === undefined) {
-    return undefined;
-  }
-
-  if (typeof rawCursor !== 'string' || !/^[A-Za-z0-9_-]+$/.test(rawCursor)) {
-    throw new InvalidIncomingListCursorError();
-  }
-
-  const decoded = Buffer.from(rawCursor, 'base64url');
-  const text = decoded.toString('utf8');
-  const prefix = `${CURSOR_VERSION}:`;
-
-  if (
-    decoded.toString('base64url') !== rawCursor ||
-    !text.startsWith(prefix) ||
-    text.length === prefix.length ||
-    text.includes('\u0000')
-  ) {
-    throw new InvalidIncomingListCursorError();
-  }
-
-  return text.slice(prefix.length);
 }
 
 type ListOutgoingContactRequestsInput = {

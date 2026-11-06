@@ -4,14 +4,14 @@ import {
   ContactRequestAcceptanceUnavailableError,
   ContactRequestAlreadyAcceptedError,
   ContactRequestAlreadyRejectedError,
-  ContactRequestListingUnavailableError,
+  IncomingContactRequestListingUnavailableError,
   ContactRequestRejectionNotAuthorizedError,
   ContactRequestRejectionUnavailableError,
   ContactRequestUnavailableError,
   ContactTargetLookupUnavailableError,
   ContactTargetNotFoundError,
-  InvalidIncomingListCursorError,
-  InvalidIncomingListLimitError,
+  InvalidContactRequestListCursorError,
+  InvalidContactRequestListLimitError,
   OutgoingContactRequestListingUnavailableError,
   SelfContactRequestError,
 } from '@huddle/chat';
@@ -82,7 +82,7 @@ describe('ContactRequestExceptionFilter', () => {
     const filter = new ContactRequestExceptionFilter();
     const { host, response } = createArgumentsHost();
 
-    filter.catch(new InvalidIncomingListLimitError(), host);
+    filter.catch(new InvalidContactRequestListLimitError(), host);
 
     expect(response.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
     expect(response.json).toHaveBeenCalledWith({
@@ -103,7 +103,7 @@ describe('ContactRequestExceptionFilter', () => {
     const filter = new ContactRequestExceptionFilter();
     const { host, response } = createArgumentsHost();
 
-    filter.catch(new InvalidIncomingListCursorError(), host);
+    filter.catch(new InvalidContactRequestListCursorError(), host);
 
     expect(response.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
     expect(response.json).toHaveBeenCalledWith({
@@ -203,7 +203,7 @@ describe('ContactRequestExceptionFilter', () => {
       message: 'Contact request rejection is temporarily unavailable.',
     },
     {
-      exception: new ContactRequestListingUnavailableError(),
+      exception: new IncomingContactRequestListingUnavailableError(),
       status: HttpStatus.SERVICE_UNAVAILABLE,
       code: 'CONTACT_REQUEST_LISTING_UNAVAILABLE',
       message: 'Incoming Contact requests are temporarily unavailable.',

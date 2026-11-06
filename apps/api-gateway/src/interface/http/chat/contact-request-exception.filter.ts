@@ -4,14 +4,14 @@ import {
   ContactRequestAcceptanceUnavailableError,
   ContactRequestAlreadyAcceptedError,
   ContactRequestAlreadyRejectedError,
-  ContactRequestListingUnavailableError,
+  IncomingContactRequestListingUnavailableError,
   ContactRequestRejectionNotAuthorizedError,
   ContactRequestRejectionUnavailableError,
   ContactRequestUnavailableError,
   ContactTargetLookupUnavailableError,
   ContactTargetNotFoundError,
-  InvalidIncomingListCursorError,
-  InvalidIncomingListLimitError,
+  InvalidContactRequestListCursorError,
+  InvalidContactRequestListLimitError,
   OutgoingContactRequestListingUnavailableError,
   SelfContactRequestError,
 } from '@huddle/chat';
@@ -147,7 +147,7 @@ export class ContactRequestExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    if (exception instanceof ContactRequestListingUnavailableError) {
+    if (exception instanceof IncomingContactRequestListingUnavailableError) {
       writeErrorResponse(response, HttpStatus.SERVICE_UNAVAILABLE, {
         code: 'CONTACT_REQUEST_LISTING_UNAVAILABLE',
         message: 'Incoming Contact requests are temporarily unavailable.',
@@ -165,7 +165,7 @@ export class ContactRequestExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    if (exception instanceof InvalidIncomingListLimitError) {
+    if (exception instanceof InvalidContactRequestListLimitError) {
       writeErrorResponse(response, HttpStatus.BAD_REQUEST, {
         code: 'VALIDATION_FAILED',
         message: 'Request validation failed.',
@@ -180,7 +180,7 @@ export class ContactRequestExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    if (exception instanceof InvalidIncomingListCursorError) {
+    if (exception instanceof InvalidContactRequestListCursorError) {
       writeErrorResponse(response, HttpStatus.BAD_REQUEST, {
         code: 'VALIDATION_FAILED',
         message: 'Request validation failed.',

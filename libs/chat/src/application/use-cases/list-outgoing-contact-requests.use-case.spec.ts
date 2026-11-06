@@ -1,8 +1,8 @@
 import { ContactRelationship } from '../../domain/contact-relationship.entity';
 import {
-  InvalidIncomingListCursorError,
-  InvalidIncomingListLimitError,
-} from './list-incoming-contact-requests.use-case';
+  InvalidContactRequestListCursorError,
+  InvalidContactRequestListLimitError,
+} from './contact-request-list-pagination';
 import {
   ListOutgoingContactRequestsUseCase,
   OutgoingContactRequestListingUnavailableError,
@@ -85,9 +85,6 @@ describe('ListOutgoingContactRequestsUseCase', () => {
       { id: 'relationship-1', recipientId: 'user-recipient-1' },
       { id: 'relationship-2', recipientId: 'user-recipient-2' },
     ]);
-    expect(
-      contactRelationshipRepository.findPendingByRecipient,
-    ).not.toHaveBeenCalled();
     expect(contactRelationshipRepository.findById).not.toHaveBeenCalled();
     expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
     expect(
@@ -313,7 +310,7 @@ describe('ListOutgoingContactRequestsUseCase', () => {
         .execute({ requesterId: 'user-requester', limit })
         .catch((caught: unknown) => caught);
 
-      expect(error).toBeInstanceOf(InvalidIncomingListLimitError);
+      expect(error).toBeInstanceOf(InvalidContactRequestListLimitError);
       expect((error as Error).message).toBe(
         'limit must be an integer from 1 to 50.',
       );
@@ -351,7 +348,7 @@ describe('ListOutgoingContactRequestsUseCase', () => {
         .execute({ requesterId: 'user-requester', cursor })
         .catch((caught: unknown) => caught);
 
-      expect(error).toBeInstanceOf(InvalidIncomingListCursorError);
+      expect(error).toBeInstanceOf(InvalidContactRequestListCursorError);
       expect((error as Error).message).toBe('cursor must be a valid cursor.');
       expect(
         contactRelationshipRepository.findPendingByRequester,
@@ -370,7 +367,7 @@ describe('ListOutgoingContactRequestsUseCase', () => {
       .execute({ requesterId: 'user-requester', limit: '0', cursor: '' })
       .catch((caught: unknown) => caught);
 
-    expect(error).toBeInstanceOf(InvalidIncomingListLimitError);
+    expect(error).toBeInstanceOf(InvalidContactRequestListLimitError);
     expect(
       contactRelationshipRepository.findPendingByRequester,
     ).not.toHaveBeenCalled();

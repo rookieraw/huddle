@@ -1,8 +1,10 @@
 import { ContactRelationship } from '../../domain/contact-relationship.entity';
 import {
-  ContactRequestListingUnavailableError,
-  InvalidIncomingListCursorError,
-  InvalidIncomingListLimitError,
+  InvalidContactRequestListCursorError,
+  InvalidContactRequestListLimitError,
+} from './contact-request-list-pagination';
+import {
+  IncomingContactRequestListingUnavailableError,
   ListIncomingContactRequestsUseCase,
 } from './list-incoming-contact-requests.use-case';
 
@@ -29,13 +31,13 @@ function createRepository(
   };
 }
 
-type RequesterProfileDirectoryMock = {
+type ProfileDirectoryMock = {
   findProfiles: jest.Mock;
 };
 
 function createProfileDirectory(
-  overrides: Partial<RequesterProfileDirectoryMock> = {},
-): RequesterProfileDirectoryMock {
+  overrides: Partial<ProfileDirectoryMock> = {},
+): ProfileDirectoryMock {
   return {
     findProfiles: jest.fn().mockResolvedValue([]),
     ...overrides,
@@ -43,10 +45,10 @@ function createProfileDirectory(
 }
 
 describe('ListIncomingContactRequestsUseCase', () => {
-  let requesterProfileDirectory: RequesterProfileDirectoryMock;
+  let profileDirectory: ProfileDirectoryMock;
 
   beforeEach(() => {
-    requesterProfileDirectory = createProfileDirectory();
+    profileDirectory = createProfileDirectory();
   });
 
   it('queries the repository for pending relationships addressed to the actor and returns them as page items', async () => {
@@ -68,7 +70,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
     });
     const useCase = new ListIncomingContactRequestsUseCase(
       contactRelationshipRepository,
-      requesterProfileDirectory,
+      profileDirectory,
     );
 
     const result = await useCase.execute({ recipientId });
@@ -96,7 +98,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
     });
     const useCase = new ListIncomingContactRequestsUseCase(
       contactRelationshipRepository,
-      requesterProfileDirectory,
+      profileDirectory,
     );
 
     await useCase.execute({ recipientId: 'user-recipient' });
@@ -124,7 +126,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
     });
     const useCase = new ListIncomingContactRequestsUseCase(
       contactRelationshipRepository,
-      requesterProfileDirectory,
+      profileDirectory,
     );
 
     const result = await useCase.execute({ recipientId });
@@ -153,7 +155,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
     });
     const useCase = new ListIncomingContactRequestsUseCase(
       contactRelationshipRepository,
-      requesterProfileDirectory,
+      profileDirectory,
     );
 
     const result = await useCase.execute({ recipientId });
@@ -177,7 +179,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
     });
     const useCase = new ListIncomingContactRequestsUseCase(
       contactRelationshipRepository,
-      requesterProfileDirectory,
+      profileDirectory,
     );
 
     const result = await useCase.execute({ recipientId });
@@ -205,7 +207,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
     });
     const useCase = new ListIncomingContactRequestsUseCase(
       contactRelationshipRepository,
-      requesterProfileDirectory,
+      profileDirectory,
     );
 
     const firstPage = await useCase.execute({ recipientId });
@@ -238,7 +240,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
     });
     const useCase = new ListIncomingContactRequestsUseCase(
       contactRelationshipRepository,
-      requesterProfileDirectory,
+      profileDirectory,
     );
 
     const result = await useCase.execute({ recipientId, limit: '5' });
@@ -276,14 +278,14 @@ describe('ListIncomingContactRequestsUseCase', () => {
       const contactRelationshipRepository = createRepository();
       const useCase = new ListIncomingContactRequestsUseCase(
         contactRelationshipRepository,
-        requesterProfileDirectory,
+        profileDirectory,
       );
 
       const error: unknown = await useCase
         .execute({ recipientId: 'user-recipient', limit })
         .catch((caught: unknown) => caught);
 
-      expect(error).toBeInstanceOf(InvalidIncomingListLimitError);
+      expect(error).toBeInstanceOf(InvalidContactRequestListLimitError);
       expect((error as Error).message).toBe(
         'limit must be an integer from 1 to 50.',
       );
@@ -314,14 +316,14 @@ describe('ListIncomingContactRequestsUseCase', () => {
       const contactRelationshipRepository = createRepository();
       const useCase = new ListIncomingContactRequestsUseCase(
         contactRelationshipRepository,
-        requesterProfileDirectory,
+        profileDirectory,
       );
 
       const error: unknown = await useCase
         .execute({ recipientId: 'user-recipient', cursor })
         .catch((caught: unknown) => caught);
 
-      expect(error).toBeInstanceOf(InvalidIncomingListCursorError);
+      expect(error).toBeInstanceOf(InvalidContactRequestListCursorError);
       expect((error as Error).message).toBe('cursor must be a valid cursor.');
       expect(
         contactRelationshipRepository.findPendingByRecipient,
@@ -333,14 +335,14 @@ describe('ListIncomingContactRequestsUseCase', () => {
     const contactRelationshipRepository = createRepository();
     const useCase = new ListIncomingContactRequestsUseCase(
       contactRelationshipRepository,
-      requesterProfileDirectory,
+      profileDirectory,
     );
 
     const error: unknown = await useCase
       .execute({ recipientId: 'user-recipient', limit: '0', cursor: '' })
       .catch((caught: unknown) => caught);
 
-    expect(error).toBeInstanceOf(InvalidIncomingListLimitError);
+    expect(error).toBeInstanceOf(InvalidContactRequestListLimitError);
     expect(
       contactRelationshipRepository.findPendingByRecipient,
     ).not.toHaveBeenCalled();
@@ -359,7 +361,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
     const contactRelationshipRepository = createRepository({
       findPendingByRecipient: jest.fn().mockResolvedValue(relationships),
     });
-    const profileDirectory = createProfileDirectory({
+    const directory = createProfileDirectory({
       findProfiles: jest.fn().mockResolvedValue([
         { userId: 'user-requester-2', displayName: 'Bob' },
         { userId: 'user-requester-1', displayName: 'Alice' },
@@ -367,13 +369,13 @@ describe('ListIncomingContactRequestsUseCase', () => {
     });
     const useCase = new ListIncomingContactRequestsUseCase(
       contactRelationshipRepository,
-      profileDirectory,
+      directory,
     );
 
     const result = await useCase.execute({ recipientId });
 
-    expect(profileDirectory.findProfiles).toHaveBeenCalledTimes(1);
-    expect(profileDirectory.findProfiles).toHaveBeenCalledWith([
+    expect(directory.findProfiles).toHaveBeenCalledTimes(1);
+    expect(directory.findProfiles).toHaveBeenCalledWith([
       'user-requester-1',
       'user-requester-2',
     ]);
@@ -396,7 +398,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
     const contactRelationshipRepository = createRepository({
       findPendingByRecipient: jest.fn().mockResolvedValue(relationships),
     });
-    const profileDirectory = createProfileDirectory({
+    const directory = createProfileDirectory({
       findProfiles: jest.fn().mockResolvedValue([
         { userId: 'user-requester-3', displayName: 'Carol' },
         { userId: 'user-requester-1', displayName: 'Alice' },
@@ -404,7 +406,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
     });
     const useCase = new ListIncomingContactRequestsUseCase(
       contactRelationshipRepository,
-      profileDirectory,
+      directory,
     );
 
     const result = await useCase.execute({ recipientId });
@@ -429,7 +431,6 @@ describe('ListIncomingContactRequestsUseCase', () => {
     const contactRelationshipRepository = createRepository({
       findPendingByRecipient: jest.fn().mockResolvedValue(relationships),
     });
-    const profileDirectory = createProfileDirectory();
     const useCase = new ListIncomingContactRequestsUseCase(
       contactRelationshipRepository,
       profileDirectory,
@@ -452,7 +453,6 @@ describe('ListIncomingContactRequestsUseCase', () => {
         .fn()
         .mockRejectedValue(new Error('database connection lost')),
     });
-    const profileDirectory = createProfileDirectory();
     const useCase = new ListIncomingContactRequestsUseCase(
       contactRelationshipRepository,
       profileDirectory,
@@ -462,7 +462,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
       .execute({ recipientId: 'user-recipient' })
       .catch((caught: unknown) => caught);
 
-    expect(error).toBeInstanceOf(ContactRequestListingUnavailableError);
+    expect(error).toBeInstanceOf(IncomingContactRequestListingUnavailableError);
     expect((error as Error).message).toBe(
       'Incoming Contact requests are temporarily unavailable.',
     );
@@ -480,19 +480,19 @@ describe('ListIncomingContactRequestsUseCase', () => {
         }),
       ]),
     });
-    const profileDirectory = createProfileDirectory({
+    const directory = createProfileDirectory({
       findProfiles: jest.fn().mockRejectedValue(new Error('identity down')),
     });
     const useCase = new ListIncomingContactRequestsUseCase(
       contactRelationshipRepository,
-      profileDirectory,
+      directory,
     );
 
     const error: unknown = await useCase
       .execute({ recipientId: 'user-recipient' })
       .catch((caught: unknown) => caught);
 
-    expect(error).toBeInstanceOf(ContactRequestListingUnavailableError);
+    expect(error).toBeInstanceOf(IncomingContactRequestListingUnavailableError);
     expect((error as Error).message).toBe(
       'Incoming Contact requests are temporarily unavailable.',
     );
@@ -502,7 +502,6 @@ describe('ListIncomingContactRequestsUseCase', () => {
     const contactRelationshipRepository = createRepository({
       findPendingByRecipient: jest.fn().mockResolvedValue([]),
     });
-    const profileDirectory = createProfileDirectory();
     const useCase = new ListIncomingContactRequestsUseCase(
       contactRelationshipRepository,
       profileDirectory,
@@ -525,7 +524,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
       });
       const useCase = new ListIncomingContactRequestsUseCase(
         contactRelationshipRepository,
-        requesterProfileDirectory,
+        profileDirectory,
       );
 
       await useCase.execute({ recipientId: 'user-recipient', limit });

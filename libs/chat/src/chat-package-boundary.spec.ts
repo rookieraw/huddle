@@ -38,9 +38,9 @@ describe('@huddle/chat acceptance package boundary', () => {
     expect(chatPackage).toEqual(
       expect.objectContaining({
         ListIncomingContactRequestsUseCase: expect.any(Function),
-        ContactRequestListingUnavailableError: expect.any(Function),
-        InvalidIncomingListLimitError: expect.any(Function),
-        InvalidIncomingListCursorError: expect.any(Function),
+        IncomingContactRequestListingUnavailableError: expect.any(Function),
+        InvalidContactRequestListLimitError: expect.any(Function),
+        InvalidContactRequestListCursorError: expect.any(Function),
         REQUESTER_PROFILE_DIRECTORY: expect.any(Symbol),
       }),
     );
