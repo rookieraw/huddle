@@ -1,12 +1,26 @@
-import type { ContactRelationshipRepository } from '../ports/contact-relationship.repository.port';
+import type { ContactRelationship } from '../../domain/contact-relationship.entity';
+import type {
+  ContactRelationshipRepository,
+  FindPendingByRequesterQuery,
+} from '../ports/contact-relationship.repository.port';
 import {
   InvalidIncomingListCursorError,
   InvalidIncomingListLimitError,
 } from './list-incoming-contact-requests.use-case';
-import type { RequesterProfileDirectory } from '../ports/requester-profile-directory.port';
+import type {
+  RequesterProfile,
+  RequesterProfileDirectory,
+} from '../ports/requester-profile-directory.port';
 
 export const OUTGOING_CONTACT_REQUEST_DEFAULT_LIMIT = 20;
 const OUTGOING_CONTACT_REQUEST_MAX_LIMIT = 50;
+
+export class OutgoingContactRequestListingUnavailableError extends Error {
+  constructor() {
+    super('Outgoing Contact requests are temporarily unavailable.');
+    this.name = 'OutgoingContactRequestListingUnavailableError';
+  }
+}
 
 function resolveLimit(rawLimit: unknown): number {
   if (rawLimit === undefined) {
@@ -88,27 +102,23 @@ export class ListOutgoingContactRequestsUseCase {
   ): Promise<OutgoingContactRequestPage> {
     const limit = resolveLimit(input.limit);
     const afterId = resolveAfterId(input.cursor);
-    const relationships =
-      await this.contactRelationshipRepository.findPendingByRequester({
-        requesterId: input.requesterId,
-        take: limit + 1,
-        ...(afterId !== undefined && { afterRelationshipId: afterId }),
-      });
+    const relationships = await this.findPendingRelationships({
+      requesterId: input.requesterId,
+      take: limit + 1,
+      ...(afterId !== undefined && { afterRelationshipId: afterId }),
+    });
 
-    const page = relationships.slice(0, limit);
-    const displayNames = new Map<string, string>();
-
-    if (page.length > 0) {
-      const profiles = await this.profileDirectory.findProfiles(
-        page.map((relationship) => relationship.recipientId),
-      );
-
-      for (const profile of profiles) {
-        displayNames.set(profile.userId, profile.displayName);
-      }
-    }
-
-    const items = page.map((relationship) => ({
+    const keptRelationships = relationships.slice(0, limit);
+    const profiles =
+      keptRelationships.length === 0
+        ? []
+        : await this.findRecipientProfiles(
+            keptRelationships.map((relationship) => relationship.recipientId),
+          );
+    const displayNames = new Map(
+      profiles.map((profile) => [profile.userId, profile.displayName]),
+    );
+    const items = keptRelationships.map((relationship) => ({
       id: relationship.id,
       recipientId: relationship.recipientId,
       displayName: displayNames.get(relationship.recipientId) ?? null,
@@ -120,5 +130,27 @@ export class ListOutgoingContactRequestsUseCase {
       items,
       nextCursor: hasMore ? encodeCursor(items[items.length - 1].id) : null,
     };
+  }
+
+  private async findPendingRelationships(
+    query: FindPendingByRequesterQuery,
+  ): Promise<ContactRelationship[]> {
+    try {
+      return await this.contactRelationshipRepository.findPendingByRequester(
+        query,
+      );
+    } catch {
+      throw new OutgoingContactRequestListingUnavailableError();
+    }
+  }
+
+  private async findRecipientProfiles(
+    recipientIds: string[],
+  ): Promise<RequesterProfile[]> {
+    try {
+      return await this.profileDirectory.findProfiles(recipientIds);
+    } catch {
+      throw new OutgoingContactRequestListingUnavailableError();
+    }
   }
 }

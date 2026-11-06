@@ -3,7 +3,10 @@ import {
   InvalidIncomingListCursorError,
   InvalidIncomingListLimitError,
 } from './list-incoming-contact-requests.use-case';
-import { ListOutgoingContactRequestsUseCase } from './list-outgoing-contact-requests.use-case';
+import {
+  ListOutgoingContactRequestsUseCase,
+  OutgoingContactRequestListingUnavailableError,
+} from './list-outgoing-contact-requests.use-case';
 
 type ContactRelationshipRepositoryMock = {
   findCurrentByUserPair: jest.Mock;
@@ -485,5 +488,56 @@ describe('ListOutgoingContactRequestsUseCase', () => {
 
     expect(result).toEqual({ items: [], nextCursor: null });
     expect(profileDirectory.findProfiles).not.toHaveBeenCalled();
+  });
+
+  it('reports the listing as unavailable without calling the profile directory when the repository fails', async () => {
+    const contactRelationshipRepository = createRepository({
+      findPendingByRequester: jest
+        .fn()
+        .mockRejectedValue(new Error('database connection lost')),
+    });
+    const useCase = new ListOutgoingContactRequestsUseCase(
+      contactRelationshipRepository,
+      profileDirectory,
+    );
+
+    const error: unknown = await useCase
+      .execute({ requesterId: 'user-requester' })
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(OutgoingContactRequestListingUnavailableError);
+    expect((error as Error).message).toBe(
+      'Outgoing Contact requests are temporarily unavailable.',
+    );
+    expect(profileDirectory.findProfiles).not.toHaveBeenCalled();
+  });
+
+  it('reports the listing as unavailable and returns no partial list when the profile directory fails', async () => {
+    const contactRelationshipRepository = createRepository({
+      findPendingByRequester: jest.fn().mockResolvedValue([
+        ContactRelationship.reconstitute({
+          id: 'relationship-1',
+          requesterId: 'user-requester',
+          recipientId: 'user-recipient-1',
+          status: 'pending',
+        }),
+      ]),
+    });
+    const directory = createProfileDirectory({
+      findProfiles: jest.fn().mockRejectedValue(new Error('identity down')),
+    });
+    const useCase = new ListOutgoingContactRequestsUseCase(
+      contactRelationshipRepository,
+      directory,
+    );
+
+    const error: unknown = await useCase
+      .execute({ requesterId: 'user-requester' })
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(OutgoingContactRequestListingUnavailableError);
+    expect((error as Error).message).toBe(
+      'Outgoing Contact requests are temporarily unavailable.',
+    );
   });
 });
