@@ -12,6 +12,7 @@ import {
   ContactTargetNotFoundError,
   InvalidIncomingListCursorError,
   InvalidIncomingListLimitError,
+  OutgoingContactRequestListingUnavailableError,
   SelfContactRequestError,
 } from '@huddle/chat';
 import {
@@ -150,6 +151,15 @@ export class ContactRequestExceptionFilter implements ExceptionFilter {
       writeErrorResponse(response, HttpStatus.SERVICE_UNAVAILABLE, {
         code: 'CONTACT_REQUEST_LISTING_UNAVAILABLE',
         message: 'Incoming Contact requests are temporarily unavailable.',
+      });
+
+      return;
+    }
+
+    if (exception instanceof OutgoingContactRequestListingUnavailableError) {
+      writeErrorResponse(response, HttpStatus.SERVICE_UNAVAILABLE, {
+        code: 'OUTGOING_CONTACT_REQUEST_LISTING_UNAVAILABLE',
+        message: 'Outgoing Contact requests are temporarily unavailable.',
       });
 
       return;
