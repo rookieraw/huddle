@@ -47,6 +47,20 @@ function createProfileDirectory(
   };
 }
 
+function acceptedContactsOfRecipient(
+  userId: string,
+  count: number,
+): ContactRelationship[] {
+  return Array.from({ length: count }, (_, index) =>
+    ContactRelationship.reconstitute({
+      id: `relationship-${index + 1}`,
+      requesterId: `user-contact-${index + 1}`,
+      recipientId: userId,
+      status: 'accepted',
+    }),
+  );
+}
+
 describe('ListAcceptedContactsUseCase', () => {
   let profileDirectory: ProfileDirectoryMock;
 
@@ -135,14 +149,7 @@ describe('ListAcceptedContactsUseCase', () => {
 
   it('returns only the first 20 items and drops the lookahead row when the repository returns 21', async () => {
     const userId = 'user-actor';
-    const relationships = Array.from({ length: 21 }, (_, index) =>
-      ContactRelationship.reconstitute({
-        id: `relationship-${index + 1}`,
-        requesterId: `user-contact-${index + 1}`,
-        recipientId: userId,
-        status: 'accepted',
-      }),
-    );
+    const relationships = acceptedContactsOfRecipient(userId, 21);
     const contactRelationshipRepository = createRepository({
       findAcceptedByUser: jest.fn().mockResolvedValue(relationships),
     });
@@ -166,14 +173,7 @@ describe('ListAcceptedContactsUseCase', () => {
 
   it('returns a null nextCursor when the repository returns no more than the limit', async () => {
     const userId = 'user-actor';
-    const relationships = Array.from({ length: 20 }, (_, index) =>
-      ContactRelationship.reconstitute({
-        id: `relationship-${index + 1}`,
-        requesterId: `user-contact-${index + 1}`,
-        recipientId: userId,
-        status: 'accepted',
-      }),
-    );
+    const relationships = acceptedContactsOfRecipient(userId, 20);
     const contactRelationshipRepository = createRepository({
       findAcceptedByUser: jest.fn().mockResolvedValue(relationships),
     });
@@ -190,14 +190,7 @@ describe('ListAcceptedContactsUseCase', () => {
 
   it('returns an opaque non-null nextCursor for the last kept item when a lookahead row exists', async () => {
     const userId = 'user-actor';
-    const relationships = Array.from({ length: 21 }, (_, index) =>
-      ContactRelationship.reconstitute({
-        id: `relationship-${index + 1}`,
-        requesterId: `user-contact-${index + 1}`,
-        recipientId: userId,
-        status: 'accepted',
-      }),
-    );
+    const relationships = acceptedContactsOfRecipient(userId, 21);
     const contactRelationshipRepository = createRepository({
       findAcceptedByUser: jest.fn().mockResolvedValue(relationships),
     });
@@ -215,14 +208,7 @@ describe('ListAcceptedContactsUseCase', () => {
 
   it('passes the id decoded from a returned nextCursor to the repository as the continuation point', async () => {
     const userId = 'user-actor';
-    const relationships = Array.from({ length: 21 }, (_, index) =>
-      ContactRelationship.reconstitute({
-        id: `relationship-${index + 1}`,
-        requesterId: `user-contact-${index + 1}`,
-        recipientId: userId,
-        status: 'accepted',
-      }),
-    );
+    const relationships = acceptedContactsOfRecipient(userId, 21);
     const contactRelationshipRepository = createRepository({
       findAcceptedByUser: jest
         .fn()
@@ -251,14 +237,7 @@ describe('ListAcceptedContactsUseCase', () => {
 
   it('uses an explicit limit for the page size and the lookahead row', async () => {
     const userId = 'user-actor';
-    const relationships = Array.from({ length: 6 }, (_, index) =>
-      ContactRelationship.reconstitute({
-        id: `relationship-${index + 1}`,
-        requesterId: `user-contact-${index + 1}`,
-        recipientId: userId,
-        status: 'accepted',
-      }),
-    );
+    const relationships = acceptedContactsOfRecipient(userId, 6);
     const contactRelationshipRepository = createRepository({
       findAcceptedByUser: jest.fn().mockResolvedValue(relationships),
     });
@@ -413,14 +392,7 @@ describe('ListAcceptedContactsUseCase', () => {
 
   it('lists a Contact with a null display name when it has no profile and keeps the other names matched by user id', async () => {
     const userId = 'user-actor';
-    const relationships = Array.from({ length: 3 }, (_, index) =>
-      ContactRelationship.reconstitute({
-        id: `relationship-${index + 1}`,
-        requesterId: `user-contact-${index + 1}`,
-        recipientId: userId,
-        status: 'accepted',
-      }),
-    );
+    const relationships = acceptedContactsOfRecipient(userId, 3);
     const contactRelationshipRepository = createRepository({
       findAcceptedByUser: jest.fn().mockResolvedValue(relationships),
     });
@@ -446,14 +418,7 @@ describe('ListAcceptedContactsUseCase', () => {
 
   it('sends at most 50 Contact ids to the profile directory and excludes the lookahead row at the maximum limit', async () => {
     const userId = 'user-actor';
-    const relationships = Array.from({ length: 51 }, (_, index) =>
-      ContactRelationship.reconstitute({
-        id: `relationship-${index + 1}`,
-        requesterId: `user-contact-${index + 1}`,
-        recipientId: userId,
-        status: 'accepted',
-      }),
-    );
+    const relationships = acceptedContactsOfRecipient(userId, 51);
     const contactRelationshipRepository = createRepository({
       findAcceptedByUser: jest.fn().mockResolvedValue(relationships),
     });
