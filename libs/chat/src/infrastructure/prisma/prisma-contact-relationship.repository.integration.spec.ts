@@ -824,6 +824,285 @@ describe('PrismaContactRelationshipRepository (integration)', () => {
     expect(found).toEqual([]);
   });
 
+  it('finds the accepted relationship where the user is the recipient and excludes other users relationships', async () => {
+    const userId = 'user-accepted-listing-recipient';
+    const seeded = [
+      [
+        'relationship-accepted-listing-as-recipient',
+        'user-accepted-listing-requester',
+        userId,
+      ],
+      [
+        'relationship-accepted-listing-unrelated',
+        'user-accepted-listing-other-requester',
+        'user-accepted-listing-other-recipient',
+      ],
+    ] as const;
+    for (const [id, requesterId, recipientId] of seeded) {
+      await repository.save(
+        ContactRelationship.reconstitute({
+          id,
+          requesterId,
+          recipientId,
+          status: 'accepted',
+        }),
+      );
+    }
+
+    const found = await repository.findAcceptedByUser({ userId, take: 50 });
+
+    expect(found.map((relationship) => relationship.id)).toEqual([
+      'relationship-accepted-listing-as-recipient',
+    ]);
+    expect(
+      found.every(
+        (relationship) =>
+          relationship.isAccepted() &&
+          relationship.recipientId === userId &&
+          relationship.requesterId === 'user-accepted-listing-requester',
+      ),
+    ).toBe(true);
+  });
+
+  it('finds accepted relationships where the user is the requester as well as the recipient', async () => {
+    const userId = 'user-accepted-both-directions';
+    const seeded = [
+      [
+        'relationship-accepted-both-as-recipient',
+        'user-accepted-both-requester',
+        userId,
+      ],
+      [
+        'relationship-accepted-both-as-requester',
+        userId,
+        'user-accepted-both-recipient',
+      ],
+      [
+        'relationship-accepted-both-unrelated',
+        'user-accepted-both-other-requester',
+        'user-accepted-both-other-recipient',
+      ],
+    ] as const;
+    for (const [id, requesterId, recipientId] of seeded) {
+      await repository.save(
+        ContactRelationship.reconstitute({
+          id,
+          requesterId,
+          recipientId,
+          status: 'accepted',
+        }),
+      );
+    }
+
+    const found = await repository.findAcceptedByUser({ userId, take: 50 });
+
+    expect(found.map((relationship) => relationship.id).sort()).toEqual([
+      'relationship-accepted-both-as-recipient',
+      'relationship-accepted-both-as-requester',
+    ]);
+  });
+
+  it('finds only accepted relationships and excludes the user pending and rejected ones in both directions', async () => {
+    const userId = 'user-accepted-only';
+    const seeded = [
+      [
+        'relationship-accepted-only-accepted-as-recipient',
+        'user-accepted-only-counterpart-1',
+        userId,
+        'accepted',
+      ],
+      [
+        'relationship-accepted-only-accepted-as-requester',
+        userId,
+        'user-accepted-only-counterpart-2',
+        'accepted',
+      ],
+      [
+        'relationship-accepted-only-pending-as-recipient',
+        'user-accepted-only-counterpart-3',
+        userId,
+        'pending',
+      ],
+      [
+        'relationship-accepted-only-pending-as-requester',
+        userId,
+        'user-accepted-only-counterpart-4',
+        'pending',
+      ],
+      [
+        'relationship-accepted-only-rejected-as-recipient',
+        'user-accepted-only-counterpart-5',
+        userId,
+        'rejected',
+      ],
+      [
+        'relationship-accepted-only-rejected-as-requester',
+        userId,
+        'user-accepted-only-counterpart-6',
+        'rejected',
+      ],
+    ] as const;
+    for (const [id, requesterId, recipientId, status] of seeded) {
+      await repository.save(
+        ContactRelationship.reconstitute({
+          id,
+          requesterId,
+          recipientId,
+          status,
+        }),
+      );
+    }
+
+    const found = await repository.findAcceptedByUser({ userId, take: 50 });
+
+    expect(found.map((relationship) => relationship.id).sort()).toEqual([
+      'relationship-accepted-only-accepted-as-recipient',
+      'relationship-accepted-only-accepted-as-requester',
+    ]);
+  });
+
+  it('finds accepted relationships in ascending identifier order across both directions regardless of insertion order', async () => {
+    const userId = 'user-accepted-ordering';
+    const seeded = [
+      [
+        'relationship-accepted-ordering-c',
+        'user-accepted-ordering-counterpart-1',
+        userId,
+      ],
+      [
+        'relationship-accepted-ordering-a',
+        userId,
+        'user-accepted-ordering-counterpart-2',
+      ],
+      [
+        'relationship-accepted-ordering-d',
+        userId,
+        'user-accepted-ordering-counterpart-3',
+      ],
+      [
+        'relationship-accepted-ordering-b',
+        'user-accepted-ordering-counterpart-4',
+        userId,
+      ],
+    ] as const;
+    for (const [id, requesterId, recipientId] of seeded) {
+      await repository.save(
+        ContactRelationship.reconstitute({
+          id,
+          requesterId,
+          recipientId,
+          status: 'accepted',
+        }),
+      );
+    }
+
+    const found = await repository.findAcceptedByUser({ userId, take: 50 });
+
+    expect(found.map((relationship) => relationship.id)).toEqual([
+      'relationship-accepted-ordering-a',
+      'relationship-accepted-ordering-b',
+      'relationship-accepted-ordering-c',
+      'relationship-accepted-ordering-d',
+    ]);
+  });
+
+  it('finds at most take accepted relationships across both directions and returns the first ones in identifier order', async () => {
+    const userId = 'user-accepted-take';
+    for (let index = 1; index <= 5; index += 1) {
+      const id = `relationship-accepted-take-${index}`;
+      const counterpartId = `user-accepted-take-counterpart-${index}`;
+      await repository.save(
+        ContactRelationship.reconstitute({
+          id,
+          requesterId: index % 2 === 0 ? userId : counterpartId,
+          recipientId: index % 2 === 0 ? counterpartId : userId,
+          status: 'accepted',
+        }),
+      );
+    }
+
+    const found = await repository.findAcceptedByUser({ userId, take: 3 });
+
+    expect(found.map((relationship) => relationship.id)).toEqual([
+      'relationship-accepted-take-1',
+      'relationship-accepted-take-2',
+      'relationship-accepted-take-3',
+    ]);
+  });
+
+  it('returns exactly 51 of 52 accepted relationships of the user in identifier order across both directions for the maximum listing lookahead', async () => {
+    const userId = 'user-accepted-bound';
+    const boundId = (number: number) =>
+      `relationship-accepted-bound-${String(number).padStart(2, '0')}`;
+    for (let number = 51; number >= 0; number -= 1) {
+      await repository.save(
+        ContactRelationship.reconstitute({
+          id: boundId(number),
+          requesterId:
+            number % 2 === 0
+              ? userId
+              : `user-accepted-bound-counterpart-${number}`,
+          recipientId:
+            number % 2 === 0
+              ? `user-accepted-bound-counterpart-${number}`
+              : userId,
+          status: 'accepted',
+        }),
+      );
+    }
+
+    const found = await repository.findAcceptedByUser({ userId, take: 51 });
+
+    expect(found).toHaveLength(51);
+    expect(found.map((relationship) => relationship.id)).toEqual(
+      Array.from({ length: 51 }, (_, number) => boundId(number)),
+    );
+  });
+
+  it('continues the accepted listing after the given identifier across both directions and excludes that row, in identifier order', async () => {
+    const userId = 'user-accepted-continuation';
+    for (let index = 1; index <= 5; index += 1) {
+      const counterpartId = `user-accepted-continuation-counterpart-${index}`;
+      await repository.save(
+        ContactRelationship.reconstitute({
+          id: `relationship-accepted-continuation-${index}`,
+          requesterId: index % 2 === 0 ? userId : counterpartId,
+          recipientId: index % 2 === 0 ? counterpartId : userId,
+          status: 'accepted',
+        }),
+      );
+    }
+
+    const found = await repository.findAcceptedByUser({
+      userId,
+      take: 2,
+      afterRelationshipId: 'relationship-accepted-continuation-2',
+    });
+
+    expect(found.map((relationship) => relationship.id)).toEqual([
+      'relationship-accepted-continuation-3',
+      'relationship-accepted-continuation-4',
+    ]);
+  });
+
+  it('returns an empty list when the user has no accepted relationships', async () => {
+    await repository.save(
+      ContactRelationship.reconstitute({
+        id: 'relationship-accepted-empty-pending',
+        requesterId: 'user-accepted-empty',
+        recipientId: 'user-accepted-empty-counterpart',
+        status: 'pending',
+      }),
+    );
+
+    const found = await repository.findAcceptedByUser({
+      userId: 'user-accepted-empty',
+      take: 10,
+    });
+
+    expect(found).toEqual([]);
+  });
+
   it('returns the persisted winner for an unordered-pair uniqueness collision', async () => {
     const winner = ContactRelationship.create({
       requesterId: 'user-original-requester',

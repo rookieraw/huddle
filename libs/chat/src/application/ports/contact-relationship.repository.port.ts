@@ -16,12 +16,21 @@ export type FindPendingByRequesterQuery = {
   afterRelationshipId?: string;
 };
 
+export type FindAcceptedByUserQuery = {
+  userId: string;
+  take: number;
+  afterRelationshipId?: string;
+};
+
 export interface ContactRelationshipRepository {
   findById(relationshipId: string): Promise<ContactRelationship | null>;
   findCurrentByUserPair(
     firstUserId: string,
     secondUserId: string,
   ): Promise<ContactRelationship | null>;
+  findAcceptedByUser(
+    query: FindAcceptedByUserQuery,
+  ): Promise<ContactRelationship[]>;
   findPendingByRecipient(
     query: FindPendingByRecipientQuery,
   ): Promise<ContactRelationship[]>;

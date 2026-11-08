@@ -1,5 +1,6 @@
 import type {
   ContactRelationshipRepository,
+  FindAcceptedByUserQuery,
   FindPendingByRecipientQuery,
   FindPendingByRequesterQuery,
 } from '../../application/ports/contact-relationship.repository.port';
@@ -71,6 +72,24 @@ export class PrismaContactRelationshipRepository implements ContactRelationshipR
     }
 
     return this.toDomain(record);
+  }
+
+  async findAcceptedByUser(
+    query: FindAcceptedByUserQuery,
+  ): Promise<ContactRelationship[]> {
+    const records = await this.prisma.contactRelationship.findMany({
+      where: {
+        status: 'accepted',
+        OR: [{ recipientId: query.userId }, { requesterId: query.userId }],
+        ...(query.afterRelationshipId !== undefined && {
+          id: { gt: query.afterRelationshipId },
+        }),
+      },
+      orderBy: { id: 'asc' },
+      take: query.take,
+    });
+
+    return records.map((record) => this.toDomain(record));
   }
 
   async findPendingByRecipient(

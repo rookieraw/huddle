@@ -49,5 +49,13 @@ export {
   ListOutgoingContactRequestsUseCase,
   OutgoingContactRequestListingUnavailableError,
 } from './application/use-cases/list-outgoing-contact-requests.use-case';
+export type {
+  AcceptedContactItem,
+  AcceptedContactPage,
+} from './application/use-cases/list-accepted-contacts.use-case';
+export {
+  AcceptedContactListingUnavailableError,
+  ListAcceptedContactsUseCase,
+} from './application/use-cases/list-accepted-contacts.use-case';
 export { ChatPersistenceModule } from './infrastructure/nestjs/chat-persistence.module';
 export { CHAT_PRISMA_CLIENT } from './infrastructure/prisma/chat-prisma-client.provider';

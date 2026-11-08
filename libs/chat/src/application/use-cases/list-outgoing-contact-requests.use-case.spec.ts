@@ -9,6 +9,7 @@ import {
 } from './list-outgoing-contact-requests.use-case';
 
 type ContactRelationshipRepositoryMock = {
+  findAcceptedByUser: jest.Mock;
   findCurrentByUserPair: jest.Mock;
   findById: jest.Mock;
   findPendingByRecipient: jest.Mock;
@@ -21,6 +22,7 @@ function createRepository(
   overrides: Partial<ContactRelationshipRepositoryMock> = {},
 ): ContactRelationshipRepositoryMock {
   return {
+    findAcceptedByUser: jest.fn(),
     findCurrentByUserPair: jest.fn(),
     findById: jest.fn(),
     findPendingByRecipient: jest.fn(),
@@ -470,15 +472,15 @@ describe('ListOutgoingContactRequestsUseCase', () => {
   });
 
   it('reports the listing as unavailable and returns no partial list when the profile directory fails', async () => {
+    const requesterId = 'user-requester';
+    const relationship = ContactRelationship.reconstitute({
+      id: 'relationship-1',
+      requesterId,
+      recipientId: 'user-recipient-1',
+      status: 'pending',
+    });
     const contactRelationshipRepository = createRepository({
-      findPendingByRequester: jest.fn().mockResolvedValue([
-        ContactRelationship.reconstitute({
-          id: 'relationship-1',
-          requesterId: 'user-requester',
-          recipientId: 'user-recipient-1',
-          status: 'pending',
-        }),
-      ]),
+      findPendingByRequester: jest.fn().mockResolvedValue([relationship]),
     });
     const directory = createProfileDirectory({
       findProfiles: jest.fn().mockRejectedValue(new Error('identity down')),
@@ -489,7 +491,7 @@ describe('ListOutgoingContactRequestsUseCase', () => {
     );
 
     const error: unknown = await useCase
-      .execute({ requesterId: 'user-requester' })
+      .execute({ requesterId })
       .catch((caught: unknown) => caught);
 
     expect(error).toBeInstanceOf(OutgoingContactRequestListingUnavailableError);
