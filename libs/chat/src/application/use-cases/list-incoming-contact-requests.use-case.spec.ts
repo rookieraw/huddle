@@ -1,8 +1,8 @@
 import { ContactRelationship } from '../../domain/contact-relationship.entity';
 import {
-  InvalidContactRequestListCursorError,
-  InvalidContactRequestListLimitError,
-} from './contact-request-list-pagination';
+  InvalidContactListCursorError,
+  InvalidContactListLimitError,
+} from './contact-list-pagination';
 import {
   ListIncomingContactRequestsUseCase,
   IncomingContactRequestListingUnavailableError,
@@ -285,7 +285,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
         .execute({ recipientId: 'user-recipient', limit })
         .catch((caught: unknown) => caught);
 
-      expect(error).toBeInstanceOf(InvalidContactRequestListLimitError);
+      expect(error).toBeInstanceOf(InvalidContactListLimitError);
       expect((error as Error).message).toBe(
         'limit must be an integer from 1 to 50.',
       );
@@ -323,7 +323,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
         .execute({ recipientId: 'user-recipient', cursor })
         .catch((caught: unknown) => caught);
 
-      expect(error).toBeInstanceOf(InvalidContactRequestListCursorError);
+      expect(error).toBeInstanceOf(InvalidContactListCursorError);
       expect((error as Error).message).toBe('cursor must be a valid cursor.');
       expect(
         contactRelationshipRepository.findPendingByRecipient,
@@ -342,7 +342,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
       .execute({ recipientId: 'user-recipient', limit: '0', cursor: '' })
       .catch((caught: unknown) => caught);
 
-    expect(error).toBeInstanceOf(InvalidContactRequestListLimitError);
+    expect(error).toBeInstanceOf(InvalidContactListLimitError);
     expect(
       contactRelationshipRepository.findPendingByRecipient,
     ).not.toHaveBeenCalled();

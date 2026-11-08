@@ -10,8 +10,8 @@ import {
   ContactRequestUnavailableError,
   ContactTargetLookupUnavailableError,
   ContactTargetNotFoundError,
-  InvalidContactRequestListCursorError,
-  InvalidContactRequestListLimitError,
+  InvalidContactListCursorError,
+  InvalidContactListLimitError,
   OutgoingContactRequestListingUnavailableError,
   SelfContactRequestError,
 } from '@huddle/chat';
@@ -82,7 +82,7 @@ describe('ContactRequestExceptionFilter', () => {
     const filter = new ContactRequestExceptionFilter();
     const { host, response } = createArgumentsHost();
 
-    filter.catch(new InvalidContactRequestListLimitError(), host);
+    filter.catch(new InvalidContactListLimitError(), host);
 
     expect(response.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
     expect(response.json).toHaveBeenCalledWith({
@@ -103,7 +103,7 @@ describe('ContactRequestExceptionFilter', () => {
     const filter = new ContactRequestExceptionFilter();
     const { host, response } = createArgumentsHost();
 
-    filter.catch(new InvalidContactRequestListCursorError(), host);
+    filter.catch(new InvalidContactListCursorError(), host);
 
     expect(response.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
     expect(response.json).toHaveBeenCalledWith({

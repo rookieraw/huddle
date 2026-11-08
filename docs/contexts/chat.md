@@ -1,7 +1,7 @@
 # Chat Context
 
 Status: Accepted target; Contact-request creation, acceptance, rejection, incoming listing, and outgoing listing HTTP implemented
-Last reviewed: 2026-11-07
+Last reviewed: 2026-11-08
 
 ## Responsibility
 
@@ -120,7 +120,7 @@ repository answers a plain pending-by-recipient query and knows nothing about
 pages or cursors; the Application owns the page size, the one-row lookahead, and
 cursor encoding and validation. Each item carries the requester's current
 `displayName`, resolved in one batched call per page through a Chat-owned
-requester-profile port and never stored by Chat. A requester without a profile
+user-profile port and never stored by Chat. A requester without a profile
 is still listed with a null `displayName`. Repository failure and profile
 failure share one retryable unavailable outcome, classified without inspecting
 exception messages.

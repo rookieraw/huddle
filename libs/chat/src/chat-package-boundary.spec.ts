@@ -37,15 +37,13 @@ describe('@huddle/chat acceptance package boundary', () => {
   it('exports the listing capability shared by the incoming and outgoing listings without exposing its helpers', () => {
     expect(chatPackage).toEqual(
       expect.objectContaining({
-        InvalidContactRequestListLimitError: expect.any(Function),
-        InvalidContactRequestListCursorError: expect.any(Function),
-        REQUESTER_PROFILE_DIRECTORY: expect.any(Symbol),
+        InvalidContactListLimitError: expect.any(Function),
+        InvalidContactListCursorError: expect.any(Function),
+        USER_PROFILE_DIRECTORY: expect.any(Symbol),
       }),
     );
-    expect(chatPackage).not.toHaveProperty(
-      'CONTACT_REQUEST_LIST_DEFAULT_LIMIT',
-    );
-    expect(chatPackage).not.toHaveProperty('CONTACT_REQUEST_LIST_MAX_LIMIT');
+    expect(chatPackage).not.toHaveProperty('CONTACT_LIST_DEFAULT_LIMIT');
+    expect(chatPackage).not.toHaveProperty('CONTACT_LIST_MAX_LIMIT');
     expect(chatPackage).not.toHaveProperty('resolveLimit');
     expect(chatPackage).not.toHaveProperty('resolveAfterId');
     expect(chatPackage).not.toHaveProperty('encodeCursor');

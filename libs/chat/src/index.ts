@@ -25,14 +25,14 @@ export {
   RejectContactRequestUseCase,
 } from './application/use-cases/reject-contact-request.use-case';
 export type {
-  RequesterProfile,
-  RequesterProfileDirectory,
-} from './application/ports/requester-profile-directory.port';
-export { REQUESTER_PROFILE_DIRECTORY } from './application/ports/requester-profile-directory.port';
+  UserProfile,
+  UserProfileDirectory,
+} from './application/ports/user-profile-directory.port';
+export { USER_PROFILE_DIRECTORY } from './application/ports/user-profile-directory.port';
 export {
-  InvalidContactRequestListCursorError,
-  InvalidContactRequestListLimitError,
-} from './application/use-cases/contact-request-list-pagination';
+  InvalidContactListCursorError,
+  InvalidContactListLimitError,
+} from './application/use-cases/contact-list-pagination';
 export type {
   IncomingContactRequestItem,
   IncomingContactRequestPage,

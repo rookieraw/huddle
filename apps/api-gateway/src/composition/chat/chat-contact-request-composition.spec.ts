@@ -15,7 +15,7 @@ import {
   ContactRequestUnavailableError,
   ListIncomingContactRequestsUseCase,
   ListOutgoingContactRequestsUseCase,
-  REQUESTER_PROFILE_DIRECTORY,
+  USER_PROFILE_DIRECTORY,
   RejectContactRequestUseCase,
   SendContactRequestUseCase,
 } from '@huddle/chat';
@@ -29,7 +29,7 @@ import { ContactRequestExceptionFilter } from '../../interface/http/chat/contact
 import { ContactRequestsController } from '../../interface/http/chat/contact-requests.controller';
 import { ChatContactRequestModule } from './chat-contact-request.module';
 import { IdentityContactTargetDirectoryAdapter } from './identity-contact-target-directory.adapter';
-import { IdentityRequesterProfileDirectoryAdapter } from './identity-requester-profile-directory.adapter';
+import { IdentityUserProfileDirectoryAdapter } from './identity-user-profile-directory.adapter';
 
 type DisconnectablePrismaClient = {
   $disconnect(): Promise<void>;
@@ -406,8 +406,8 @@ describe('Chat Contact-request production composition', () => {
       .useValue(prisma)
       .compile();
 
-    const adapter = testingModule.get(IdentityRequesterProfileDirectoryAdapter);
-    expect(testingModule.get(REQUESTER_PROFILE_DIRECTORY)).toBe(adapter);
+    const adapter = testingModule.get(IdentityUserProfileDirectoryAdapter);
+    expect(testingModule.get(USER_PROFILE_DIRECTORY)).toBe(adapter);
 
     const useCase = testingModule.get(ListIncomingContactRequestsUseCase);
     const result = await useCase.execute({ recipientId: 'user-recipient' });

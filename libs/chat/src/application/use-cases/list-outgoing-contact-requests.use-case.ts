@@ -4,14 +4,14 @@ import type {
   FindPendingByRequesterQuery,
 } from '../ports/contact-relationship.repository.port';
 import type {
-  RequesterProfile,
-  RequesterProfileDirectory,
-} from '../ports/requester-profile-directory.port';
+  UserProfile,
+  UserProfileDirectory,
+} from '../ports/user-profile-directory.port';
 import {
   encodeCursor,
   resolveAfterId,
   resolveLimit,
-} from './contact-request-list-pagination';
+} from './contact-list-pagination';
 
 export class OutgoingContactRequestListingUnavailableError extends Error {
   constructor() {
@@ -41,7 +41,7 @@ export type OutgoingContactRequestPage = {
 export class ListOutgoingContactRequestsUseCase {
   constructor(
     private readonly contactRelationshipRepository: ContactRelationshipRepository,
-    private readonly profileDirectory: RequesterProfileDirectory,
+    private readonly profileDirectory: UserProfileDirectory,
   ) {}
 
   async execute(
@@ -93,7 +93,7 @@ export class ListOutgoingContactRequestsUseCase {
 
   private async findRecipientProfiles(
     recipientIds: string[],
-  ): Promise<RequesterProfile[]> {
+  ): Promise<UserProfile[]> {
     try {
       return await this.profileDirectory.findProfiles(recipientIds);
     } catch {

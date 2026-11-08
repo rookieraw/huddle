@@ -1,7 +1,7 @@
 import type { ProfileQueryApi } from '@huddle/identity';
-import { IdentityRequesterProfileDirectoryAdapter } from './identity-requester-profile-directory.adapter';
+import { IdentityUserProfileDirectoryAdapter } from './identity-user-profile-directory.adapter';
 
-describe('IdentityRequesterProfileDirectoryAdapter', () => {
+describe('IdentityUserProfileDirectoryAdapter', () => {
   it('forwards the exact user ids once and returns only the found profile entries', async () => {
     const getProfiles = jest.fn(() =>
       Promise.resolve({
@@ -13,9 +13,7 @@ describe('IdentityRequesterProfileDirectoryAdapter', () => {
       }),
     );
     const profileQueryApi: ProfileQueryApi = { getProfiles };
-    const adapter = new IdentityRequesterProfileDirectoryAdapter(
-      profileQueryApi,
-    );
+    const adapter = new IdentityUserProfileDirectoryAdapter(profileQueryApi);
 
     await expect(
       adapter.findProfiles([
@@ -39,9 +37,7 @@ describe('IdentityRequesterProfileDirectoryAdapter', () => {
     const profileFailure = new Error('Identity profile query unavailable');
     const getProfiles = jest.fn(() => Promise.reject(profileFailure));
     const profileQueryApi: ProfileQueryApi = { getProfiles };
-    const adapter = new IdentityRequesterProfileDirectoryAdapter(
-      profileQueryApi,
-    );
+    const adapter = new IdentityUserProfileDirectoryAdapter(profileQueryApi);
 
     await expect(adapter.findProfiles(['user-requester-1'])).rejects.toBe(
       profileFailure,

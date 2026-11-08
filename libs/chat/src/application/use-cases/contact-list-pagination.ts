@@ -1,37 +1,35 @@
-export const CONTACT_REQUEST_LIST_DEFAULT_LIMIT = 20;
-export const CONTACT_REQUEST_LIST_MAX_LIMIT = 50;
+export const CONTACT_LIST_DEFAULT_LIMIT = 20;
+export const CONTACT_LIST_MAX_LIMIT = 50;
 
 const CURSOR_VERSION = 'v1';
 
-export class InvalidContactRequestListLimitError extends Error {
+export class InvalidContactListLimitError extends Error {
   constructor() {
-    super(
-      `limit must be an integer from 1 to ${CONTACT_REQUEST_LIST_MAX_LIMIT}.`,
-    );
-    this.name = 'InvalidContactRequestListLimitError';
+    super(`limit must be an integer from 1 to ${CONTACT_LIST_MAX_LIMIT}.`);
+    this.name = 'InvalidContactListLimitError';
   }
 }
 
-export class InvalidContactRequestListCursorError extends Error {
+export class InvalidContactListCursorError extends Error {
   constructor() {
     super('cursor must be a valid cursor.');
-    this.name = 'InvalidContactRequestListCursorError';
+    this.name = 'InvalidContactListCursorError';
   }
 }
 
 export function resolveLimit(rawLimit: unknown): number {
   if (rawLimit === undefined) {
-    return CONTACT_REQUEST_LIST_DEFAULT_LIMIT;
+    return CONTACT_LIST_DEFAULT_LIMIT;
   }
 
   if (typeof rawLimit !== 'string' || !/^[0-9]+$/.test(rawLimit)) {
-    throw new InvalidContactRequestListLimitError();
+    throw new InvalidContactListLimitError();
   }
 
   const limit = Number(rawLimit);
 
-  if (limit < 1 || limit > CONTACT_REQUEST_LIST_MAX_LIMIT) {
-    throw new InvalidContactRequestListLimitError();
+  if (limit < 1 || limit > CONTACT_LIST_MAX_LIMIT) {
+    throw new InvalidContactListLimitError();
   }
 
   return limit;
@@ -43,7 +41,7 @@ export function resolveAfterId(rawCursor: unknown): string | undefined {
   }
 
   if (typeof rawCursor !== 'string' || !/^[A-Za-z0-9_-]+$/.test(rawCursor)) {
-    throw new InvalidContactRequestListCursorError();
+    throw new InvalidContactListCursorError();
   }
 
   const decoded = Buffer.from(rawCursor, 'base64url');
@@ -56,7 +54,7 @@ export function resolveAfterId(rawCursor: unknown): string | undefined {
     text.length === prefix.length ||
     text.includes('\u0000')
   ) {
-    throw new InvalidContactRequestListCursorError();
+    throw new InvalidContactListCursorError();
   }
 
   return text.slice(prefix.length);
