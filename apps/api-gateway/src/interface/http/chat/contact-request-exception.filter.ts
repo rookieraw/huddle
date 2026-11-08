@@ -1,4 +1,5 @@
 import {
+  AcceptedContactListingUnavailableError,
   ContactRelationshipNotFoundError,
   ContactRequestAcceptanceNotAuthorizedError,
   ContactRequestAcceptanceUnavailableError,
@@ -160,6 +161,15 @@ export class ContactRequestExceptionFilter implements ExceptionFilter {
       writeErrorResponse(response, HttpStatus.SERVICE_UNAVAILABLE, {
         code: 'OUTGOING_CONTACT_REQUEST_LISTING_UNAVAILABLE',
         message: 'Outgoing Contact requests are temporarily unavailable.',
+      });
+
+      return;
+    }
+
+    if (exception instanceof AcceptedContactListingUnavailableError) {
+      writeErrorResponse(response, HttpStatus.SERVICE_UNAVAILABLE, {
+        code: 'ACCEPTED_CONTACT_LISTING_UNAVAILABLE',
+        message: 'Accepted Contacts are temporarily unavailable.',
       });
 
       return;

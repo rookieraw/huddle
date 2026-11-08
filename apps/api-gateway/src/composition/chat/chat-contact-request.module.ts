@@ -4,6 +4,7 @@ import {
   CONTACT_RELATIONSHIP_REPOSITORY,
   CONTACT_TARGET_DIRECTORY,
   ChatPersistenceModule,
+  ListAcceptedContactsUseCase,
   ListIncomingContactRequestsUseCase,
   ListOutgoingContactRequestsUseCase,
   USER_PROFILE_DIRECTORY,
@@ -24,12 +25,13 @@ import type { DirectoryApi, ProfileQueryApi } from '@huddle/identity';
 import { ContactRequestAuthenticationGuard } from '../../interface/http/chat/contact-request-authentication.guard';
 import { ContactRequestExceptionFilter } from '../../interface/http/chat/contact-request-exception.filter';
 import { ContactRequestsController } from '../../interface/http/chat/contact-requests.controller';
+import { ContactsController } from '../../interface/http/chat/contacts.controller';
 import { IdentityContactTargetDirectoryAdapter } from './identity-contact-target-directory.adapter';
 import { IdentityUserProfileDirectoryAdapter } from './identity-user-profile-directory.adapter';
 
 @Module({
   imports: [IdentityModule, ChatPersistenceModule],
-  controllers: [ContactRequestsController],
+  controllers: [ContactRequestsController, ContactsController],
   providers: [
     ContactRequestAuthenticationGuard,
     ContactRequestExceptionFilter,
@@ -59,6 +61,18 @@ import { IdentityUserProfileDirectoryAdapter } from './identity-user-profile-dir
         contactRelationshipRepository: ContactRelationshipRepository,
       ) => new AcceptContactRequestUseCase(contactRelationshipRepository),
       inject: [CONTACT_RELATIONSHIP_REPOSITORY],
+    },
+    {
+      provide: ListAcceptedContactsUseCase,
+      useFactory: (
+        contactRelationshipRepository: ContactRelationshipRepository,
+        profileDirectory: UserProfileDirectory,
+      ) =>
+        new ListAcceptedContactsUseCase(
+          contactRelationshipRepository,
+          profileDirectory,
+        ),
+      inject: [CONTACT_RELATIONSHIP_REPOSITORY, USER_PROFILE_DIRECTORY],
     },
     {
       provide: ListIncomingContactRequestsUseCase,

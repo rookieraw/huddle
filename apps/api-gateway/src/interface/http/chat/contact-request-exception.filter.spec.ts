@@ -1,4 +1,5 @@
 import {
+  AcceptedContactListingUnavailableError,
   ContactRelationshipNotFoundError,
   ContactRequestAcceptanceNotAuthorizedError,
   ContactRequestAcceptanceUnavailableError,
@@ -213,6 +214,12 @@ describe('ContactRequestExceptionFilter', () => {
       status: HttpStatus.SERVICE_UNAVAILABLE,
       code: 'OUTGOING_CONTACT_REQUEST_LISTING_UNAVAILABLE',
       message: 'Outgoing Contact requests are temporarily unavailable.',
+    },
+    {
+      exception: new AcceptedContactListingUnavailableError(),
+      status: HttpStatus.SERVICE_UNAVAILABLE,
+      code: 'ACCEPTED_CONTACT_LISTING_UNAVAILABLE',
+      message: 'Accepted Contacts are temporarily unavailable.',
     },
   ])(
     'returns the fixed $code envelope',
