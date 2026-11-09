@@ -1,7 +1,7 @@
 # Chat Context
 
-Status: Accepted target; Contact-request creation, acceptance, rejection, incoming listing, and outgoing listing HTTP implemented
-Last reviewed: 2026-11-08
+Status: Accepted target; Contact-request creation, acceptance, rejection, incoming listing, outgoing listing, and accepted Contact listing HTTP implemented
+Last reviewed: 2026-11-09
 
 ## Responsibility
 
@@ -45,7 +45,7 @@ translations, response shapes, and error mappings of the implemented Contacts
 HTTP operations belong to
 [`../contracts/chat-contacts-http.md`](../contracts/chat-contacts-http.md).
 
-Accepted target behavior outside this implemented Contact-request subset does
+Accepted target behavior outside this implemented Contacts subset does
 not imply current implementation.
 
 ## Core Concepts
@@ -78,6 +78,16 @@ no longer pending. The listing does not distinguish an accepted request from a
 rejected one, and this limit applies to that listing only; it does not decide
 what an accepted-Contact listing reveals.
 
+Accepted Contacts are visible by design, because a requester must be able to
+see who accepted. A user who compares the accepted-Contact listing with the
+pending outgoing listing can therefore infer, by elimination, that a request
+absent from both was rejected. This is an inference and not a statement of any
+API response: no response names a rejection, and rejected relationships are
+never listed. This Context accepts that limit and does not claim that a
+rejected request is indistinguishable from other absences. Keeping rejected
+requests visibly pending would change delivered behavior and is a separate
+decision.
+
 Required invariants:
 
 - A user cannot contact themselves.
@@ -96,6 +106,13 @@ Required invariants:
 - Blocking is a separate deferred capability.
 
 Contacts and conversations are separate concepts.
+
+The accepted-Contact listing shows current accepted relationships only. It is
+not the set of a user's conversation partners: an existing Direct Conversation
+persists after its Contact relationship ends. A Contact that is no longer
+accepted simply stops appearing, and the listing does not say who ended the
+relationship or how. Contact removal, and the identity of a relationship
+established again after removal, belong to the removal capability.
 
 #### Application Behavior
 
@@ -132,6 +149,19 @@ incoming-listing query. Each item carries the recipient's current
 stored by Chat. A recipient without a profile is still listed with a null
 `displayName`. Repository failure and profile failure share one retryable
 unavailable outcome that is separate from the incoming listing's.
+
+The Application accepted-Contact listing query returns the accepted
+relationships of the acting `userId` as Contacts, whichever user sent the
+original request, ordered by relationship identifier as one sequence across
+both directions and paginated like the other listings. The repository answers
+one plain accepted-by-user query for the user as requester or recipient and
+knows nothing about pages or cursors. Each item carries the other party's
+`userId` and current `displayName`, resolved in one batched call per page
+through the same Chat-owned user-profile port and never stored by Chat; a
+Contact without a profile is still listed with a null `displayName`, and no
+profile call is made when there are no Contacts. Repository failure and profile
+failure share one retryable unavailable outcome that is separate from the
+incoming and outgoing listings'.
 
 ### Conversation
 
@@ -406,7 +436,7 @@ Chat stores relational state in PostgreSQL:
 
 The database constraint enforces one pending-or-accepted current relationship per unordered user pair.
 
-Pending, accepted, and rejected Contact relationship persistence, including the pending-by-recipient listing query, is implemented in the Chat Context. Conversation, membership, Group administration, invitation, and quota persistence remain target behavior.
+Pending, accepted, and rejected Contact relationship persistence, including the pending-by-recipient, pending-by-requester, and accepted-by-user listing queries, is implemented in the Chat Context. Conversation, membership, Group administration, invitation, and quota persistence remain target behavior.
 
 ### MongoDB
 

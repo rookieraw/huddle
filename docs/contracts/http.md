@@ -1,8 +1,8 @@
 # HTTP Contracts
 
 Status: Shared conventions accepted; Identity endpoints and first Chat subset implemented
-Last reviewed: 2026-11-07
-Last verified against source: 2026-11-07
+Last reviewed: 2026-11-09
+Last verified against source: 2026-11-09
 
 ## Purpose
 
@@ -69,14 +69,14 @@ A Planned capability name is not a stable public route.
 
 ## Contract Registry
 
-| Context or capability | State                                                                                                                                       | Contract document                                                                           |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Identity              | Implemented with transitional behavior                                                                                                      | [`identity-http.md`](identity-http.md)                                                      |
-| Chat                  | Contact-request creation, acceptance, rejection, incoming listing, and outgoing listing Implemented; remaining Phase 2 capabilities Planned | [`chat-http.md`](chat-http.md) (index) and [`chat-contacts-http.md`](chat-contacts-http.md) |
-| Calling               | Planned for Phase 3                                                                                                                         | Create only if a required HTTP capability is identified                                     |
-| Billing               | Planned for Phase 4                                                                                                                         | Create when the exact Billing HTTP contract is defined                                      |
-| Meetings              | Planned for Phase 5                                                                                                                         | Create when the exact Meeting HTTP contract is defined                                      |
-| Notification          | Planned for Phase 6                                                                                                                         | Create when the exact Notification HTTP contract is defined                                 |
+| Context or capability | State                                                                                                                                                                 | Contract document                                                                           |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Identity              | Implemented with transitional behavior                                                                                                                                | [`identity-http.md`](identity-http.md)                                                      |
+| Chat                  | Contact-request creation, acceptance, rejection, incoming listing, outgoing listing, and accepted Contact listing Implemented; remaining Phase 2 capabilities Planned | [`chat-http.md`](chat-http.md) (index) and [`chat-contacts-http.md`](chat-contacts-http.md) |
+| Calling               | Planned for Phase 3                                                                                                                                                   | Create only if a required HTTP capability is identified                                     |
+| Billing               | Planned for Phase 4                                                                                                                                                   | Create when the exact Billing HTTP contract is defined                                      |
+| Meetings              | Planned for Phase 5                                                                                                                                                   | Create when the exact Meeting HTTP contract is defined                                      |
+| Notification          | Planned for Phase 6                                                                                                                                                   | Create when the exact Notification HTTP contract is defined                                 |
 
 Do not create empty Context contract files merely to satisfy this registry.
 
@@ -393,16 +393,18 @@ planned target behavior:
 | Contact-request rejection        | `Implemented` | [`chat-contacts-http.md`](chat-contacts-http.md) | Authenticated HTTP delivery verified |
 | Incoming Contact-request listing | `Implemented` | [`chat-contacts-http.md`](chat-contacts-http.md) | Authenticated HTTP delivery verified |
 | Outgoing Contact-request listing | `Implemented` | [`chat-contacts-http.md`](chat-contacts-http.md) | Authenticated HTTP delivery verified |
+| Accepted Contact listing         | `Implemented` | [`chat-contacts-http.md`](chat-contacts-http.md) | Authenticated HTTP delivery verified |
 
 The implemented subset defines `POST /contact-requests`,
 `POST /contact-requests/{contactRequestId}/accept`,
 `POST /contact-requests/{contactRequestId}/reject`,
 `GET /contact-requests/incoming`, which lists pending Contact requests
-addressed to the verified actor with cursor pagination, and
+addressed to the verified actor with cursor pagination,
 `GET /contact-requests/outgoing`, which lists pending Contact requests created
-by the verified actor with the same pagination. No other Contacts,
-Conversation, Group, Message-history, or frontend capability is accepted or
-implemented here.
+by the verified actor with the same pagination, and `GET /contacts`, which
+lists the verified actor's accepted Contacts with the same pagination. No
+other Contacts, Conversation, Group, Message-history, or frontend capability
+is accepted or implemented here.
 
 ## Planned HTTP Capability Registry
 
@@ -423,7 +425,6 @@ capabilities.
 
 #### Contacts
 
-- List accepted Contacts
 - Remove Contact
 
 #### Conversations

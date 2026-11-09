@@ -1,7 +1,7 @@
 # Chat Contacts HTTP Contract
 
-Status: Contact-request creation Implemented; Contact-request acceptance Implemented; Contact-request rejection Implemented; incoming Contact-request listing Implemented; outgoing Contact-request listing Implemented
-Last reviewed: 2026-11-07
+Status: Contact-request creation Implemented; Contact-request acceptance Implemented; Contact-request rejection Implemented; incoming Contact-request listing Implemented; outgoing Contact-request listing Implemented; accepted Contact listing Implemented
+Last reviewed: 2026-11-09
 
 ## Purpose
 
@@ -882,6 +882,225 @@ longer pending. The listing reveals no more than that: it does not distinguish
 accepted from rejected, and accepted and rejected relationships are never
 listed. This decision applies to this operation only. Accepted-Contact
 visibility is decided separately and is not authorized by this operation.
+
+Public error messages are selected by this contract and never copied from a
+caught exception or echoed from client input.
+
+## List Accepted Contacts
+
+Contract state: `Implemented`
+
+Authentication: Authenticated; results are scoped to the verified actor
+
+```http
+GET /contacts?limit=20&cursor=<opaque-cursor>
+Authorization: Bearer <access-token>
+```
+
+The operation returns the accepted Contacts of the verified actor, so the user
+can see who they are connected to. It is a read-only query. It does not list
+Contact requests or relationships in any other state, and it does not create,
+accept, reject, remove, or otherwise change a relationship.
+
+An accepted Contact is the other party of an accepted relationship, whichever
+user sent the original request. The operation does not distinguish the two
+directions.
+
+### Actor Authority
+
+The user comes only from the `userId` produced by Identity's public
+Authentication API after access-token verification. A path, query, or body
+value cannot provide or override it. Undeclared query parameters, including
+`userId`, `requesterId`, or `recipientId`, are ignored: the operation reads
+only `limit` and `cursor`. The contract does not expose Application input
+types, Domain entities, repositories, Prisma models, Identity internals,
+principal email, expiration, or token claims.
+
+Because the list is scoped to the actor, there is no addressable resource
+whose existence could be hidden. The operation therefore defines no `403` or
+`404` response.
+
+### Query Parameters
+
+| Parameter | Presence | Rule                                                                                                                                                                 |
+| --------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `limit`   | Optional | A single value made only of ASCII digits whose integer value is from 1 to 50. Default `20` when absent. A larger value is rejected, not clamped.                     |
+| `cursor`  | Optional | A single value previously returned as `nextCursor`. Opaque to clients; clients must not construct, parse, or modify it. A value the server cannot decode is invalid. |
+
+A `limit` that is empty, repeated, signed, padded with whitespace,
+hexadecimal, exponential, decimal, zero, negative, or above 50 is invalid. A
+`cursor` that is empty, repeated, malformed, or of an unsupported version is
+invalid.
+
+The shared pagination convention in [`http.md`](http.md) owns the parameter
+names, default, and maximum. This operation does not lower the maximum.
+
+An invalid value returns `400 VALIDATION_FAILED`. When both parameters are
+invalid, `limit` is validated first and the response carries exactly one
+detail, for `limit`. The `401` for a missing or unusable access token takes
+precedence over any `400`, because authentication runs before query
+validation.
+
+### Success
+
+```http
+200 OK
+```
+
+```json
+{
+  "items": [
+    {
+      "userId": "user-contact",
+      "displayName": "Contact Name"
+    }
+  ],
+  "nextCursor": "opaque-cursor"
+}
+```
+
+| Field                 | Type             | Consumer meaning                                                                                                      |
+| --------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `items`               | array            | At most `limit` accepted Contacts of the verified actor, in the order below. Empty when there are none.               |
+| `items[].userId`      | string           | The authoritative user who is the Contact. This, not `displayName`, identifies the Contact.                           |
+| `items[].displayName` | string or `null` | Current presentation text from Identity's public Profile Query API. `null` when Identity has no profile for the user. |
+| `nextCursor`          | string or `null` | Pass it as `cursor` to read the next page. `null` marks the end of the list.                                          |
+
+The item carries the Contact's `userId` and `displayName` only. The
+relationship identifier, the direction of the original request, the
+acceptance time, and the status are omitted; see Information Minimization.
+Clients address a Contact by `userId`.
+
+`displayName` is non-unique, user-controlled presentation text. It is not an
+identifier and must not be used to authorize or distinguish Contacts;
+clients must treat it as untrusted text. A Contact without a profile still
+appears in the list with `displayName` present and `null`.
+
+`displayName` comes only from Identity's public Profile Query API under
+[`../decisions/0004-cross-context-integration.md`](../decisions/0004-cross-context-integration.md).
+Chat does not copy it into Chat storage. A Profile Query failure fails the
+whole request; the operation never returns a partially filled list.
+
+### Ordering and Pagination
+
+Items are returned in a stable, server-defined order that the response does
+not expose: ascending order of the identifier of each Contact's underlying
+relationship, applied to the user's accepted relationships as one sequence
+regardless of which user sent the original request. For unchanged data,
+consecutive pages contain no duplicates and no gaps. The order carries **no
+chronological meaning**: identifiers are opaque and random, so a Contact's
+position says nothing about when the relationship began, and a client cannot
+reproduce the order from `userId` or `displayName`.
+
+The list is paginated rather than bounded, as for the other Contact listings
+under the shared convention in [`http.md`](http.md).
+
+`nextCursor` is non-null exactly when more accepted Contacts exist after the
+returned page and is `null` on the last page. A cursor continues after the
+last returned Contact. Continuation does not require that Contact to still
+exist or still be accepted, and a cursor from another actor's listing is not
+an error because results stay scoped to the verified actor.
+
+There is no snapshot guarantee. A Contact created or ended while a client
+traverses the list may be missed or may disappear. A client discovers new
+Contacts by restarting from the first page.
+
+### Contacts and Conversations
+
+The list shows the user's **current** accepted relationships. It is not the
+set of people the user can converse with. A Direct Conversation does not end
+when a Contact relationship ends, so a user may converse with someone who is
+not, or is no longer, a Contact.
+
+A Contact that is no longer accepted stops appearing in the list. The other
+user observes that only by disappearance: the list does not say who ended a
+relationship or how. This operation does not define Contact removal or the
+identity of a relationship established again after removal.
+
+### Empty Result
+
+A user with no accepted Contacts receives:
+
+```http
+200 OK
+```
+
+```json
+{
+  "items": [],
+  "nextCursor": null
+}
+```
+
+An empty result is distinct from `503`: it confirms there is nothing to
+display, not that the lookup failed.
+
+### Error Responses
+
+Every error uses the stable envelope defined in [`http.md`](http.md).
+Non-validation errors omit `error.details`.
+
+| Situation                                           | HTTP status | Stable code                            | Public message                                 | Consumer action                                                             |
+| --------------------------------------------------- | ----------: | -------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------- |
+| Authentication is missing or unusable               |         401 | `AUTHENTICATION_REQUIRED`              | Authentication is required.                    | Stop the protected interaction and reauthenticate.                          |
+| `limit` is invalid                                  |         400 | `VALIDATION_FAILED`                    | Request validation failed.                     | Correct `limit`.                                                            |
+| `cursor` is invalid (and `limit` is valid)          |         400 | `VALIDATION_FAILED`                    | Request validation failed.                     | Discard the cursor and restart from the first page.                         |
+| Relationship lookup or Profile Query is unavailable |         503 | `ACCEPTED_CONTACT_LISTING_UNAVAILABLE` | Accepted Contacts are temporarily unavailable. | Retry the same request according to bounded client policy.                  |
+| Unclassified unexpected failure                     |         500 | `INTERNAL_ERROR`                       | An unexpected error occurred.                  | Do not assume the list is complete; reload before presenting a final state. |
+
+#### Validation Examples
+
+```http
+400 Bad Request
+```
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "Request validation failed.",
+    "details": [
+      {
+        "field": "limit",
+        "message": "limit must be an integer from 1 to 50."
+      }
+    ]
+  }
+}
+```
+
+An invalid `cursor` returns the same envelope with `field` set to `cursor` and
+`message` set to `cursor must be a valid cursor.` Validation details name only
+`limit` or `cursor` and never repeat the rejected value.
+
+Repository unavailability and Profile Query unavailability share one status,
+code, and public message because the consumer action is identical. The
+operation is read-only, so retrying it is safe. An empty list is never
+reported as `503`, and a `503` is never reported as an empty list.
+
+### Information Minimization
+
+Responses must not expose:
+
+- principal email or token claims;
+- the relationship identifier, the direction of the original request, the
+  acceptance time, or the relationship status;
+- pending or rejected relationships, or any other user's relationships;
+- any Identity data other than `displayName`;
+- raw repository or Profile Query failures;
+- Identity, Prisma, PostgreSQL, NestJS, or provider internals;
+- database codes, constraint names, stack traces, or filesystem paths.
+
+Accepted Contacts are visible by design: a requester must be able to see who
+accepted. A user who compares this list with the pending outgoing listing can
+therefore infer, by elimination, that a request absent from both was rejected.
+This is an inference and not a statement of the API. No response names a
+rejection, and rejected relationships are never listed. The contract does not
+claim that a rejected request is indistinguishable from other absences, and
+this accepted limit applies to Contact-request visibility generally. The
+statement in List Outgoing Contact Requests that the pending listing does not
+distinguish accepted from rejected concerns that listing only and is
+unchanged.
 
 Public error messages are selected by this contract and never copied from a
 caught exception or echoed from client input.
