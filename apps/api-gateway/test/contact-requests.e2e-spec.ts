@@ -970,33 +970,30 @@ describe('Contact requests (e2e)', () => {
     expect(upsert).not.toHaveBeenCalled();
   });
 
-  it.each([['missing', {}]])(
-    'returns the fixed safe validation envelope for a %s target user identifier',
-    async (_scenario, body) => {
-      const response = await request(app.getHttpServer())
-        .post('/contact-requests')
-        .set('Authorization', 'Bearer access-token')
-        .send(body)
-        .expect(400);
-      const responseBody = response.body as ContactRequestErrorBody;
+  it('returns the fixed safe validation envelope for a missing target user identifier', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/contact-requests')
+      .set('Authorization', 'Bearer access-token')
+      .send({})
+      .expect(400);
+    const responseBody = response.body as ContactRequestErrorBody;
 
-      expect(responseBody).toEqual({
-        error: {
-          code: 'VALIDATION_FAILED',
-          message: 'Request validation failed.',
-          details: [
-            {
-              field: 'targetUserId',
-              message: 'targetUserId must be a non-empty string.',
-            },
-          ],
-        },
-      });
-      expect(userExists).not.toHaveBeenCalled();
-      expect(findFirst).not.toHaveBeenCalled();
-      expect(upsert).not.toHaveBeenCalled();
-    },
-  );
+    expect(responseBody).toEqual({
+      error: {
+        code: 'VALIDATION_FAILED',
+        message: 'Request validation failed.',
+        details: [
+          {
+            field: 'targetUserId',
+            message: 'targetUserId must be a non-empty string.',
+          },
+        ],
+      },
+    });
+    expect(userExists).not.toHaveBeenCalled();
+    expect(findFirst).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+  });
 
   it('removes unsupported fields and keeps requester authority server-side', async () => {
     const response = await request(app.getHttpServer())
@@ -1030,47 +1027,36 @@ describe('Contact requests (e2e)', () => {
     ]);
   });
 
-  it.each([['a missing header', undefined]])(
-    'returns authentication required for %s',
-    async (_scenario, authorization) => {
-      let httpRequest = request(app.getHttpServer()).post('/contact-requests');
+  it('returns authentication required for a missing header', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/contact-requests')
+      .send({ targetUserId: 'user-target' })
+      .expect(401);
+    const body = response.body as ContactRequestErrorBody;
 
-      if (authorization !== undefined) {
-        httpRequest = httpRequest.set('Authorization', authorization);
-      }
+    expect(body).toEqual(authenticationRequiredBody);
+    expect(verifyAccessToken).not.toHaveBeenCalled();
+    expect(userExists).not.toHaveBeenCalled();
+    expect(findFirst).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+  });
 
-      const response = await httpRequest
-        .send({ targetUserId: 'user-target' })
-        .expect(401);
-      const body = response.body as ContactRequestErrorBody;
+  it('returns authentication required for an invalid access token', async () => {
+    verifyAccessToken.mockRejectedValueOnce(new InvalidAccessTokenError());
 
-      expect(body).toEqual(authenticationRequiredBody);
-      expect(verifyAccessToken).not.toHaveBeenCalled();
-      expect(userExists).not.toHaveBeenCalled();
-      expect(findFirst).not.toHaveBeenCalled();
-      expect(upsert).not.toHaveBeenCalled();
-    },
-  );
+    const response = await request(app.getHttpServer())
+      .post('/contact-requests')
+      .set('Authorization', 'Bearer unusable-access-token')
+      .send({ targetUserId: 'user-target' })
+      .expect(401);
+    const body = response.body as ContactRequestErrorBody;
 
-  it.each([['invalid', new InvalidAccessTokenError()]])(
-    'returns authentication required for an %s access token',
-    async (_scenario, tokenError) => {
-      verifyAccessToken.mockRejectedValueOnce(tokenError);
-
-      const response = await request(app.getHttpServer())
-        .post('/contact-requests')
-        .set('Authorization', 'Bearer unusable-access-token')
-        .send({ targetUserId: 'user-target' })
-        .expect(401);
-      const body = response.body as ContactRequestErrorBody;
-
-      expect(body).toEqual(authenticationRequiredBody);
-      expect(verifyAccessToken).toHaveBeenCalledWith('unusable-access-token');
-      expect(userExists).not.toHaveBeenCalled();
-      expect(findFirst).not.toHaveBeenCalled();
-      expect(upsert).not.toHaveBeenCalled();
-    },
-  );
+    expect(body).toEqual(authenticationRequiredBody);
+    expect(verifyAccessToken).toHaveBeenCalledWith('unusable-access-token');
+    expect(userExists).not.toHaveBeenCalled();
+    expect(findFirst).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+  });
 
   it('returns the fixed self-contact-request response before dependency work', async () => {
     const response = await request(app.getHttpServer())
@@ -1175,43 +1161,32 @@ describe('Contact requests (e2e)', () => {
     },
   );
 
-  it.each([
-    {
-      route: 'creation',
-      path: '/contact-requests',
-      body: { targetUserId: 'user-target' },
-    },
-  ])(
-    'returns only the fixed internal-error response for an unexpected failure on $route',
-    async ({ path, body: requestBody }) => {
-      const { failure, internalValues } = createUnexpectedFailure();
-      verifyAccessToken.mockRejectedValueOnce(failure);
+  it('returns only the fixed internal-error response for an unexpected failure on creation', async () => {
+    const { failure, internalValues } = createUnexpectedFailure();
+    verifyAccessToken.mockRejectedValueOnce(failure);
 
-      let httpRequest = request(app.getHttpServer())
-        .post(path)
-        .set('Authorization', 'Bearer secret-access-token');
-      if (requestBody) {
-        httpRequest = httpRequest.send(requestBody);
-      }
-      const response = await httpRequest.expect(500);
-      const body = response.body as ContactRequestErrorBody;
+    const response = await request(app.getHttpServer())
+      .post('/contact-requests')
+      .set('Authorization', 'Bearer secret-access-token')
+      .send({ targetUserId: 'user-target' })
+      .expect(500);
+    const body = response.body as ContactRequestErrorBody;
 
-      expect(body).toEqual({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'An unexpected error occurred.',
-        },
-      });
-      const serializedBody = JSON.stringify(body);
-      for (const internalValue of internalValues) {
-        expect(serializedBody).not.toContain(internalValue);
-      }
-      expect(verifyAccessToken).toHaveBeenCalledWith('secret-access-token');
-      expect(userExists).not.toHaveBeenCalled();
-      expect(findUnique).not.toHaveBeenCalled();
-      expect(findFirst).not.toHaveBeenCalled();
-      expect(upsert).not.toHaveBeenCalled();
-      expect(updateMany).not.toHaveBeenCalled();
-    },
-  );
+    expect(body).toEqual({
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'An unexpected error occurred.',
+      },
+    });
+    const serializedBody = JSON.stringify(body);
+    for (const internalValue of internalValues) {
+      expect(serializedBody).not.toContain(internalValue);
+    }
+    expect(verifyAccessToken).toHaveBeenCalledWith('secret-access-token');
+    expect(userExists).not.toHaveBeenCalled();
+    expect(findUnique).not.toHaveBeenCalled();
+    expect(findFirst).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+    expect(updateMany).not.toHaveBeenCalled();
+  });
 });

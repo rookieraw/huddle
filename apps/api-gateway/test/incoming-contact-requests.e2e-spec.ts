@@ -337,54 +337,42 @@ describe('Incoming Contact requests (e2e)', () => {
     },
   );
 
-  it.each([['a missing header', undefined]])(
-    'returns authentication required before query validation for %s',
-    async (_scenario, authorization) => {
-      let httpRequest = request(app.getHttpServer()).get(
-        '/contact-requests/incoming?limit=0',
-      );
+  it('returns authentication required before query validation for a missing header', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/contact-requests/incoming?limit=0')
+      .expect(401);
+    const body = response.body as IncomingContactRequestsErrorBody;
 
-      if (authorization !== undefined) {
-        httpRequest = httpRequest.set('Authorization', authorization);
-      }
+    expect(body).toEqual({
+      error: {
+        code: 'AUTHENTICATION_REQUIRED',
+        message: 'Authentication is required.',
+      },
+    });
+    expect(verifyAccessToken).not.toHaveBeenCalled();
+    expect(findMany).not.toHaveBeenCalled();
+    expect(getProfiles).not.toHaveBeenCalled();
+  });
 
-      const response = await httpRequest.expect(401);
-      const body = response.body as IncomingContactRequestsErrorBody;
+  it('returns authentication required before query validation for an invalid access token', async () => {
+    verifyAccessToken.mockRejectedValueOnce(new InvalidAccessTokenError());
 
-      expect(body).toEqual({
-        error: {
-          code: 'AUTHENTICATION_REQUIRED',
-          message: 'Authentication is required.',
-        },
-      });
-      expect(verifyAccessToken).not.toHaveBeenCalled();
-      expect(findMany).not.toHaveBeenCalled();
-      expect(getProfiles).not.toHaveBeenCalled();
-    },
-  );
+    const response = await request(app.getHttpServer())
+      .get('/contact-requests/incoming?limit=0')
+      .set('Authorization', 'Bearer unusable-access-token')
+      .expect(401);
+    const body = response.body as IncomingContactRequestsErrorBody;
 
-  it.each([['invalid', new InvalidAccessTokenError()]])(
-    'returns authentication required before query validation for an %s access token',
-    async (_scenario, tokenError) => {
-      verifyAccessToken.mockRejectedValueOnce(tokenError);
-
-      const response = await request(app.getHttpServer())
-        .get('/contact-requests/incoming?limit=0')
-        .set('Authorization', 'Bearer unusable-access-token')
-        .expect(401);
-      const body = response.body as IncomingContactRequestsErrorBody;
-
-      expect(body).toEqual({
-        error: {
-          code: 'AUTHENTICATION_REQUIRED',
-          message: 'Authentication is required.',
-        },
-      });
-      expect(verifyAccessToken).toHaveBeenCalledWith('unusable-access-token');
-      expect(findMany).not.toHaveBeenCalled();
-      expect(getProfiles).not.toHaveBeenCalled();
-    },
-  );
+    expect(body).toEqual({
+      error: {
+        code: 'AUTHENTICATION_REQUIRED',
+        message: 'Authentication is required.',
+      },
+    });
+    expect(verifyAccessToken).toHaveBeenCalledWith('unusable-access-token');
+    expect(findMany).not.toHaveBeenCalled();
+    expect(getProfiles).not.toHaveBeenCalled();
+  });
 
   it.each([
     {
