@@ -1,5 +1,5 @@
 import { ConfigModule } from '@nestjs/config';
-import type { ArgumentsHost, ExecutionContext } from '@nestjs/common';
+import type { ArgumentsHost, ExecutionContext, Type } from '@nestjs/common';
 import { HttpStatus } from '@nestjs/common';
 import {
   EXCEPTION_FILTERS_METADATA,
@@ -80,6 +80,46 @@ function createArgumentsHost() {
   };
 }
 
+const persistenceConfig = {
+  DATABASE_URL: 'postgresql://test:test@localhost:5432/chat-composition',
+};
+
+const productionConfig = {
+  ...persistenceConfig,
+  GITHUB_CALLBACK_URL: 'http://localhost/auth/oauth/github/callback',
+  GITHUB_CLIENT_ID: 'composition-github-client',
+  GITHUB_CLIENT_SECRET: 'composition-github-secret',
+  GOOGLE_CALLBACK_URL: 'http://localhost/auth/oauth/google/callback',
+  GOOGLE_CLIENT_ID: 'composition-google-client',
+  GOOGLE_CLIENT_SECRET: 'composition-google-secret',
+  JWT_SECRET: 'composition-jwt-secret',
+};
+
+type ProviderOverride = readonly [token: unknown, value: unknown];
+
+function createCompositionModule(
+  moduleUnderTest: Type<unknown>,
+  config: Record<string, string>,
+  overrides: ProviderOverride[] = [],
+): Promise<TestingModule> {
+  let builder = Test.createTestingModule({
+    imports: [
+      ConfigModule.forRoot({
+        isGlobal: true,
+        ignoreEnvFile: true,
+        load: [() => config],
+      }),
+      moduleUnderTest,
+    ],
+  });
+
+  for (const [token, value] of overrides) {
+    builder = builder.overrideProvider(token).useValue(value);
+  }
+
+  return builder.compile();
+}
+
 describe('Chat Contact-request production composition', () => {
   let testingModule: TestingModule | undefined;
 
@@ -88,21 +128,10 @@ describe('Chat Contact-request production composition', () => {
   });
 
   it('disconnects the Chat Prisma client when its production module closes', async () => {
-    testingModule = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-          ignoreEnvFile: true,
-          load: [
-            () => ({
-              DATABASE_URL:
-                'postgresql://test:test@localhost:5432/chat-composition',
-            }),
-          ],
-        }),
-        ChatPersistenceModule,
-      ],
-    }).compile();
+    testingModule = await createCompositionModule(
+      ChatPersistenceModule,
+      persistenceConfig,
+    );
     const prisma =
       testingModule.get<DisconnectablePrismaClient>(CHAT_PRISMA_CLIENT);
     const disconnect = jest
@@ -122,24 +151,11 @@ describe('Chat Contact-request production composition', () => {
         findFirst,
       },
     };
-    testingModule = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-          ignoreEnvFile: true,
-          load: [
-            () => ({
-              DATABASE_URL:
-                'postgresql://test:test@localhost:5432/chat-composition',
-            }),
-          ],
-        }),
-        ChatPersistenceModule,
-      ],
-    })
-      .overrideProvider(CHAT_PRISMA_CLIENT)
-      .useValue(prisma)
-      .compile();
+    testingModule = await createCompositionModule(
+      ChatPersistenceModule,
+      persistenceConfig,
+      [[CHAT_PRISMA_CLIENT, prisma]],
+    );
 
     const repository = testingModule.get<ContactRelationshipRepository>(
       CONTACT_RELATIONSHIP_REPOSITORY,
@@ -166,35 +182,14 @@ describe('Chat Contact-request production composition', () => {
         upsert,
       },
     };
-    testingModule = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-          ignoreEnvFile: true,
-          load: [
-            () => ({
-              DATABASE_URL:
-                'postgresql://test:test@localhost:5432/chat-composition',
-              GITHUB_CALLBACK_URL:
-                'http://localhost/auth/oauth/github/callback',
-              GITHUB_CLIENT_ID: 'composition-github-client',
-              GITHUB_CLIENT_SECRET: 'composition-github-secret',
-              GOOGLE_CALLBACK_URL:
-                'http://localhost/auth/oauth/google/callback',
-              GOOGLE_CLIENT_ID: 'composition-google-client',
-              GOOGLE_CLIENT_SECRET: 'composition-google-secret',
-              JWT_SECRET: 'composition-jwt-secret',
-            }),
-          ],
-        }),
-        ChatContactRequestModule,
+    testingModule = await createCompositionModule(
+      ChatContactRequestModule,
+      productionConfig,
+      [
+        [DIRECTORY_API, { userExists }],
+        [CHAT_PRISMA_CLIENT, prisma],
       ],
-    })
-      .overrideProvider(DIRECTORY_API)
-      .useValue({ userExists })
-      .overrideProvider(CHAT_PRISMA_CLIENT)
-      .useValue(prisma)
-      .compile();
+    );
 
     const adapter = testingModule.get(IdentityContactTargetDirectoryAdapter);
     expect(testingModule.get(CONTACT_TARGET_DIRECTORY)).toBe(adapter);
@@ -230,35 +225,14 @@ describe('Chat Contact-request production composition', () => {
         updateMany,
       },
     };
-    testingModule = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-          ignoreEnvFile: true,
-          load: [
-            () => ({
-              DATABASE_URL:
-                'postgresql://test:test@localhost:5432/chat-composition',
-              GITHUB_CALLBACK_URL:
-                'http://localhost/auth/oauth/github/callback',
-              GITHUB_CLIENT_ID: 'composition-github-client',
-              GITHUB_CLIENT_SECRET: 'composition-github-secret',
-              GOOGLE_CALLBACK_URL:
-                'http://localhost/auth/oauth/google/callback',
-              GOOGLE_CLIENT_ID: 'composition-google-client',
-              GOOGLE_CLIENT_SECRET: 'composition-google-secret',
-              JWT_SECRET: 'composition-jwt-secret',
-            }),
-          ],
-        }),
-        ChatContactRequestModule,
+    testingModule = await createCompositionModule(
+      ChatContactRequestModule,
+      productionConfig,
+      [
+        [DIRECTORY_API, { userExists: jest.fn() }],
+        [CHAT_PRISMA_CLIENT, prisma],
       ],
-    })
-      .overrideProvider(DIRECTORY_API)
-      .useValue({ userExists: jest.fn() })
-      .overrideProvider(CHAT_PRISMA_CLIENT)
-      .useValue(prisma)
-      .compile();
+    );
 
     const controller = testingModule.get(ContactRequestsController);
     expect(testingModule.get(AcceptContactRequestUseCase)).toBeDefined();
@@ -301,35 +275,14 @@ describe('Chat Contact-request production composition', () => {
         updateMany,
       },
     };
-    testingModule = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-          ignoreEnvFile: true,
-          load: [
-            () => ({
-              DATABASE_URL:
-                'postgresql://test:test@localhost:5432/chat-composition',
-              GITHUB_CALLBACK_URL:
-                'http://localhost/auth/oauth/github/callback',
-              GITHUB_CLIENT_ID: 'composition-github-client',
-              GITHUB_CLIENT_SECRET: 'composition-github-secret',
-              GOOGLE_CALLBACK_URL:
-                'http://localhost/auth/oauth/google/callback',
-              GOOGLE_CLIENT_ID: 'composition-google-client',
-              GOOGLE_CLIENT_SECRET: 'composition-google-secret',
-              JWT_SECRET: 'composition-jwt-secret',
-            }),
-          ],
-        }),
-        ChatContactRequestModule,
+    testingModule = await createCompositionModule(
+      ChatContactRequestModule,
+      productionConfig,
+      [
+        [DIRECTORY_API, { userExists: jest.fn() }],
+        [CHAT_PRISMA_CLIENT, prisma],
       ],
-    })
-      .overrideProvider(DIRECTORY_API)
-      .useValue({ userExists: jest.fn() })
-      .overrideProvider(CHAT_PRISMA_CLIENT)
-      .useValue(prisma)
-      .compile();
+    );
 
     const controller = testingModule.get(ContactRequestsController);
     expect(testingModule.get(RejectContactRequestUseCase)).toBeDefined();
@@ -376,37 +329,15 @@ describe('Chat Contact-request production composition', () => {
         findMany,
       },
     };
-    testingModule = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-          ignoreEnvFile: true,
-          load: [
-            () => ({
-              DATABASE_URL:
-                'postgresql://test:test@localhost:5432/chat-composition',
-              GITHUB_CALLBACK_URL:
-                'http://localhost/auth/oauth/github/callback',
-              GITHUB_CLIENT_ID: 'composition-github-client',
-              GITHUB_CLIENT_SECRET: 'composition-github-secret',
-              GOOGLE_CALLBACK_URL:
-                'http://localhost/auth/oauth/google/callback',
-              GOOGLE_CLIENT_ID: 'composition-google-client',
-              GOOGLE_CLIENT_SECRET: 'composition-google-secret',
-              JWT_SECRET: 'composition-jwt-secret',
-            }),
-          ],
-        }),
-        ChatContactRequestModule,
+    testingModule = await createCompositionModule(
+      ChatContactRequestModule,
+      productionConfig,
+      [
+        [DIRECTORY_API, { userExists: jest.fn() }],
+        [PROFILE_QUERY_API, { getProfiles }],
+        [CHAT_PRISMA_CLIENT, prisma],
       ],
-    })
-      .overrideProvider(DIRECTORY_API)
-      .useValue({ userExists: jest.fn() })
-      .overrideProvider(PROFILE_QUERY_API)
-      .useValue({ getProfiles })
-      .overrideProvider(CHAT_PRISMA_CLIENT)
-      .useValue(prisma)
-      .compile();
+    );
 
     const adapter = testingModule.get(IdentityUserProfileDirectoryAdapter);
     expect(testingModule.get(USER_PROFILE_DIRECTORY)).toBe(adapter);
@@ -453,37 +384,15 @@ describe('Chat Contact-request production composition', () => {
         findMany,
       },
     };
-    testingModule = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-          ignoreEnvFile: true,
-          load: [
-            () => ({
-              DATABASE_URL:
-                'postgresql://test:test@localhost:5432/chat-composition',
-              GITHUB_CALLBACK_URL:
-                'http://localhost/auth/oauth/github/callback',
-              GITHUB_CLIENT_ID: 'composition-github-client',
-              GITHUB_CLIENT_SECRET: 'composition-github-secret',
-              GOOGLE_CALLBACK_URL:
-                'http://localhost/auth/oauth/google/callback',
-              GOOGLE_CLIENT_ID: 'composition-google-client',
-              GOOGLE_CLIENT_SECRET: 'composition-google-secret',
-              JWT_SECRET: 'composition-jwt-secret',
-            }),
-          ],
-        }),
-        ChatContactRequestModule,
+    testingModule = await createCompositionModule(
+      ChatContactRequestModule,
+      productionConfig,
+      [
+        [DIRECTORY_API, { userExists: jest.fn() }],
+        [PROFILE_QUERY_API, { getProfiles }],
+        [CHAT_PRISMA_CLIENT, prisma],
       ],
-    })
-      .overrideProvider(DIRECTORY_API)
-      .useValue({ userExists: jest.fn() })
-      .overrideProvider(PROFILE_QUERY_API)
-      .useValue({ getProfiles })
-      .overrideProvider(CHAT_PRISMA_CLIENT)
-      .useValue(prisma)
-      .compile();
+    );
 
     const useCase = testingModule.get(ListOutgoingContactRequestsUseCase);
     const result = await useCase.execute({ requesterId: 'user-requester' });
@@ -536,37 +445,15 @@ describe('Chat Contact-request production composition', () => {
         findMany,
       },
     };
-    testingModule = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-          ignoreEnvFile: true,
-          load: [
-            () => ({
-              DATABASE_URL:
-                'postgresql://test:test@localhost:5432/chat-composition',
-              GITHUB_CALLBACK_URL:
-                'http://localhost/auth/oauth/github/callback',
-              GITHUB_CLIENT_ID: 'composition-github-client',
-              GITHUB_CLIENT_SECRET: 'composition-github-secret',
-              GOOGLE_CALLBACK_URL:
-                'http://localhost/auth/oauth/google/callback',
-              GOOGLE_CLIENT_ID: 'composition-google-client',
-              GOOGLE_CLIENT_SECRET: 'composition-google-secret',
-              JWT_SECRET: 'composition-jwt-secret',
-            }),
-          ],
-        }),
-        ChatContactRequestModule,
+    testingModule = await createCompositionModule(
+      ChatContactRequestModule,
+      productionConfig,
+      [
+        [DIRECTORY_API, { userExists: jest.fn() }],
+        [PROFILE_QUERY_API, { getProfiles }],
+        [CHAT_PRISMA_CLIENT, prisma],
       ],
-    })
-      .overrideProvider(DIRECTORY_API)
-      .useValue({ userExists: jest.fn() })
-      .overrideProvider(PROFILE_QUERY_API)
-      .useValue({ getProfiles })
-      .overrideProvider(CHAT_PRISMA_CLIENT)
-      .useValue(prisma)
-      .compile();
+    );
 
     const useCase = testingModule.get(ListAcceptedContactsUseCase);
     const result = await useCase.execute({ userId: 'user-actor' });
@@ -595,37 +482,15 @@ describe('Chat Contact-request production composition', () => {
   });
 
   it('registers the Contacts controller with the shared guard and filter in the production graph', async () => {
-    testingModule = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-          ignoreEnvFile: true,
-          load: [
-            () => ({
-              DATABASE_URL:
-                'postgresql://test:test@localhost:5432/chat-composition',
-              GITHUB_CALLBACK_URL:
-                'http://localhost/auth/oauth/github/callback',
-              GITHUB_CLIENT_ID: 'composition-github-client',
-              GITHUB_CLIENT_SECRET: 'composition-github-secret',
-              GOOGLE_CALLBACK_URL:
-                'http://localhost/auth/oauth/google/callback',
-              GOOGLE_CLIENT_ID: 'composition-google-client',
-              GOOGLE_CLIENT_SECRET: 'composition-google-secret',
-              JWT_SECRET: 'composition-jwt-secret',
-            }),
-          ],
-        }),
-        ChatContactRequestModule,
+    testingModule = await createCompositionModule(
+      ChatContactRequestModule,
+      productionConfig,
+      [
+        [AUTHENTICATION_API, { verifyAccessToken: jest.fn() }],
+        [DIRECTORY_API, { userExists: jest.fn() }],
+        [CHAT_PRISMA_CLIENT, { contactRelationship: {} }],
       ],
-    })
-      .overrideProvider(AUTHENTICATION_API)
-      .useValue({ verifyAccessToken: jest.fn() })
-      .overrideProvider(DIRECTORY_API)
-      .useValue({ userExists: jest.fn() })
-      .overrideProvider(CHAT_PRISMA_CLIENT)
-      .useValue({ contactRelationship: {} })
-      .compile();
+    );
 
     // get() throws when the controller is not registered in the module.
     testingModule.get(ContactsController);
@@ -650,37 +515,15 @@ describe('Chat Contact-request production composition', () => {
         findFirst,
       },
     };
-    testingModule = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-          ignoreEnvFile: true,
-          load: [
-            () => ({
-              DATABASE_URL:
-                'postgresql://test:test@localhost:5432/chat-composition',
-              GITHUB_CALLBACK_URL:
-                'http://localhost/auth/oauth/github/callback',
-              GITHUB_CLIENT_ID: 'composition-github-client',
-              GITHUB_CLIENT_SECRET: 'composition-github-secret',
-              GOOGLE_CALLBACK_URL:
-                'http://localhost/auth/oauth/google/callback',
-              GOOGLE_CLIENT_ID: 'composition-google-client',
-              GOOGLE_CLIENT_SECRET: 'composition-google-secret',
-              JWT_SECRET: 'composition-jwt-secret',
-            }),
-          ],
-        }),
-        ChatContactRequestModule,
+    testingModule = await createCompositionModule(
+      ChatContactRequestModule,
+      productionConfig,
+      [
+        [AUTHENTICATION_API, { verifyAccessToken }],
+        [DIRECTORY_API, { userExists }],
+        [CHAT_PRISMA_CLIENT, prisma],
       ],
-    })
-      .overrideProvider(AUTHENTICATION_API)
-      .useValue({ verifyAccessToken })
-      .overrideProvider(DIRECTORY_API)
-      .useValue({ userExists })
-      .overrideProvider(CHAT_PRISMA_CLIENT)
-      .useValue(prisma)
-      .compile();
+    );
 
     const controller = testingModule.get(ContactRequestsController);
     const guard = testingModule.get(ContactRequestAuthenticationGuard);
