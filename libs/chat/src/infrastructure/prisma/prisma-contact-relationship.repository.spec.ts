@@ -256,7 +256,7 @@ describe('PrismaContactRelationshipRepository', () => {
     });
   });
 
-  it('finds accepted relationships of the user in either direction in ascending identifier order limited to take', async () => {
+  it('passes the accepted, either-direction, identifier-ordered, take-limited query to Prisma and maps the returned records', async () => {
     const findMany = jest.fn().mockResolvedValue([
       {
         id: 'relationship-a',
@@ -299,7 +299,7 @@ describe('PrismaContactRelationshipRepository', () => {
     expect(found.every((relationship) => relationship.isAccepted())).toBe(true);
   });
 
-  it('continues accepted relationships of the user strictly after the given identifier', async () => {
+  it('adds the strictly-after identifier condition to the accepted query', async () => {
     const findMany = jest.fn().mockResolvedValue([]);
     const prisma = {
       contactRelationship: {

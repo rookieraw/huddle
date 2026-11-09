@@ -34,7 +34,7 @@ describe('@huddle/chat acceptance package boundary', () => {
     expect(chatPackage).not.toHaveProperty('PrismaClient');
   });
 
-  it('exports the listing capability shared by the incoming and outgoing listings without exposing its helpers', () => {
+  it('exports the listing capability shared by the Contact listings without exposing its helpers', () => {
     expect(chatPackage).toEqual(
       expect.objectContaining({
         InvalidContactListLimitError: expect.any(Function),

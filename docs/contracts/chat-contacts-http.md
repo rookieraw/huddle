@@ -969,7 +969,8 @@ validation.
 The item carries the Contact's `userId` and `displayName` only. The
 relationship identifier, the direction of the original request, the
 acceptance time, and the status are omitted; see Information Minimization.
-Clients address a Contact by `userId`.
+In this list a Contact is identified by `userId`. This operation does not
+decide how any other operation addresses a Contact.
 
 `displayName` is non-unique, user-controlled presentation text. It is not an
 identifier and must not be used to authorize or distinguish Contacts;
