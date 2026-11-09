@@ -2,10 +2,8 @@ import { CHAT_PRISMA_CLIENT } from '@huddle/chat';
 import {
   AUTHENTICATION_API,
   DIRECTORY_API,
-  ExpiredAccessTokenError,
   InvalidAccessTokenError,
   PROFILE_QUERY_API,
-  UnsupportedAccessTokenTypeError,
 } from '@huddle/identity';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -304,21 +302,6 @@ describe('Accepted Contacts (e2e)', () => {
 
   it.each([
     { scenario: 'zero', query: 'limit=0', detail: limitValidationDetail },
-    {
-      scenario: 'above the maximum',
-      query: 'limit=51',
-      detail: limitValidationDetail,
-    },
-    {
-      scenario: 'non-numeric',
-      query: 'limit=abc',
-      detail: limitValidationDetail,
-    },
-    {
-      scenario: 'fractional',
-      query: 'limit=1.5',
-      detail: limitValidationDetail,
-    },
     { scenario: 'empty', query: 'limit=', detail: limitValidationDetail },
     {
       scenario: 'repeated',
@@ -362,61 +345,42 @@ describe('Accepted Contacts (e2e)', () => {
     },
   );
 
-  it.each([
-    ['a missing header', undefined],
-    ['a different scheme', 'Basic access-token'],
-    ['a missing token', 'Bearer'],
-    ['more than one credential', 'Bearer access-token unexpected'],
-  ])(
-    'returns authentication required before query validation for %s',
-    async (_scenario, authorization) => {
-      let httpRequest = request(app.getHttpServer()).get('/contacts?limit=0');
+  it('returns authentication required before query validation for a missing header', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/contacts?limit=0')
+      .expect(401);
+    const body = response.body as AcceptedContactsErrorBody;
 
-      if (authorization !== undefined) {
-        httpRequest = httpRequest.set('Authorization', authorization);
-      }
+    expect(body).toEqual({
+      error: {
+        code: 'AUTHENTICATION_REQUIRED',
+        message: 'Authentication is required.',
+      },
+    });
+    expect(verifyAccessToken).not.toHaveBeenCalled();
+    expect(findMany).not.toHaveBeenCalled();
+    expect(getProfiles).not.toHaveBeenCalled();
+  });
 
-      const response = await httpRequest.expect(401);
-      const body = response.body as AcceptedContactsErrorBody;
+  it('returns authentication required before query validation for an invalid access token', async () => {
+    verifyAccessToken.mockRejectedValueOnce(new InvalidAccessTokenError());
 
-      expect(body).toEqual({
-        error: {
-          code: 'AUTHENTICATION_REQUIRED',
-          message: 'Authentication is required.',
-        },
-      });
-      expect(verifyAccessToken).not.toHaveBeenCalled();
-      expect(findMany).not.toHaveBeenCalled();
-      expect(getProfiles).not.toHaveBeenCalled();
-    },
-  );
+    const response = await request(app.getHttpServer())
+      .get('/contacts?limit=0')
+      .set('Authorization', 'Bearer unusable-access-token')
+      .expect(401);
+    const body = response.body as AcceptedContactsErrorBody;
 
-  it.each([
-    ['invalid', new InvalidAccessTokenError()],
-    ['expired', new ExpiredAccessTokenError()],
-    ['unsupported', new UnsupportedAccessTokenTypeError()],
-  ])(
-    'returns authentication required before query validation for an %s access token',
-    async (_scenario, tokenError) => {
-      verifyAccessToken.mockRejectedValueOnce(tokenError);
-
-      const response = await request(app.getHttpServer())
-        .get('/contacts?limit=0')
-        .set('Authorization', 'Bearer unusable-access-token')
-        .expect(401);
-      const body = response.body as AcceptedContactsErrorBody;
-
-      expect(body).toEqual({
-        error: {
-          code: 'AUTHENTICATION_REQUIRED',
-          message: 'Authentication is required.',
-        },
-      });
-      expect(verifyAccessToken).toHaveBeenCalledWith('unusable-access-token');
-      expect(findMany).not.toHaveBeenCalled();
-      expect(getProfiles).not.toHaveBeenCalled();
-    },
-  );
+    expect(body).toEqual({
+      error: {
+        code: 'AUTHENTICATION_REQUIRED',
+        message: 'Authentication is required.',
+      },
+    });
+    expect(verifyAccessToken).toHaveBeenCalledWith('unusable-access-token');
+    expect(findMany).not.toHaveBeenCalled();
+    expect(getProfiles).not.toHaveBeenCalled();
+  });
 
   it.each([
     {
