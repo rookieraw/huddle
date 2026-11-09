@@ -4,6 +4,12 @@ export const CONTACT_RELATIONSHIP_REPOSITORY = Symbol(
   'CONTACT_RELATIONSHIP_REPOSITORY',
 );
 
+export type FindAcceptedByUserQuery = {
+  userId: string;
+  take: number;
+  afterRelationshipId?: string;
+};
+
 export type FindPendingByRecipientQuery = {
   recipientId: string;
   take: number;
@@ -12,12 +18,6 @@ export type FindPendingByRecipientQuery = {
 
 export type FindPendingByRequesterQuery = {
   requesterId: string;
-  take: number;
-  afterRelationshipId?: string;
-};
-
-export type FindAcceptedByUserQuery = {
-  userId: string;
   take: number;
   afterRelationshipId?: string;
 };
