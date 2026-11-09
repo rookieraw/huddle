@@ -25,14 +25,14 @@ export {
   RejectContactRequestUseCase,
 } from './application/use-cases/reject-contact-request.use-case';
 export type {
-  RequesterProfile,
-  RequesterProfileDirectory,
-} from './application/ports/requester-profile-directory.port';
-export { REQUESTER_PROFILE_DIRECTORY } from './application/ports/requester-profile-directory.port';
+  UserProfile,
+  UserProfileDirectory,
+} from './application/ports/user-profile-directory.port';
+export { USER_PROFILE_DIRECTORY } from './application/ports/user-profile-directory.port';
 export {
-  InvalidContactRequestListCursorError,
-  InvalidContactRequestListLimitError,
-} from './application/use-cases/contact-request-list-pagination';
+  InvalidContactListCursorError,
+  InvalidContactListLimitError,
+} from './application/use-cases/contact-list-pagination';
 export type {
   IncomingContactRequestItem,
   IncomingContactRequestPage,
@@ -49,5 +49,13 @@ export {
   ListOutgoingContactRequestsUseCase,
   OutgoingContactRequestListingUnavailableError,
 } from './application/use-cases/list-outgoing-contact-requests.use-case';
+export type {
+  AcceptedContactItem,
+  AcceptedContactPage,
+} from './application/use-cases/list-accepted-contacts.use-case';
+export {
+  AcceptedContactListingUnavailableError,
+  ListAcceptedContactsUseCase,
+} from './application/use-cases/list-accepted-contacts.use-case';
 export { ChatPersistenceModule } from './infrastructure/nestjs/chat-persistence.module';
 export { CHAT_PRISMA_CLIENT } from './infrastructure/prisma/chat-prisma-client.provider';

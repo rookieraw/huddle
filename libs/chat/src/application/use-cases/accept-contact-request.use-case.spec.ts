@@ -11,6 +11,7 @@ import {
 } from './contact-request.errors';
 
 type ContactRelationshipRepositoryMock = {
+  findAcceptedByUser: jest.Mock;
   findCurrentByUserPair: jest.Mock;
   findById: jest.Mock;
   findPendingByRecipient: jest.Mock;
@@ -23,6 +24,7 @@ function createRepository(
   overrides: Partial<ContactRelationshipRepositoryMock> = {},
 ): ContactRelationshipRepositoryMock {
   return {
+    findAcceptedByUser: jest.fn(),
     findCurrentByUserPair: jest.fn(),
     findById: jest.fn(),
     findPendingByRecipient: jest.fn(),

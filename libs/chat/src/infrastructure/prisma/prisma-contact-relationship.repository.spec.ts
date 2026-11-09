@@ -255,4 +255,74 @@ describe('PrismaContactRelationshipRepository', () => {
       take: 21,
     });
   });
+
+  it('passes the accepted, either-direction, identifier-ordered, take-limited query to Prisma and maps the returned records', async () => {
+    const findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'relationship-a',
+        requesterId: 'user-actor',
+        recipientId: 'user-contact-a',
+        status: 'accepted',
+      },
+      {
+        id: 'relationship-b',
+        requesterId: 'user-contact-b',
+        recipientId: 'user-actor',
+        status: 'accepted',
+      },
+    ]);
+    const prisma = {
+      contactRelationship: {
+        findMany,
+      },
+    } as unknown as PrismaClient;
+    const repository = new PrismaContactRelationshipRepository(prisma);
+
+    const found = await repository.findAcceptedByUser({
+      userId: 'user-actor',
+      take: 21,
+    });
+
+    expect(findMany).toHaveBeenCalledTimes(1);
+    expect(findMany).toHaveBeenCalledWith({
+      where: {
+        status: 'accepted',
+        OR: [{ recipientId: 'user-actor' }, { requesterId: 'user-actor' }],
+      },
+      orderBy: { id: 'asc' },
+      take: 21,
+    });
+    expect(found.map((relationship) => relationship.id)).toEqual([
+      'relationship-a',
+      'relationship-b',
+    ]);
+    expect(found.every((relationship) => relationship.isAccepted())).toBe(true);
+  });
+
+  it('adds the strictly-after identifier condition to the accepted query', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const prisma = {
+      contactRelationship: {
+        findMany,
+      },
+    } as unknown as PrismaClient;
+    const repository = new PrismaContactRelationshipRepository(prisma);
+
+    await repository.findAcceptedByUser({
+      userId: 'user-actor',
+      take: 21,
+      afterRelationshipId: 'relationship-b',
+    });
+
+    expect(findMany).toHaveBeenCalledTimes(1);
+    expect(findMany).toHaveBeenCalledWith({
+      where: {
+        status: 'accepted',
+        OR: [{ recipientId: 'user-actor' }, { requesterId: 'user-actor' }],
+        id: { gt: 'relationship-b' },
+      },
+      orderBy: { id: 'asc' },
+      take: 21,
+    });
+  });
 });

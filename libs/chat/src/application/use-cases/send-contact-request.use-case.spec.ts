@@ -61,6 +61,10 @@ class RecordingContactRelationshipRepository implements ContactRelationshipRepos
       ) ?? null,
   );
 
+  readonly findAcceptedByUser = jest.fn(
+    async (): Promise<ContactRelationship[]> => [],
+  );
+
   readonly findPendingByRecipient = jest.fn(
     async (): Promise<ContactRelationship[]> => [],
   );

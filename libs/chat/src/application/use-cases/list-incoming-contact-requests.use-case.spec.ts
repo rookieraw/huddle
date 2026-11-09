@@ -1,14 +1,15 @@
 import { ContactRelationship } from '../../domain/contact-relationship.entity';
 import {
-  InvalidContactRequestListCursorError,
-  InvalidContactRequestListLimitError,
-} from './contact-request-list-pagination';
+  InvalidContactListCursorError,
+  InvalidContactListLimitError,
+} from './contact-list-pagination';
 import {
   ListIncomingContactRequestsUseCase,
   IncomingContactRequestListingUnavailableError,
 } from './list-incoming-contact-requests.use-case';
 
 type ContactRelationshipRepositoryMock = {
+  findAcceptedByUser: jest.Mock;
   findCurrentByUserPair: jest.Mock;
   findById: jest.Mock;
   findPendingByRecipient: jest.Mock;
@@ -21,6 +22,7 @@ function createRepository(
   overrides: Partial<ContactRelationshipRepositoryMock> = {},
 ): ContactRelationshipRepositoryMock {
   return {
+    findAcceptedByUser: jest.fn(),
     findCurrentByUserPair: jest.fn(),
     findById: jest.fn(),
     findPendingByRecipient: jest.fn(),
@@ -42,6 +44,20 @@ function createProfileDirectory(
     findProfiles: jest.fn().mockResolvedValue([]),
     ...overrides,
   };
+}
+
+function pendingRequestsToRecipient(
+  recipientId: string,
+  count: number,
+): ContactRelationship[] {
+  return Array.from({ length: count }, (_, index) =>
+    ContactRelationship.reconstitute({
+      id: `relationship-${index + 1}`,
+      requesterId: `user-requester-${index + 1}`,
+      recipientId,
+      status: 'pending',
+    }),
+  );
 }
 
 describe('ListIncomingContactRequestsUseCase', () => {
@@ -113,14 +129,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
 
   it('returns only the first 20 items and drops the lookahead row when the repository returns 21', async () => {
     const recipientId = 'user-recipient';
-    const relationships = Array.from({ length: 21 }, (_, index) =>
-      ContactRelationship.reconstitute({
-        id: `relationship-${index + 1}`,
-        requesterId: `user-requester-${index + 1}`,
-        recipientId,
-        status: 'pending',
-      }),
-    );
+    const relationships = pendingRequestsToRecipient(recipientId, 21);
     const contactRelationshipRepository = createRepository({
       findPendingByRecipient: jest.fn().mockResolvedValue(relationships),
     });
@@ -142,14 +151,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
 
   it('returns a null nextCursor when the repository returns no more than the limit', async () => {
     const recipientId = 'user-recipient';
-    const relationships = Array.from({ length: 20 }, (_, index) =>
-      ContactRelationship.reconstitute({
-        id: `relationship-${index + 1}`,
-        requesterId: `user-requester-${index + 1}`,
-        recipientId,
-        status: 'pending',
-      }),
-    );
+    const relationships = pendingRequestsToRecipient(recipientId, 20);
     const contactRelationshipRepository = createRepository({
       findPendingByRecipient: jest.fn().mockResolvedValue(relationships),
     });
@@ -166,14 +168,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
 
   it('returns an opaque non-null nextCursor for the last kept item when a lookahead row exists', async () => {
     const recipientId = 'user-recipient';
-    const relationships = Array.from({ length: 21 }, (_, index) =>
-      ContactRelationship.reconstitute({
-        id: `relationship-${index + 1}`,
-        requesterId: `user-requester-${index + 1}`,
-        recipientId,
-        status: 'pending',
-      }),
-    );
+    const relationships = pendingRequestsToRecipient(recipientId, 21);
     const contactRelationshipRepository = createRepository({
       findPendingByRecipient: jest.fn().mockResolvedValue(relationships),
     });
@@ -191,14 +186,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
 
   it('passes the id decoded from a returned nextCursor to the repository as the continuation point', async () => {
     const recipientId = 'user-recipient';
-    const relationships = Array.from({ length: 21 }, (_, index) =>
-      ContactRelationship.reconstitute({
-        id: `relationship-${index + 1}`,
-        requesterId: `user-requester-${index + 1}`,
-        recipientId,
-        status: 'pending',
-      }),
-    );
+    const relationships = pendingRequestsToRecipient(recipientId, 21);
     const contactRelationshipRepository = createRepository({
       findPendingByRecipient: jest
         .fn()
@@ -227,14 +215,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
 
   it('uses an explicit limit for the page size and the lookahead row', async () => {
     const recipientId = 'user-recipient';
-    const relationships = Array.from({ length: 6 }, (_, index) =>
-      ContactRelationship.reconstitute({
-        id: `relationship-${index + 1}`,
-        requesterId: `user-requester-${index + 1}`,
-        recipientId,
-        status: 'pending',
-      }),
-    );
+    const relationships = pendingRequestsToRecipient(recipientId, 6);
     const contactRelationshipRepository = createRepository({
       findPendingByRecipient: jest.fn().mockResolvedValue(relationships),
     });
@@ -285,7 +266,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
         .execute({ recipientId: 'user-recipient', limit })
         .catch((caught: unknown) => caught);
 
-      expect(error).toBeInstanceOf(InvalidContactRequestListLimitError);
+      expect(error).toBeInstanceOf(InvalidContactListLimitError);
       expect((error as Error).message).toBe(
         'limit must be an integer from 1 to 50.',
       );
@@ -323,7 +304,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
         .execute({ recipientId: 'user-recipient', cursor })
         .catch((caught: unknown) => caught);
 
-      expect(error).toBeInstanceOf(InvalidContactRequestListCursorError);
+      expect(error).toBeInstanceOf(InvalidContactListCursorError);
       expect((error as Error).message).toBe('cursor must be a valid cursor.');
       expect(
         contactRelationshipRepository.findPendingByRecipient,
@@ -342,7 +323,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
       .execute({ recipientId: 'user-recipient', limit: '0', cursor: '' })
       .catch((caught: unknown) => caught);
 
-    expect(error).toBeInstanceOf(InvalidContactRequestListLimitError);
+    expect(error).toBeInstanceOf(InvalidContactListLimitError);
     expect(
       contactRelationshipRepository.findPendingByRecipient,
     ).not.toHaveBeenCalled();
@@ -350,14 +331,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
 
   it('looks up the requester profiles once and gives each item its own requester display name regardless of the returned order', async () => {
     const recipientId = 'user-recipient';
-    const relationships = [1, 2].map((number) =>
-      ContactRelationship.reconstitute({
-        id: `relationship-${number}`,
-        requesterId: `user-requester-${number}`,
-        recipientId,
-        status: 'pending',
-      }),
-    );
+    const relationships = pendingRequestsToRecipient(recipientId, 2);
     const contactRelationshipRepository = createRepository({
       findPendingByRecipient: jest.fn().mockResolvedValue(relationships),
     });
@@ -387,14 +361,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
 
   it('lists a request with a null display name when its requester has no profile and keeps the other names matched by user id', async () => {
     const recipientId = 'user-recipient';
-    const relationships = [1, 2, 3].map((number) =>
-      ContactRelationship.reconstitute({
-        id: `relationship-${number}`,
-        requesterId: `user-requester-${number}`,
-        recipientId,
-        status: 'pending',
-      }),
-    );
+    const relationships = pendingRequestsToRecipient(recipientId, 3);
     const contactRelationshipRepository = createRepository({
       findPendingByRecipient: jest.fn().mockResolvedValue(relationships),
     });
@@ -420,14 +387,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
 
   it('sends at most 50 requester ids to the profile directory and excludes the lookahead row at the maximum limit', async () => {
     const recipientId = 'user-recipient';
-    const relationships = Array.from({ length: 51 }, (_, index) =>
-      ContactRelationship.reconstitute({
-        id: `relationship-${index + 1}`,
-        requesterId: `user-requester-${index + 1}`,
-        recipientId,
-        status: 'pending',
-      }),
-    );
+    const relationships = pendingRequestsToRecipient(recipientId, 51);
     const contactRelationshipRepository = createRepository({
       findPendingByRecipient: jest.fn().mockResolvedValue(relationships),
     });
@@ -470,15 +430,15 @@ describe('ListIncomingContactRequestsUseCase', () => {
   });
 
   it('reports the listing as unavailable and returns no partial list when the profile directory fails', async () => {
+    const recipientId = 'user-recipient';
+    const relationship = ContactRelationship.reconstitute({
+      id: 'relationship-1',
+      requesterId: 'user-requester-1',
+      recipientId,
+      status: 'pending',
+    });
     const contactRelationshipRepository = createRepository({
-      findPendingByRecipient: jest.fn().mockResolvedValue([
-        ContactRelationship.reconstitute({
-          id: 'relationship-1',
-          requesterId: 'user-requester-1',
-          recipientId: 'user-recipient',
-          status: 'pending',
-        }),
-      ]),
+      findPendingByRecipient: jest.fn().mockResolvedValue([relationship]),
     });
     const directory = createProfileDirectory({
       findProfiles: jest.fn().mockRejectedValue(new Error('identity down')),
@@ -489,7 +449,7 @@ describe('ListIncomingContactRequestsUseCase', () => {
     );
 
     const error: unknown = await useCase
-      .execute({ recipientId: 'user-recipient' })
+      .execute({ recipientId })
       .catch((caught: unknown) => caught);
 
     expect(error).toBeInstanceOf(IncomingContactRequestListingUnavailableError);

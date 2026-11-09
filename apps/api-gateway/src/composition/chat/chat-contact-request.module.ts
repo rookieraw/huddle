@@ -4,16 +4,17 @@ import {
   CONTACT_RELATIONSHIP_REPOSITORY,
   CONTACT_TARGET_DIRECTORY,
   ChatPersistenceModule,
+  ListAcceptedContactsUseCase,
   ListIncomingContactRequestsUseCase,
   ListOutgoingContactRequestsUseCase,
-  REQUESTER_PROFILE_DIRECTORY,
+  USER_PROFILE_DIRECTORY,
   RejectContactRequestUseCase,
   SendContactRequestUseCase,
 } from '@huddle/chat';
 import type {
   ContactRelationshipRepository,
   ContactTargetDirectory,
-  RequesterProfileDirectory,
+  UserProfileDirectory,
 } from '@huddle/chat';
 import {
   DIRECTORY_API,
@@ -24,12 +25,13 @@ import type { DirectoryApi, ProfileQueryApi } from '@huddle/identity';
 import { ContactRequestAuthenticationGuard } from '../../interface/http/chat/contact-request-authentication.guard';
 import { ContactRequestExceptionFilter } from '../../interface/http/chat/contact-request-exception.filter';
 import { ContactRequestsController } from '../../interface/http/chat/contact-requests.controller';
+import { ContactsController } from '../../interface/http/chat/contacts.controller';
 import { IdentityContactTargetDirectoryAdapter } from './identity-contact-target-directory.adapter';
-import { IdentityRequesterProfileDirectoryAdapter } from './identity-requester-profile-directory.adapter';
+import { IdentityUserProfileDirectoryAdapter } from './identity-user-profile-directory.adapter';
 
 @Module({
   imports: [IdentityModule, ChatPersistenceModule],
-  controllers: [ContactRequestsController],
+  controllers: [ContactRequestsController, ContactsController],
   providers: [
     ContactRequestAuthenticationGuard,
     ContactRequestExceptionFilter,
@@ -44,14 +46,14 @@ import { IdentityRequesterProfileDirectoryAdapter } from './identity-requester-p
       useExisting: IdentityContactTargetDirectoryAdapter,
     },
     {
-      provide: IdentityRequesterProfileDirectoryAdapter,
+      provide: IdentityUserProfileDirectoryAdapter,
       useFactory: (profileQueryApi: ProfileQueryApi) =>
-        new IdentityRequesterProfileDirectoryAdapter(profileQueryApi),
+        new IdentityUserProfileDirectoryAdapter(profileQueryApi),
       inject: [PROFILE_QUERY_API],
     },
     {
-      provide: REQUESTER_PROFILE_DIRECTORY,
-      useExisting: IdentityRequesterProfileDirectoryAdapter,
+      provide: USER_PROFILE_DIRECTORY,
+      useExisting: IdentityUserProfileDirectoryAdapter,
     },
     {
       provide: AcceptContactRequestUseCase,
@@ -61,28 +63,40 @@ import { IdentityRequesterProfileDirectoryAdapter } from './identity-requester-p
       inject: [CONTACT_RELATIONSHIP_REPOSITORY],
     },
     {
+      provide: ListAcceptedContactsUseCase,
+      useFactory: (
+        contactRelationshipRepository: ContactRelationshipRepository,
+        profileDirectory: UserProfileDirectory,
+      ) =>
+        new ListAcceptedContactsUseCase(
+          contactRelationshipRepository,
+          profileDirectory,
+        ),
+      inject: [CONTACT_RELATIONSHIP_REPOSITORY, USER_PROFILE_DIRECTORY],
+    },
+    {
       provide: ListIncomingContactRequestsUseCase,
       useFactory: (
         contactRelationshipRepository: ContactRelationshipRepository,
-        profileDirectory: RequesterProfileDirectory,
+        profileDirectory: UserProfileDirectory,
       ) =>
         new ListIncomingContactRequestsUseCase(
           contactRelationshipRepository,
           profileDirectory,
         ),
-      inject: [CONTACT_RELATIONSHIP_REPOSITORY, REQUESTER_PROFILE_DIRECTORY],
+      inject: [CONTACT_RELATIONSHIP_REPOSITORY, USER_PROFILE_DIRECTORY],
     },
     {
       provide: ListOutgoingContactRequestsUseCase,
       useFactory: (
         contactRelationshipRepository: ContactRelationshipRepository,
-        profileDirectory: RequesterProfileDirectory,
+        profileDirectory: UserProfileDirectory,
       ) =>
         new ListOutgoingContactRequestsUseCase(
           contactRelationshipRepository,
           profileDirectory,
         ),
-      inject: [CONTACT_RELATIONSHIP_REPOSITORY, REQUESTER_PROFILE_DIRECTORY],
+      inject: [CONTACT_RELATIONSHIP_REPOSITORY, USER_PROFILE_DIRECTORY],
     },
     {
       provide: RejectContactRequestUseCase,

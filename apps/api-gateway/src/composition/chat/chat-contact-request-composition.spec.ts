@@ -13,9 +13,10 @@ import {
   CONTACT_TARGET_DIRECTORY,
   ChatPersistenceModule,
   ContactRequestUnavailableError,
+  ListAcceptedContactsUseCase,
   ListIncomingContactRequestsUseCase,
   ListOutgoingContactRequestsUseCase,
-  REQUESTER_PROFILE_DIRECTORY,
+  USER_PROFILE_DIRECTORY,
   RejectContactRequestUseCase,
   SendContactRequestUseCase,
 } from '@huddle/chat';
@@ -27,9 +28,10 @@ import {
 import { ContactRequestAuthenticationGuard } from '../../interface/http/chat/contact-request-authentication.guard';
 import { ContactRequestExceptionFilter } from '../../interface/http/chat/contact-request-exception.filter';
 import { ContactRequestsController } from '../../interface/http/chat/contact-requests.controller';
+import { ContactsController } from '../../interface/http/chat/contacts.controller';
 import { ChatContactRequestModule } from './chat-contact-request.module';
 import { IdentityContactTargetDirectoryAdapter } from './identity-contact-target-directory.adapter';
-import { IdentityRequesterProfileDirectoryAdapter } from './identity-requester-profile-directory.adapter';
+import { IdentityUserProfileDirectoryAdapter } from './identity-user-profile-directory.adapter';
 
 type DisconnectablePrismaClient = {
   $disconnect(): Promise<void>;
@@ -406,8 +408,8 @@ describe('Chat Contact-request production composition', () => {
       .useValue(prisma)
       .compile();
 
-    const adapter = testingModule.get(IdentityRequesterProfileDirectoryAdapter);
-    expect(testingModule.get(REQUESTER_PROFILE_DIRECTORY)).toBe(adapter);
+    const adapter = testingModule.get(IdentityUserProfileDirectoryAdapter);
+    expect(testingModule.get(USER_PROFILE_DIRECTORY)).toBe(adapter);
 
     const useCase = testingModule.get(ListIncomingContactRequestsUseCase);
     const result = await useCase.execute({ recipientId: 'user-recipient' });
@@ -505,6 +507,134 @@ describe('Chat Contact-request production composition', () => {
       ],
       nextCursor: null,
     });
+  });
+
+  it('resolves the accepted Contact listing through the Identity profile adapter and both Chat ports', async () => {
+    const getProfiles = jest.fn().mockResolvedValue({
+      profiles: [
+        { userId: 'user-contact-1', displayName: 'Alice' },
+        { userId: 'user-contact-2', displayName: 'Bob' },
+      ],
+      missingUserIds: [],
+    });
+    const findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'relationship-1',
+        requesterId: 'user-contact-1',
+        recipientId: 'user-actor',
+        status: 'accepted',
+      },
+      {
+        id: 'relationship-2',
+        requesterId: 'user-actor',
+        recipientId: 'user-contact-2',
+        status: 'accepted',
+      },
+    ]);
+    const prisma = {
+      contactRelationship: {
+        findMany,
+      },
+    };
+    testingModule = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          ignoreEnvFile: true,
+          load: [
+            () => ({
+              DATABASE_URL:
+                'postgresql://test:test@localhost:5432/chat-composition',
+              GITHUB_CALLBACK_URL:
+                'http://localhost/auth/oauth/github/callback',
+              GITHUB_CLIENT_ID: 'composition-github-client',
+              GITHUB_CLIENT_SECRET: 'composition-github-secret',
+              GOOGLE_CALLBACK_URL:
+                'http://localhost/auth/oauth/google/callback',
+              GOOGLE_CLIENT_ID: 'composition-google-client',
+              GOOGLE_CLIENT_SECRET: 'composition-google-secret',
+              JWT_SECRET: 'composition-jwt-secret',
+            }),
+          ],
+        }),
+        ChatContactRequestModule,
+      ],
+    })
+      .overrideProvider(DIRECTORY_API)
+      .useValue({ userExists: jest.fn() })
+      .overrideProvider(PROFILE_QUERY_API)
+      .useValue({ getProfiles })
+      .overrideProvider(CHAT_PRISMA_CLIENT)
+      .useValue(prisma)
+      .compile();
+
+    const useCase = testingModule.get(ListAcceptedContactsUseCase);
+    const result = await useCase.execute({ userId: 'user-actor' });
+
+    expect(findMany).toHaveBeenCalledTimes(1);
+    expect(findMany).toHaveBeenCalledWith({
+      where: {
+        status: 'accepted',
+        OR: [{ recipientId: 'user-actor' }, { requesterId: 'user-actor' }],
+      },
+      orderBy: { id: 'asc' },
+      take: 21,
+    });
+    expect(getProfiles).toHaveBeenCalledTimes(1);
+    expect(getProfiles).toHaveBeenCalledWith([
+      'user-contact-1',
+      'user-contact-2',
+    ]);
+    expect(result).toEqual({
+      items: [
+        { userId: 'user-contact-1', displayName: 'Alice' },
+        { userId: 'user-contact-2', displayName: 'Bob' },
+      ],
+      nextCursor: null,
+    });
+  });
+
+  it('registers the Contacts controller with the shared guard and filter in the production graph', async () => {
+    testingModule = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          ignoreEnvFile: true,
+          load: [
+            () => ({
+              DATABASE_URL:
+                'postgresql://test:test@localhost:5432/chat-composition',
+              GITHUB_CALLBACK_URL:
+                'http://localhost/auth/oauth/github/callback',
+              GITHUB_CLIENT_ID: 'composition-github-client',
+              GITHUB_CLIENT_SECRET: 'composition-github-secret',
+              GOOGLE_CALLBACK_URL:
+                'http://localhost/auth/oauth/google/callback',
+              GOOGLE_CLIENT_ID: 'composition-google-client',
+              GOOGLE_CLIENT_SECRET: 'composition-google-secret',
+              JWT_SECRET: 'composition-jwt-secret',
+            }),
+          ],
+        }),
+        ChatContactRequestModule,
+      ],
+    })
+      .overrideProvider(AUTHENTICATION_API)
+      .useValue({ verifyAccessToken: jest.fn() })
+      .overrideProvider(DIRECTORY_API)
+      .useValue({ userExists: jest.fn() })
+      .overrideProvider(CHAT_PRISMA_CLIENT)
+      .useValue({ contactRelationship: {} })
+      .compile();
+
+    // get() throws when the controller is not registered in the module.
+    testingModule.get(ContactsController);
+    expect(Reflect.getMetadata(GUARDS_METADATA, ContactsController)).toEqual(
+      expect.arrayContaining([ContactRequestAuthenticationGuard]),
+    );
+    expect(
+      Reflect.getMetadata(EXCEPTION_FILTERS_METADATA, ContactsController),
+    ).toEqual(expect.arrayContaining([ContactRequestExceptionFilter]));
   });
 
   it('runs the registered controller path through the production graph', async () => {

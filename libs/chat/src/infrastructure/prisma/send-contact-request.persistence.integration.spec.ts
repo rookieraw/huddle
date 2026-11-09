@@ -7,6 +7,7 @@ import {
 import { PrismaPg } from '@prisma/adapter-pg';
 import type {
   ContactRelationshipRepository,
+  FindAcceptedByUserQuery,
   FindPendingByRecipientQuery,
   FindPendingByRequesterQuery,
 } from '../../application/ports/contact-relationship.repository.port';
@@ -70,6 +71,12 @@ class SaveBarrierContactRelationshipRepository implements ContactRelationshipRep
     }
 
     return relationship;
+  }
+
+  async findAcceptedByUser(
+    query: FindAcceptedByUserQuery,
+  ): Promise<ContactRelationship[]> {
+    return this.realRepository.findAcceptedByUser(query);
   }
 
   async findPendingByRecipient(
