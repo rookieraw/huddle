@@ -306,11 +306,6 @@ describe('Incoming Contact requests (e2e)', () => {
       detail: cursorValidationDetail,
     },
     {
-      scenario: 'a repeated cursor',
-      query: 'cursor=first&cursor=second',
-      detail: cursorValidationDetail,
-    },
-    {
       scenario: 'both invalid, reporting limit only',
       query: 'limit=0&cursor=not-a-cursor',
       detail: limitValidationDetail,
@@ -336,6 +331,51 @@ describe('Incoming Contact requests (e2e)', () => {
       expect(getProfiles).not.toHaveBeenCalled();
     },
   );
+
+  it('returns the fixed validation envelope for a repeated cursor even when each value is a valid cursor', async () => {
+    findMany.mockResolvedValueOnce([
+      {
+        id: 'relationship-1',
+        requesterId: 'user-requester-1',
+        recipientId: 'user-recipient',
+        status: 'pending',
+      },
+      {
+        id: 'relationship-2',
+        requesterId: 'user-requester-2',
+        recipientId: 'user-recipient',
+        status: 'pending',
+      },
+    ]);
+    const firstResponse = await request(app.getHttpServer())
+      .get('/contact-requests/incoming')
+      .query({ limit: '1' })
+      .set('Authorization', 'Bearer access-token')
+      .expect(200);
+    const { nextCursor } = firstResponse.body as IncomingContactRequestsBody;
+
+    expect(typeof nextCursor).toBe('string');
+    findMany.mockClear();
+    getProfiles.mockClear();
+
+    const response = await request(app.getHttpServer())
+      .get(
+        `/contact-requests/incoming?cursor=${nextCursor as string}&cursor=${nextCursor as string}`,
+      )
+      .set('Authorization', 'Bearer access-token')
+      .expect(400);
+    const body = response.body as IncomingContactRequestsErrorBody;
+
+    expect(body).toEqual({
+      error: {
+        code: 'VALIDATION_FAILED',
+        message: 'Request validation failed.',
+        details: [cursorValidationDetail],
+      },
+    });
+    expect(findMany).not.toHaveBeenCalled();
+    expect(getProfiles).not.toHaveBeenCalled();
+  });
 
   it('returns authentication required before query validation for a missing header', async () => {
     const response = await request(app.getHttpServer())
