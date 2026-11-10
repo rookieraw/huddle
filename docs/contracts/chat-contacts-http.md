@@ -1015,11 +1015,11 @@ set of people the user can converse with. A Direct Conversation does not end
 when a Contact relationship ends, so a user may converse with someone who is
 not, or is no longer, a Contact.
 
-A Contact that is no longer accepted stops appearing in the list. The other
-user observes that only by disappearance: the list does not say who ended a
-relationship or how. Contact removal, and the identity of a relationship
-established again after removal, are defined by
-[Remove a Contact](#remove-a-contact), not by this operation.
+A Contact that is no longer accepted stops appearing in the list. The list
+shows that only by disappearance: it does not say who ended a relationship or
+how. Contact removal, and the identity of a relationship established again
+after removal, are defined by [Remove a Contact](#remove-a-contact), not by
+this operation.
 
 ### Empty Result
 
@@ -1279,9 +1279,9 @@ removed.
 After removal, a new Contact request between the same users starts a new
 pending relationship that follows the ordinary acceptance and rejection rules.
 The new `id` indirectly reveals that a prior relationship existed and ended.
-Unbounded re-requesting, including by the removed user, is a known abuse
-exposure until the deferred rate-limiting and blocking capabilities exist. The
-decision and its limits belong to [`../contexts/chat.md`](../contexts/chat.md).
+Unbounded re-requesting by either user is a known abuse exposure until the
+deferred rate-limiting and blocking capabilities exist. The decision and its
+limits belong to [`../contexts/chat.md`](../contexts/chat.md).
 
 ### What the Other User Can Observe
 

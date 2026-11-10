@@ -126,7 +126,7 @@ unordered user pair. A later Contact request between the same users, in either
 direction and from either user, creates a new pending relationship with a new
 identity, and becomes a Contact again only through a new acceptance. The new
 identity indirectly reveals that a prior relationship existed and ended.
-Unbounded re-requesting by the removed user is a known abuse exposure until the
+Unbounded re-requesting by either user is a known abuse exposure until the
 rate limiting and blocking capabilities that
 [`../architecture/security.md`](../architecture/security.md) defers exist; this
 Context does not design either here. The other user can observe that the pair
