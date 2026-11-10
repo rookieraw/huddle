@@ -1288,14 +1288,14 @@ decision and its limits belong to [`../contexts/chat.md`](../contexts/chat.md).
 The other user can observe that the pair is no longer a Contact. The Contact
 disappears from their accepted-Contact listing, a removal attempt returns the
 not-found outcome, a Contact request for the pair creates a new pending
-relationship instead of returning the accepted one, and acceptance or rejection
-of the old identifier returns not found instead of an already-resolved
-conflict. No response says who ended the relationship, when, or how. A user who
-compares the accepted-Contact listing with the pending outgoing listing can
-infer by elimination that a sent request absent from both was rejected or was
-accepted and later removed. This is an inference and not a statement of the
-API; no response names a rejection or a removal, and the contract does not
-claim that either is indistinguishable from other absences.
+relationship instead of returning the accepted one, and the original recipient's
+acceptance or rejection of the old identifier returns not found instead of an
+already-resolved conflict. No response says who ended the relationship, when,
+or how. A user who compares the accepted-Contact listing with the pending
+outgoing listing can infer by elimination that a sent request absent from both
+was rejected or was accepted and later removed. This is an inference and not a
+statement of the API; no response names a rejection or a removal, and the
+contract does not claim that either is indistinguishable from other absences.
 
 ### Information Minimization
 
