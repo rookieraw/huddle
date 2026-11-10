@@ -112,10 +112,8 @@ changing it. A rejected relationship is not current
 ([`../contexts/chat.md`](../contexts/chat.md)): it is never reused by this
 operation, and a request for a pair whose only relationship is rejected
 creates a new pending relationship with a new `id`, in either direction.
-Contact removal is an accepted target that is not implemented
-([Remove a Contact](#remove-a-contact)); once it exists, a removed relationship
-is likewise not current and is never reused. Other relationship states remain
-outside this implemented subset.
+Under the accepted Contact removal ([Remove a Contact](#remove-a-contact)), a
+removed relationship is likewise not current and is never reused.
 
 ### Error Responses
 
@@ -1091,24 +1089,24 @@ Responses must not expose:
 - principal email or token claims;
 - the relationship identifier, the direction of the original request, the
   acceptance time, or the relationship status;
-- pending or rejected relationships, or any other user's relationships;
+- pending, rejected, or removed relationships, or any other user's
+  relationships;
 - any Identity data other than `displayName`;
 - raw repository or Profile Query failures;
 - Identity, Prisma, PostgreSQL, NestJS, or provider internals;
 - database codes, constraint names, stack traces, or filesystem paths.
 
 Accepted Contacts are visible by design: a requester must be able to see who
-accepted. A user who compares this list with the pending outgoing listing can
-therefore infer, by elimination, that a request absent from both was rejected
-or, once Contact removal exists, was accepted and later removed. This is an
-inference and not a statement of the API. No response names a rejection or a
-removal, and rejected and removed relationships are never listed. The contract
-does not claim that a rejected or removed relationship is indistinguishable
-from other absences, and this accepted limit applies to Contact-request
-visibility generally. The
-statement in List Outgoing Contact Requests that the pending listing does not
-distinguish accepted from rejected concerns that listing only and is
-unchanged.
+accepted. A user can compare this list with the pending outgoing listing. If a
+request they sent is absent from both, the user can infer that it was
+rejected. Under the accepted [Contact removal](#remove-a-contact), it may
+instead have been accepted and later removed. This is an inference and not a
+statement of the API. No response names a rejection or a removal. Rejected and
+removed relationships are never listed. The contract does not claim that either
+is indistinguishable from other absences. This accepted limit applies to
+Contact-request visibility generally. The statement in List Outgoing Contact
+Requests that the pending listing does not distinguish accepted from rejected
+concerns that listing only and is unchanged.
 
 Public error messages are selected by this contract and never copied from a
 caught exception or echoed from client input.
@@ -1124,9 +1122,8 @@ DELETE /contacts/{contactUserId}
 Authorization: Bearer <access-token>
 ```
 
-This operation is a decided target. No controller, Application command,
-repository operation, or test exists for it, and this section is not evidence
-of an endpoint. It becomes `Implemented` only under the alignment rule in
+This operation is a decided target, and this section is not evidence of an
+endpoint. It becomes `Implemented` only under the alignment rule in
 [`chat-http.md`](chat-http.md), and current state is recorded in
 [`../delivery/status.md`](../delivery/status.md).
 
@@ -1288,12 +1285,16 @@ decision and its limits belong to [`../contexts/chat.md`](../contexts/chat.md).
 
 ### What the Other User Can Observe
 
-The other user observes a removal only as the Contact disappearing from their
-accepted-Contact listing. No response says who ended the relationship, when, or
-how. A user who compares the accepted-Contact listing with the pending outgoing
-listing can infer by elimination that a request absent from both was rejected
-or was accepted and later removed. This is an inference and not a statement of
-the API; no response names a rejection or a removal, and the contract does not
+The other user can observe that the pair is no longer a Contact. The Contact
+disappears from their accepted-Contact listing, a removal attempt returns the
+not-found outcome, a Contact request for the pair creates a new pending
+relationship instead of returning the accepted one, and acceptance or rejection
+of the old identifier returns not found instead of an already-resolved
+conflict. No response says who ended the relationship, when, or how. A user who
+compares the accepted-Contact listing with the pending outgoing listing can
+infer by elimination that a sent request absent from both was rejected or was
+accepted and later removed. This is an inference and not a statement of the
+API; no response names a rejection or a removal, and the contract does not
 claim that either is indistinguishable from other absences.
 
 ### Information Minimization

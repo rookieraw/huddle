@@ -83,10 +83,10 @@ rejected one, and this limit applies to that listing only; it does not decide
 what an accepted-Contact listing reveals.
 
 Accepted Contacts are visible by design, because a requester must be able to
-see who accepted. A user who compares the accepted-Contact listing with the
-pending outgoing listing can therefore infer, by elimination, that a request
-absent from both was rejected, or was accepted and later removed. This is an
-inference and not a statement of any API response: no response names a
+see who accepted. A requester who compares the accepted-Contact listing with
+the pending outgoing listing can therefore infer, by elimination, that a sent
+request absent from both was rejected, or was accepted and later removed. This
+is an inference and not a statement of any API response: no response names a
 rejection or a removal, and rejected and removed relationships are never
 listed. This Context accepts that limit and does not claim that a rejected or
 removed relationship is indistinguishable from other absences. Keeping
@@ -95,8 +95,7 @@ separate decision.
 
 #### Contact Removal
 
-Contact removal is an accepted target that is not implemented. Its exact route
-and responses belong to
+The exact route and responses of Contact removal belong to
 [`../contracts/chat-contacts-http.md`](../contracts/chat-contacts-http.md).
 
 Either user of an accepted relationship may remove it, whichever user sent the
@@ -130,9 +129,10 @@ identity indirectly reveals that a prior relationship existed and ended.
 Unbounded re-requesting by the removed user is a known abuse exposure until the
 rate limiting and blocking capabilities that
 [`../architecture/security.md`](../architecture/security.md) defers exist; this
-Context does not design either here. The other user observes a removal only
-as the Contact disappearing from the accepted-Contact listing; nothing says who
-ended the relationship or how.
+Context does not design either here. The other user can observe that the pair
+is no longer a Contact: the Contact disappears from the accepted-Contact
+listing, and their own operations on the pair behave as for a non-Contact.
+Nothing says who ended the relationship, when, or how.
 
 Required invariants:
 
