@@ -153,8 +153,8 @@ Required invariants:
 - A removed relationship is not current. It does not occupy the unordered user
   pair, is never reused or revived, and is no longer a Contact request, so it
   cannot be accepted or rejected.
-- At most one transition applies to a relationship. Concurrent removals apply
-  at most one, and a repeated removal is not a success.
+- Removal applies to a relationship at most once. Concurrent removals apply at
+  most one, and a repeated removal is not a success.
 - Removing a contact does not delete conversations or messages.
 - An existing direct conversation remains writable after contact removal.
 - Blocking is a separate deferred capability.
