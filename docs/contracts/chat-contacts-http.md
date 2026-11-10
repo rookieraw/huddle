@@ -1,12 +1,13 @@
 # Chat Contacts HTTP Contract
 
-Status: Contact-request creation Implemented; Contact-request acceptance Implemented; Contact-request rejection Implemented; incoming Contact-request listing Implemented; outgoing Contact-request listing Implemented; accepted Contact listing Implemented
-Last reviewed: 2026-11-09
+Status: Contact-request creation Implemented; Contact-request acceptance Implemented; Contact-request rejection Implemented; incoming Contact-request listing Implemented; outgoing Contact-request listing Implemented; accepted Contact listing Implemented; Contact removal Accepted, not implemented
+Last reviewed: 2026-11-10
 
 ## Purpose
 
 This document is the authoritative HTTP contract for accepted and implemented
-Contact endpoints.
+Contact endpoints. Each operation carries its own contract state; an
+`Accepted` operation is a decided target and not evidence of an endpoint.
 
 Rules that apply to more than one Chat contract file, and the index of Chat
 HTTP contract files, are in [`chat-http.md`](chat-http.md).
@@ -111,7 +112,8 @@ changing it. A rejected relationship is not current
 ([`../contexts/chat.md`](../contexts/chat.md)): it is never reused by this
 operation, and a request for a pair whose only relationship is rejected
 creates a new pending relationship with a new `id`, in either direction.
-Removed and other relationship states remain outside this implemented subset.
+Under the accepted Contact removal ([Remove a Contact](#remove-a-contact)), a
+removed relationship is likewise not current and is never reused.
 
 ### Error Responses
 
@@ -1013,10 +1015,11 @@ set of people the user can converse with. A Direct Conversation does not end
 when a Contact relationship ends, so a user may converse with someone who is
 not, or is no longer, a Contact.
 
-A Contact that is no longer accepted stops appearing in the list. The other
-user observes that only by disappearance: the list does not say who ended a
-relationship or how. This operation does not define Contact removal or the
-identity of a relationship established again after removal.
+A Contact that is no longer accepted stops appearing in the list. The list
+shows that only by disappearance: it does not say who ended a relationship or
+how. Contact removal, and the identity of a relationship established again
+after removal, are defined by [Remove a Contact](#remove-a-contact), not by
+this operation.
 
 ### Empty Result
 
@@ -1086,22 +1089,227 @@ Responses must not expose:
 - principal email or token claims;
 - the relationship identifier, the direction of the original request, the
   acceptance time, or the relationship status;
-- pending or rejected relationships, or any other user's relationships;
+- pending, rejected, or removed relationships, or any other user's
+  relationships;
 - any Identity data other than `displayName`;
 - raw repository or Profile Query failures;
 - Identity, Prisma, PostgreSQL, NestJS, or provider internals;
 - database codes, constraint names, stack traces, or filesystem paths.
 
 Accepted Contacts are visible by design: a requester must be able to see who
-accepted. A user who compares this list with the pending outgoing listing can
-therefore infer, by elimination, that a request absent from both was rejected.
-This is an inference and not a statement of the API. No response names a
-rejection, and rejected relationships are never listed. The contract does not
-claim that a rejected request is indistinguishable from other absences, and
-this accepted limit applies to Contact-request visibility generally. The
-statement in List Outgoing Contact Requests that the pending listing does not
-distinguish accepted from rejected concerns that listing only and is
-unchanged.
+accepted. A user can compare this list with the pending outgoing listing. If a
+request they sent is absent from both, the user can infer that it was
+rejected. Under the accepted [Contact removal](#remove-a-contact), it may
+instead have been accepted and later removed. This is an inference and not a
+statement of the API. No response names a rejection or a removal. Rejected and
+removed relationships are never listed. The contract does not claim that either
+is indistinguishable from other absences. This accepted limit applies to
+Contact-request visibility generally. The statement in List Outgoing Contact
+Requests that the pending listing does not distinguish accepted from rejected
+concerns that listing only and is unchanged.
+
+Public error messages are selected by this contract and never copied from a
+caught exception or echoed from client input.
+
+## Remove a Contact
+
+Contract state: `Accepted` — not implemented
+
+Authentication: Authenticated; scoped to the verified actor's own Contacts
+
+```http
+DELETE /contacts/{contactUserId}
+Authorization: Bearer <access-token>
+```
+
+This operation is a decided target, and this section is not evidence of an
+endpoint. It becomes `Implemented` only under the alignment rule in
+[`chat-http.md`](chat-http.md), and current state is recorded in
+[`../delivery/status.md`](../delivery/status.md).
+
+The operation ends the accepted relationship between the verified actor and
+the Contact identified by `contactUserId`. It removes one relationship. It does
+not delete Conversations or Messages, does not end an existing Direct
+Conversation, does not cancel a pending Contact request, and does not block
+anyone. The Context rules are in [`../contexts/chat.md`](../contexts/chat.md).
+
+### Identifier and Actor Authority
+
+`contactUserId` is a required path parameter. It is the opaque `userId` that
+`GET /contacts` returns as `items[].userId`. The relationship identifier is not
+part of the route and is never exposed.
+
+Any non-empty routed path segment is treated as an opaque string. Clients must
+not infer resource type, ownership, lifecycle state, or authorization from its
+format. A request without the path segment does not target this operation.
+
+The removing actor comes only from the `userId` produced by Identity's public
+Authentication API after access-token verification. A path, body, query, or
+other client-controlled value cannot provide or override it. Either user of an
+accepted relationship may remove it: the server resolves the unordered pair of
+the verified actor and `contactUserId`, and the roles of original requester and
+recipient are not consulted. The contract does not expose Application input
+types, Domain entities, repositories, Prisma models, Identity internals,
+principal email, expiration, or token claims.
+
+### Request Body
+
+This operation has no request body and defines no route-specific request DTO.
+Clients should omit the body and do not need to send `Content-Type`. Parsed
+JSON fields are unsupported and ignored under the shared unknown-field
+convention and cannot affect the actor, identifier, authorization, transition,
+or response. No operation-specific `VALIDATION_FAILED` outcome is defined
+because the operation has no request fields and no identifier-format rule
+beyond the required routed path segment.
+
+### Success
+
+Removing a current accepted Contact receives:
+
+```http
+204 No Content
+```
+
+The response has no body. Success is returned only after the removed state is
+persisted. It confirms that the pair is no longer a Contact. The response
+carries no relationship identifier, status, removing user, or removal time,
+because the client already holds the `userId` it sent and none of the rest is
+public. A client drops the Contact from its local accepted-Contact view and
+reconciles by reading the accepted-Contact listing again.
+
+### Resource Visibility
+
+The operation follows this order:
+
+1. Look up the current accepted relationship for the unordered pair of the
+   verified actor and `contactUserId`. The Identity Directory is not consulted.
+2. If there is none, return the public not-found outcome.
+3. Otherwise attempt the transition from accepted to removed atomically,
+   recording the removing user and the removal time.
+4. Return success if the transition applied. If it did not apply because the
+   relationship was no longer accepted, for example because a concurrent
+   removal won, return the same public not-found outcome.
+
+The public not-found outcome is identical whether the pair has a pending,
+rejected, or already removed relationship, never had a relationship, involves a
+user unknown to Identity, or is the verified actor paired with themselves. The
+operation therefore cannot be used to learn whether a user exists or to
+distinguish pending, rejected, or removed state. Because the Directory is not
+consulted, removal has no target-lookup outcome.
+
+A requester cannot cancel a pending request through this operation; a pending
+relationship returns the not-found outcome.
+
+### Error Responses
+
+Every error uses the stable envelope defined in [`http.md`](http.md).
+Non-validation errors omit `error.details`. Authentication is evaluated first.
+
+| Situation                                                 | HTTP status | Stable code                   | Public message                              | Consumer action                                                                                                    |
+| --------------------------------------------------------- | ----------: | ----------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Authentication is missing or unusable                     |         401 | `AUTHENTICATION_REQUIRED`     | Authentication is required.                 | Stop the protected interaction and reauthenticate.                                                                 |
+| The pair has no current accepted relationship (see above) |         404 | `CONTACT_NOT_FOUND`           | Contact was not found.                      | Do not retry unchanged; treat the person as not a current Contact and return to a stable Contacts state.           |
+| Relationship lookup or removal transition is unavailable  |         503 | `CONTACT_REMOVAL_UNAVAILABLE` | Contact removal is temporarily unavailable. | Do not assume completion; preserve confirmed state and retry the same route according to bounded client policy.    |
+| Unclassified unexpected failure                           |         500 | `INTERNAL_ERROR`              | An unexpected error occurred.               | Do not assume whether the removal completed; reload the Contacts list before presenting a final state or retrying. |
+
+The operation defines no `400`, `403`, or `409` response. `contactUserId` is an
+opaque non-empty segment with no validation rule, every pair that is not a
+current accepted Contact shares the one `404`, and a repeated or lost removal
+is that same `404` rather than a conflict. `CONTACT_NOT_FOUND` is distinct from
+`CONTACT_TARGET_NOT_FOUND` of Contact-request creation and from
+`CONTACT_REQUEST_NOT_FOUND` of acceptance and rejection.
+
+The transport maps stable runtime categories rather than inspecting exception
+messages. Repository lookup and transition failures share the one
+dependency-unavailable outcome. Public responses must not disclose raw
+exception messages, database or driver codes, constraints, tables, columns,
+indexes, provider or deployment details, stack traces, filesystem paths,
+credentials, tokens, or internal type names. Unexpected failures remain
+`500 INTERNAL_ERROR`; they must not be reported as not-found, conflict, or
+success.
+
+### Retry and Reconciliation
+
+A `204 No Content` confirms that the pair is persisted as no longer a Contact.
+
+After an uncertain client interruption or
+`503 CONTACT_REMOVAL_UNAVAILABLE`, the client may retry the same route
+according to bounded client policy:
+
+- A later `204` confirms removal.
+- A later `404 CONTACT_NOT_FOUND` means the person is not a current Contact.
+  The client reconciles as removed. It cannot tell whether its own earlier
+  attempt succeeded or the other user removed the Contact first, and that
+  ambiguity is intentional.
+- Another `503` remains retryable according to policy.
+
+The contract does not promise automatic retries, an idempotency key, or a
+success response for repeated removal. Removal is atomic: concurrent removals
+of one relationship, including by both users at once, apply at most one
+transition. The loser receives the same `404`, and the Contact is already
+removed.
+
+### Effect on Other Operations
+
+- **Accepted Contact listing.** The removed Contact stops appearing for both
+  users. A cursor that continued after it remains valid, as for any Contact
+  that stops being accepted.
+- **Contact-request creation.** A removed relationship is not current and is
+  never reused. A `POST /contact-requests` for the same pair, in either
+  direction and from either user, creates a new pending relationship with a new
+  `id`. Creation never changes a removed relationship. If creation finds the
+  accepted relationship before removal applies, it returns that accepted
+  relationship with `200 OK`; if removal applies first, creation makes a new
+  pending relationship.
+- **Acceptance and rejection.** A removed relationship is no longer a Contact
+  request. Acceptance and rejection treat its former identifier as missing and
+  return `404 CONTACT_REQUEST_NOT_FOUND`. They define no removed-specific
+  conflict. Removal and these operations cannot both apply to one
+  relationship, because they act on accepted and pending relationships
+  respectively.
+- **Incoming and outgoing listings.** Unchanged. Both list pending requests
+  only, and a removed relationship is never listed.
+- **Conversations.** Unchanged. An existing Direct Conversation and its history
+  remain and stay writable. Until a new accepted relationship exists, neither
+  user can create a new Direct Conversation with the other or invite the other
+  to a Group.
+
+### Re-request After Removal
+
+After removal, a new Contact request between the same users starts a new
+pending relationship that follows the ordinary acceptance and rejection rules.
+The new `id` indirectly reveals that a prior relationship existed and ended.
+Unbounded re-requesting by either user is a known abuse exposure until the
+deferred rate-limiting and blocking capabilities exist. The decision and its
+limits belong to [`../contexts/chat.md`](../contexts/chat.md).
+
+### What the Other User Can Observe
+
+The other user can observe that the pair is no longer a Contact. The Contact
+disappears from their accepted-Contact listing, a removal attempt returns the
+not-found outcome, a Contact request for the pair creates a new pending
+relationship instead of returning the accepted one, and the original recipient's
+acceptance or rejection of the old identifier returns not found instead of an
+already-resolved conflict. No response says who ended the relationship, when,
+or how. A user who compares the accepted-Contact listing with the pending
+outgoing listing can infer by elimination that a sent request absent from both
+was rejected or was accepted and later removed. This is an inference and not a
+statement of the API; no response names a rejection or a removal, and the
+contract does not claim that either is indistinguishable from other absences.
+
+### Information Minimization
+
+Responses must not expose:
+
+- principal email or token claims;
+- the relationship identifier, the removed state, the removing user, or the
+  removal time;
+- whether the pair had a pending, rejected, or already removed relationship, or
+  whether the supplied user exists;
+- any Identity data;
+- raw repository failures;
+- Identity, Prisma, PostgreSQL, NestJS, or provider internals;
+- database codes, constraint names, stack traces, or filesystem paths.
 
 Public error messages are selected by this contract and never copied from a
 caught exception or echoed from client input.

@@ -1,7 +1,7 @@
 # Chat Context
 
-Status: Accepted target; Contact-request creation, acceptance, rejection, incoming listing, outgoing listing, and accepted Contact listing HTTP implemented
-Last reviewed: 2026-11-09
+Status: Accepted target; Contact-request creation, acceptance, rejection, incoming listing, outgoing listing, and accepted Contact listing HTTP implemented; Contact removal accepted, not implemented
+Last reviewed: 2026-11-10
 
 ## Responsibility
 
@@ -58,7 +58,11 @@ Relevant states are equivalent to:
 
 - Pending
 - Accepted
-- Rejected or removed according to the use case
+- Rejected
+- Removed
+
+Rejected and removed are terminal states. A relationship in either state is
+retained, is not current, and never returns to another state.
 
 The pending-to-accepted and pending-to-rejected Domain transitions, the
 Application acceptance and rejection commands, and
@@ -79,14 +83,56 @@ rejected one, and this limit applies to that listing only; it does not decide
 what an accepted-Contact listing reveals.
 
 Accepted Contacts are visible by design, because a requester must be able to
-see who accepted. A user who compares the accepted-Contact listing with the
-pending outgoing listing can therefore infer, by elimination, that a request
-absent from both was rejected. This is an inference and not a statement of any
-API response: no response names a rejection, and rejected relationships are
-never listed. This Context accepts that limit and does not claim that a
-rejected request is indistinguishable from other absences. Keeping rejected
-requests visibly pending would change delivered behavior and is a separate
-decision.
+see who accepted. A requester who compares the accepted-Contact listing with
+the pending outgoing listing can therefore infer, by elimination, that a sent
+request absent from both was rejected, or was accepted and later removed. This
+is an inference and not a statement of any API response: no response names a
+rejection or a removal, and rejected and removed relationships are never
+listed. This Context accepts that limit and does not claim that a rejected or
+removed relationship is indistinguishable from other absences. Keeping
+rejected requests visibly pending would change delivered behavior and is a
+separate decision.
+
+#### Contact Removal
+
+The exact route and responses of Contact removal belong to
+[`../contracts/chat-contacts-http.md`](../contracts/chat-contacts-http.md).
+
+Either user of an accepted relationship may remove it, whichever user sent the
+original request. Requester and recipient roles carry no removal authority.
+Removal is unilateral: it ends the relationship for both users, needs no
+agreement from the other user, and defines no notification to them. Removal moves the
+accepted relationship to the terminal removed state and records the removing
+user and the removal time on the retained relationship. Neither is exposed
+through any public response.
+
+Only a current accepted relationship can be removed. A pending, rejected, or
+already removed relationship, a pair that never had a relationship, a user
+unknown to Identity, and a pair of one user with themselves all yield the same
+outcome, which does not depend on which of these applies. Removal does not
+consult the Identity Directory and so cannot be used to learn whether a user
+exists, or to learn that a relationship was pending, rejected, or removed.
+Removal is not requester cancellation of a pending request.
+
+Removal is not idempotent: repeating it, or losing a race to another removal,
+reports that the pair is not a current Contact. Removal and Contact-request
+creation for one pair serialize. Creation either reuses the accepted
+relationship before removal applies, or finds no current relationship after
+removal and creates a new pending one. Creation never revives a removed
+relationship.
+
+After removal the relationship is not current and does not occupy the
+unordered user pair. A later Contact request between the same users, in either
+direction and from either user, creates a new pending relationship with a new
+identity, and becomes a Contact again only through a new acceptance. The new
+identity indirectly reveals that a prior relationship existed and ended.
+Unbounded re-requesting by either user is a known abuse exposure until the
+rate limiting and blocking capabilities that
+[`../architecture/security.md`](../architecture/security.md) defers exist; this
+Context does not design either here. The other user can observe that the pair
+is no longer a Contact: the Contact disappears from the accepted-Contact
+listing, and their own operations on the pair behave as for a non-Contact.
+Nothing says who ended the relationship, when, or how.
 
 Required invariants:
 
@@ -101,6 +147,14 @@ Required invariants:
 - A rejected relationship is not current. It does not occupy the unordered
   user pair, so a later Contact request between the same users, in either
   direction, creates a new pending relationship with a new identity.
+- Either user of an accepted relationship may remove it; no one else may.
+  Removal applies only to an accepted relationship and moves it to the
+  terminal removed state, recording the removing user and the removal time.
+- A removed relationship is not current. It does not occupy the unordered user
+  pair, is never reused or revived, and is no longer a Contact request, so it
+  cannot be accepted or rejected.
+- Removal applies to a relationship at most once. Concurrent removals apply at
+  most one, and a repeated removal is not a success.
 - Removing a contact does not delete conversations or messages.
 - An existing direct conversation remains writable after contact removal.
 - Blocking is a separate deferred capability.
@@ -111,8 +165,9 @@ The accepted-Contact listing shows current accepted relationships only. It is
 not the set of a user's conversation partners: an existing Direct Conversation
 persists after its Contact relationship ends. A Contact that is no longer
 accepted simply stops appearing, and the listing does not say who ended the
-relationship or how. Contact removal, and the identity of a relationship
-established again after removal, belong to the removal capability.
+relationship or how. Removal does not end an existing Direct Conversation, but
+until a new accepted relationship exists neither user can create a new Direct
+Conversation with the other or invite the other to a Group.
 
 #### Application Behavior
 
