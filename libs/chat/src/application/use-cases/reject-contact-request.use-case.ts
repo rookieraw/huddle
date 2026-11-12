@@ -35,7 +35,7 @@ export class RejectContactRequestUseCase {
   ): Promise<ContactRelationship> {
     const relationship = await this.findRelationship(input.relationshipId);
 
-    if (!relationship) {
+    if (!relationship || relationship.isRemoved()) {
       throw new ContactRelationshipNotFoundError();
     }
 
@@ -66,6 +66,10 @@ export class RejectContactRequestUseCase {
 
     if (!applied) {
       const current = await this.findRelationship(input.relationshipId);
+
+      if (current?.isRemoved()) {
+        throw new ContactRelationshipNotFoundError();
+      }
 
       if (current?.isAccepted()) {
         throw new ContactRequestAlreadyAcceptedError();

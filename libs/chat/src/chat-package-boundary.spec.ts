@@ -34,6 +34,22 @@ describe('@huddle/chat acceptance package boundary', () => {
     expect(chatPackage).not.toHaveProperty('PrismaClient');
   });
 
+  it('exports the Contact removal Application capability without exposing its implementation', () => {
+    expect(chatPackage).toEqual(
+      expect.objectContaining({
+        RemoveContactUseCase: expect.any(Function),
+        ContactNotFoundError: expect.any(Function),
+        ContactRemovalUnavailableError: expect.any(Function),
+        CHAT_CLOCK: expect.any(Symbol),
+      }),
+    );
+    expect(chatPackage).not.toHaveProperty('ContactRelationship');
+    expect(chatPackage).not.toHaveProperty(
+      'PrismaContactRelationshipRepository',
+    );
+    expect(chatPackage).not.toHaveProperty('PrismaClient');
+  });
+
   it('exports the listing capability shared by the Contact listings without exposing its helpers', () => {
     expect(chatPackage).toEqual(
       expect.objectContaining({

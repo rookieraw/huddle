@@ -12,6 +12,8 @@ type ContactRelationshipRecord = {
   requesterId: string;
   recipientId: string;
   status: string;
+  removedByUserId: string | null;
+  removedAt: Date | null;
 };
 
 const CURRENT_USER_PAIR_CONSTRAINT =
@@ -132,22 +134,7 @@ export class PrismaContactRelationshipRepository implements ContactRelationshipR
     const status = this.toPersistenceStatus(relationship);
 
     try {
-      const record = await this.prisma.contactRelationship.upsert({
-        where: { id: relationship.id },
-        create: {
-          id: relationship.id,
-          requesterId: relationship.requesterId,
-          recipientId: relationship.recipientId,
-          status,
-        },
-        update: {
-          requesterId: relationship.requesterId,
-          recipientId: relationship.recipientId,
-          status,
-        },
-      });
-
-      return this.toDomain(record);
+      return await this.upsert(relationship, status);
     } catch (error) {
       if (!this.isCurrentUserPairCollision(error)) {
         throw error;
@@ -158,18 +145,42 @@ export class PrismaContactRelationshipRepository implements ContactRelationshipR
         relationship.recipientId,
       );
 
-      if (!winner) {
-        throw error;
+      if (winner) {
+        return winner;
       }
 
-      return winner;
+      // The current relationship ended, for example by removal, between the
+      // collision and the lookup, so the pair is free again.
+      return this.upsert(relationship, status);
     }
+  }
+
+  private async upsert(
+    relationship: ContactRelationship,
+    status: 'pending' | 'accepted' | 'rejected',
+  ): Promise<ContactRelationship> {
+    const record = await this.prisma.contactRelationship.upsert({
+      where: { id: relationship.id },
+      create: {
+        id: relationship.id,
+        requesterId: relationship.requesterId,
+        recipientId: relationship.recipientId,
+        status,
+      },
+      update: {
+        requesterId: relationship.requesterId,
+        recipientId: relationship.recipientId,
+        status,
+      },
+    });
+
+    return this.toDomain(record);
   }
 
   async transitionFromPending(
     relationship: ContactRelationship,
   ): Promise<boolean> {
-    if (relationship.isPending()) {
+    if (!relationship.isAccepted() && !relationship.isRejected()) {
       throw new Error(
         'Only a resolved ContactRelationship can be transitioned from pending.',
       );
@@ -178,6 +189,27 @@ export class PrismaContactRelationshipRepository implements ContactRelationshipR
     const result = await this.prisma.contactRelationship.updateMany({
       where: { id: relationship.id, status: 'pending' },
       data: { status: this.toPersistenceStatus(relationship) },
+    });
+
+    return result.count === 1;
+  }
+
+  async transitionFromAccepted(
+    relationship: ContactRelationship,
+  ): Promise<boolean> {
+    if (!relationship.isRemoved()) {
+      throw new Error(
+        'Only a removed ContactRelationship can be transitioned from accepted.',
+      );
+    }
+
+    const result = await this.prisma.contactRelationship.updateMany({
+      where: { id: relationship.id, status: 'accepted' },
+      data: {
+        status: 'removed',
+        removedByUserId: relationship.removedByUserId,
+        removedAt: relationship.removedAt,
+      },
     });
 
     return result.count === 1;
@@ -205,9 +237,19 @@ export class PrismaContactRelationshipRepository implements ContactRelationshipR
     if (
       record.status !== 'pending' &&
       record.status !== 'accepted' &&
-      record.status !== 'rejected'
+      record.status !== 'rejected' &&
+      record.status !== 'removed'
     ) {
       throw new Error('Unsupported persisted ContactRelationship status.');
+    }
+
+    if (
+      record.status === 'removed' &&
+      (record.removedByUserId === null || record.removedAt === null)
+    ) {
+      throw new Error(
+        'Persisted removed ContactRelationship lacks its removal details.',
+      );
     }
 
     return ContactRelationship.reconstitute({
@@ -215,6 +257,8 @@ export class PrismaContactRelationshipRepository implements ContactRelationshipR
       requesterId: record.requesterId,
       recipientId: record.recipientId,
       status: record.status,
+      removedByUserId: record.removedByUserId,
+      removedAt: record.removedAt,
     });
   }
 

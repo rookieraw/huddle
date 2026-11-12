@@ -103,6 +103,29 @@ describe('PrismaContactRelationshipRepository', () => {
     expect(updateMany).not.toHaveBeenCalled();
   });
 
+  it('refuses to transition from accepted a relationship that has not been removed', async () => {
+    const updateMany = jest.fn();
+    const prisma = {
+      contactRelationship: {
+        updateMany,
+      },
+    } as unknown as PrismaClient;
+    const repository = new PrismaContactRelationshipRepository(prisma);
+    const relationship = ContactRelationship.reconstitute({
+      id: 'relationship-still-accepted',
+      requesterId: 'user-original-requester',
+      recipientId: 'user-original-recipient',
+      status: 'accepted',
+    });
+
+    const execution = repository.transitionFromAccepted(relationship);
+
+    await expect(execution).rejects.toThrow(
+      'Only a removed ContactRelationship can be transitioned from accepted.',
+    );
+    expect(updateMany).not.toHaveBeenCalled();
+  });
+
   it('preserves a uniqueness error for an unrelated constraint', async () => {
     const unrelatedCollision = {
       code: 'P2002',
@@ -137,6 +160,90 @@ describe('PrismaContactRelationshipRepository', () => {
 
     await expect(execution).rejects.toBe(unrelatedCollision);
     expect(findFirst).not.toHaveBeenCalled();
+  });
+
+  it('retries the save when the pair collision has no current winner because it was removed in between', async () => {
+    const pairCollision = {
+      code: 'P2002',
+      meta: {
+        modelName: 'ContactRelationship',
+        driverAdapterError: {
+          name: 'DriverAdapterError',
+          cause: {
+            kind: 'UniqueConstraintViolation',
+            originalCode: '23505',
+            originalMessage:
+              'duplicate key value violates unique constraint "contact_relationships_current_user_pair_key"',
+          },
+        },
+      },
+    };
+    const relationship = ContactRelationship.create({
+      requesterId: 'user-requester',
+      recipientId: 'user-recipient',
+    });
+    const upsert = jest
+      .fn()
+      .mockRejectedValueOnce(pairCollision)
+      .mockResolvedValueOnce({
+        id: relationship.id,
+        requesterId: 'user-requester',
+        recipientId: 'user-recipient',
+        status: 'pending',
+        removedByUserId: null,
+        removedAt: null,
+      });
+    const findFirst = jest.fn().mockResolvedValue(null);
+    const prisma = {
+      contactRelationship: {
+        upsert,
+        findFirst,
+      },
+    } as unknown as PrismaClient;
+    const repository = new PrismaContactRelationshipRepository(prisma);
+
+    const saved = await repository.save(relationship);
+
+    expect(upsert).toHaveBeenCalledTimes(2);
+    expect(saved.id).toBe(relationship.id);
+    expect(saved.isPending()).toBe(true);
+  });
+
+  it('retries the save only once and surfaces a second pair collision', async () => {
+    const pairCollision = {
+      code: 'P2002',
+      meta: {
+        modelName: 'ContactRelationship',
+        driverAdapterError: {
+          name: 'DriverAdapterError',
+          cause: {
+            kind: 'UniqueConstraintViolation',
+            originalCode: '23505',
+            originalMessage:
+              'duplicate key value violates unique constraint "contact_relationships_current_user_pair_key"',
+          },
+        },
+      },
+    };
+    const upsert = jest.fn().mockRejectedValue(pairCollision);
+    const findFirst = jest.fn().mockResolvedValue(null);
+    const prisma = {
+      contactRelationship: {
+        upsert,
+        findFirst,
+      },
+    } as unknown as PrismaClient;
+    const repository = new PrismaContactRelationshipRepository(prisma);
+    const relationship = ContactRelationship.create({
+      requesterId: 'user-requester',
+      recipientId: 'user-recipient',
+    });
+
+    const execution = repository.save(relationship);
+
+    await expect(execution).rejects.toBe(pairCollision);
+    expect(upsert).toHaveBeenCalledTimes(2);
+    expect(findFirst).toHaveBeenCalledTimes(1);
   });
 
   it('preserves an ordinary persistence failure', async () => {
@@ -184,6 +291,48 @@ describe('PrismaContactRelationshipRepository', () => {
       'Unsupported persisted ContactRelationship status.',
     );
   });
+
+  it.each([
+    {
+      missing: 'the removing user',
+      removedByUserId: null,
+      removedAt: new Date('2026-11-12T00:00:00.000Z'),
+    },
+    {
+      missing: 'the removal time',
+      removedByUserId: 'user-original-requester',
+      removedAt: null,
+    },
+    {
+      missing: 'both the removing user and the removal time',
+      removedByUserId: null,
+      removedAt: null,
+    },
+  ])(
+    'rejects a persisted removed relationship that lacks $missing',
+    async ({ removedByUserId, removedAt }) => {
+      const findUnique = jest.fn().mockResolvedValue({
+        id: 'relationship-removed-incomplete',
+        requesterId: 'user-original-requester',
+        recipientId: 'user-original-recipient',
+        status: 'removed',
+        removedByUserId,
+        removedAt,
+      });
+      const prisma = {
+        contactRelationship: {
+          findUnique,
+        },
+      } as unknown as PrismaClient;
+      const repository = new PrismaContactRelationshipRepository(prisma);
+
+      const execution = repository.findById('relationship-removed-incomplete');
+
+      await expect(execution).rejects.toThrow(
+        'Persisted removed ContactRelationship lacks its removal details.',
+      );
+    },
+  );
 
   it('finds pending relationships created by the requester in ascending identifier order limited to take', async () => {
     const findMany = jest.fn().mockResolvedValue([

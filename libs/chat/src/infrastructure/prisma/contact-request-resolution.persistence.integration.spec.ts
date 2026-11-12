@@ -129,6 +129,10 @@ class LoadBarrierContactRelationshipRepository implements ContactRelationshipRep
   transitionFromPending(relationship: ContactRelationship): Promise<boolean> {
     return this.realRepository.transitionFromPending(relationship);
   }
+
+  transitionFromAccepted(relationship: ContactRelationship): Promise<boolean> {
+    return this.realRepository.transitionFromAccepted(relationship);
+  }
 }
 
 describe('Contact request resolution with PostgreSQL persistence', () => {
