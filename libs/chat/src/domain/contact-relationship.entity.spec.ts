@@ -233,6 +233,28 @@ describe('ContactRelationship', () => {
       expect(relationship.isAccepted()).toBe(false);
     });
 
+    it('allows the original recipient to remove an accepted relationship, recording the recipient as the removing user while preserving its identity and roles', () => {
+      const requesterId = 'user-original-requester';
+      const recipientId = 'user-original-recipient';
+      const removedAt = new Date('2026-11-11T11:00:00.000Z');
+      const relationship = ContactRelationship.create({
+        requesterId,
+        recipientId,
+      });
+      relationship.accept(recipientId);
+      const relationshipId = relationship.id;
+
+      relationship.remove(recipientId, removedAt);
+
+      expect(relationship.id).toBe(relationshipId);
+      expect(relationship.requesterId).toBe(requesterId);
+      expect(relationship.recipientId).toBe(recipientId);
+      expect(relationship.removedByUserId).toBe(recipientId);
+      expect(relationship.removedAt).toEqual(removedAt);
+      expect(relationship.isAccepted()).toBe(false);
+      expect(relationship.isRemoved()).toBe(true);
+    });
+
     it('rejects removal by an unrelated user while preserving the accepted relationship', () => {
       const requesterId = 'user-original-requester';
       const recipientId = 'user-original-recipient';
@@ -302,6 +324,44 @@ describe('ContactRelationship', () => {
       expect(relationship.isPending()).toBe(true);
       expect(relationship.isAccepted()).toBe(false);
     });
+  });
+
+  describe('remove state of non-accepted relationships', () => {
+    it.each(['rejected', 'removed'] as const)(
+      'rejects removal of a %s relationship while preserving it',
+      (state) => {
+        const requesterId = 'user-original-requester';
+        const recipientId = 'user-original-recipient';
+        const originalRemovedAt = new Date('2026-11-10T09:00:00.000Z');
+        const relationship = ContactRelationship.reconstitute({
+          id: `relationship-${state}`,
+          requesterId,
+          recipientId,
+          status: state,
+          removedByUserId: state === 'removed' ? requesterId : null,
+          removedAt: state === 'removed' ? originalRemovedAt : null,
+        });
+
+        expect(() =>
+          relationship.remove(
+            recipientId,
+            new Date('2026-11-12T10:00:00.000Z'),
+          ),
+        ).toThrow(DomainError);
+
+        expect(relationship.id).toBe(`relationship-${state}`);
+        expect(relationship.requesterId).toBe(requesterId);
+        expect(relationship.recipientId).toBe(recipientId);
+        expect(relationship.isRejected()).toBe(state === 'rejected');
+        expect(relationship.isRemoved()).toBe(state === 'removed');
+        expect(relationship.removedByUserId).toBe(
+          state === 'removed' ? requesterId : null,
+        );
+        expect(relationship.removedAt).toEqual(
+          state === 'removed' ? originalRemovedAt : null,
+        );
+      },
+    );
   });
 
   describe('reconstitute', () => {
