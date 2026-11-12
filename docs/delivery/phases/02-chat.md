@@ -123,9 +123,7 @@ The full Phase 2 Contacts scope includes:
 - accept a Contact request;
 - reject a Contact request;
 - list accepted Contacts;
-- remove a Contact;
-- open the existing Direct Conversation for a Contact;
-- create a Direct Conversation when none exists.
+- remove a Contact.
 
 Contact invariants and the relationship between Contacts and Conversations come only from:
 

@@ -200,9 +200,12 @@ self-targeted, repeated, or a lost race) yields one named not-found outcome.
 Repository lookup and transition failures share one retryable unavailable
 outcome, classified without inspecting exception messages.
 
-Contact-request creation never reuses a removed relationship. If the pair
-collides with an accepted relationship that is removed before creation can
-return it, creation retries once and creates the new pending relationship.
+Contact-request creation never reuses a removed relationship. When a write
+collides with the current relationship of the pair and no current relationship
+is found afterwards, because that relationship was removed or rejected in
+between, creation retries its write once and creates the new pending
+relationship. A second collision is reported as the retryable unavailable
+outcome.
 
 The Application incoming-listing query returns the pending relationships
 addressed to the acting `userId`, ordered by relationship identifier and
