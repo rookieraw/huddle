@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import {
   AcceptContactRequestUseCase,
+  CHAT_CLOCK,
   CONTACT_RELATIONSHIP_REPOSITORY,
   CONTACT_TARGET_DIRECTORY,
   ChatPersistenceModule,
@@ -9,9 +10,11 @@ import {
   ListOutgoingContactRequestsUseCase,
   USER_PROFILE_DIRECTORY,
   RejectContactRequestUseCase,
+  RemoveContactUseCase,
   SendContactRequestUseCase,
 } from '@huddle/chat';
 import type {
+  ChatClock,
   ContactRelationshipRepository,
   ContactTargetDirectory,
   UserProfileDirectory,
@@ -104,6 +107,18 @@ import { IdentityUserProfileDirectoryAdapter } from './identity-user-profile-dir
         contactRelationshipRepository: ContactRelationshipRepository,
       ) => new RejectContactRequestUseCase(contactRelationshipRepository),
       inject: [CONTACT_RELATIONSHIP_REPOSITORY],
+    },
+    {
+      provide: CHAT_CLOCK,
+      useValue: { now: () => new Date() } satisfies ChatClock,
+    },
+    {
+      provide: RemoveContactUseCase,
+      useFactory: (
+        contactRelationshipRepository: ContactRelationshipRepository,
+        clock: ChatClock,
+      ) => new RemoveContactUseCase(contactRelationshipRepository, clock),
+      inject: [CONTACT_RELATIONSHIP_REPOSITORY, CHAT_CLOCK],
     },
     {
       provide: SendContactRequestUseCase,

@@ -1,6 +1,8 @@
 import {
   AcceptedContactListingUnavailableError,
+  ContactNotFoundError,
   ContactRelationshipNotFoundError,
+  ContactRemovalUnavailableError,
   ContactRequestAcceptanceNotAuthorizedError,
   ContactRequestAcceptanceUnavailableError,
   ContactRequestAlreadyAcceptedError,
@@ -202,6 +204,18 @@ describe('ContactRequestExceptionFilter', () => {
       status: HttpStatus.SERVICE_UNAVAILABLE,
       code: 'CONTACT_REQUEST_REJECTION_UNAVAILABLE',
       message: 'Contact request rejection is temporarily unavailable.',
+    },
+    {
+      exception: new ContactNotFoundError(),
+      status: HttpStatus.NOT_FOUND,
+      code: 'CONTACT_NOT_FOUND',
+      message: 'Contact was not found.',
+    },
+    {
+      exception: new ContactRemovalUnavailableError(),
+      status: HttpStatus.SERVICE_UNAVAILABLE,
+      code: 'CONTACT_REMOVAL_UNAVAILABLE',
+      message: 'Contact removal is temporarily unavailable.',
     },
     {
       exception: new IncomingContactRequestListingUnavailableError(),

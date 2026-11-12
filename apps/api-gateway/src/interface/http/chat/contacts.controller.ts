@@ -1,7 +1,14 @@
-import { ListAcceptedContactsUseCase } from '@huddle/chat';
+import {
+  ListAcceptedContactsUseCase,
+  RemoveContactUseCase,
+} from '@huddle/chat';
 import {
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
+  Param,
   Query,
   Req,
   UseFilters,
@@ -25,6 +32,7 @@ type VerifiedContactRequest = ContactRequestAuthenticatedRequest & {
 export class ContactsController {
   constructor(
     private readonly listAcceptedContactsUseCase: ListAcceptedContactsUseCase,
+    private readonly removeContactUseCase: RemoveContactUseCase,
   ) {}
 
   @Get()
@@ -36,6 +44,18 @@ export class ContactsController {
       userId: request.user.userId,
       limit: query.limit,
       cursor: query.cursor,
+    });
+  }
+
+  @Delete(':contactUserId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async removeContact(
+    @Req() request: VerifiedContactRequest,
+    @Param('contactUserId') contactUserId: string,
+  ): Promise<void> {
+    await this.removeContactUseCase.execute({
+      removingUserId: request.user.userId,
+      contactUserId,
     });
   }
 }

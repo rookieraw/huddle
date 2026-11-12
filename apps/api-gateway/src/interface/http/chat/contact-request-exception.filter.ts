@@ -1,6 +1,8 @@
 import {
   AcceptedContactListingUnavailableError,
+  ContactNotFoundError,
   ContactRelationshipNotFoundError,
+  ContactRemovalUnavailableError,
   ContactRequestAcceptanceNotAuthorizedError,
   ContactRequestAcceptanceUnavailableError,
   ContactRequestAlreadyAcceptedError,
@@ -98,6 +100,24 @@ export class ContactRequestExceptionFilter implements ExceptionFilter {
       writeErrorResponse(response, HttpStatus.NOT_FOUND, {
         code: 'CONTACT_REQUEST_NOT_FOUND',
         message: 'Contact request was not found.',
+      });
+
+      return;
+    }
+
+    if (exception instanceof ContactNotFoundError) {
+      writeErrorResponse(response, HttpStatus.NOT_FOUND, {
+        code: 'CONTACT_NOT_FOUND',
+        message: 'Contact was not found.',
+      });
+
+      return;
+    }
+
+    if (exception instanceof ContactRemovalUnavailableError) {
+      writeErrorResponse(response, HttpStatus.SERVICE_UNAVAILABLE, {
+        code: 'CONTACT_REMOVAL_UNAVAILABLE',
+        message: 'Contact removal is temporarily unavailable.',
       });
 
       return;
