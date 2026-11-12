@@ -1,7 +1,7 @@
 # Chat Context
 
-Status: Accepted target; Contact-request creation, acceptance, rejection, incoming listing, outgoing listing, and accepted Contact listing HTTP implemented; Contact removal accepted, not implemented
-Last reviewed: 2026-11-10
+Status: Accepted target; Contact-request creation, acceptance, rejection, incoming listing, outgoing listing, accepted Contact listing, and Contact removal HTTP implemented
+Last reviewed: 2026-11-12
 
 ## Responsibility
 
@@ -64,11 +64,12 @@ Relevant states are equivalent to:
 Rejected and removed are terminal states. A relationship in either state is
 retained, is not current, and never returns to another state.
 
-The pending-to-accepted and pending-to-rejected Domain transitions, the
-Application acceptance and rejection commands, and
-pending/accepted/rejected PostgreSQL persistence are implemented. The HTTP
-acceptance and rejection endpoints and their transport evidence are
-implemented; their frontend flow remains unimplemented.
+The pending-to-accepted, pending-to-rejected, and accepted-to-removed Domain
+transitions, the Application acceptance, rejection, and removal commands, and
+pending/accepted/rejected/removed PostgreSQL persistence are implemented. The
+HTTP acceptance, rejection, and removal endpoints and their transport evidence
+are implemented; their frontend flow remains unimplemented. Acceptance and
+rejection treat a removed relationship's former identifier as missing.
 
 Because a rejected relationship is not current, a requester can send a new request to
 a user who rejected them, and the new relationship identity indirectly reveals
@@ -183,7 +184,25 @@ through one pending-only repository transition. Concurrent resolution attempts
 apply at most one transition, and the losing attempt reports the winning state.
 Named Application outcomes distinguish missing relationships, unauthorized
 actors, already accepted and already rejected relationships, and repository
-unavailability without inspecting exception messages.
+unavailability without inspecting exception messages. Both commands treat a
+removed relationship as missing for every actor, including one removed after the
+first read.
+
+The Application removal command finds the current relationship of the acting
+`userId` and the target Contact by the unordered user pair, without consulting
+the Identity Directory. It removes only a current accepted relationship, for
+either user, recording the removing user and a removal time taken from an
+injected Chat-owned time source that API Gateway composition provides, and
+persists the result through one accepted-only repository transition. Concurrent
+removals apply at most one. Every case that is not a current accepted Contact
+(pending, rejected, already removed, never related, unknown user,
+self-targeted, repeated, or a lost race) yields one named not-found outcome.
+Repository lookup and transition failures share one retryable unavailable
+outcome, classified without inspecting exception messages.
+
+Contact-request creation never reuses a removed relationship. If the pair
+collides with an accepted relationship that is removed before creation can
+return it, creation retries once and creates the new pending relationship.
 
 The Application incoming-listing query returns the pending relationships
 addressed to the acting `userId`, ordered by relationship identifier and
@@ -491,7 +510,7 @@ Chat stores relational state in PostgreSQL:
 
 The database constraint enforces one pending-or-accepted current relationship per unordered user pair.
 
-Pending, accepted, and rejected Contact relationship persistence, including the pending-by-recipient, pending-by-requester, and accepted-by-user listing queries, is implemented in the Chat Context. Conversation, membership, Group administration, invitation, and quota persistence remain target behavior.
+Pending, accepted, rejected, and removed Contact relationship persistence, including the removing user and removal time and the pending-by-recipient, pending-by-requester, and accepted-by-user listing queries, is implemented in the Chat Context. Conversation, membership, Group administration, invitation, and quota persistence remain target behavior.
 
 ### MongoDB
 

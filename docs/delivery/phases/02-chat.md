@@ -1,6 +1,6 @@
 # Phase 2 — Contacts and Chat
 
-Status: In progress — Contact-request creation, acceptance, rejection, incoming listing, outgoing listing, and accepted Contact listing HTTP implemented
+Status: In progress — Contact-request creation, acceptance, rejection, incoming listing, outgoing listing, accepted Contact listing, and Contact removal HTTP implemented
 Depends on: Phase 1 — Identity  
 Next gate: Phase 2.5 — CI/CD and Deployment Foundation
 
