@@ -18,6 +18,7 @@ import {
   ListOutgoingContactRequestsUseCase,
   USER_PROFILE_DIRECTORY,
   RejectContactRequestUseCase,
+  RemoveContactUseCase,
   SendContactRequestUseCase,
 } from '@huddle/chat';
 import {
@@ -479,6 +480,63 @@ describe('Chat Contact-request production composition', () => {
       ],
       nextCursor: null,
     });
+  });
+
+  it('resolves removal through the Contact relationship repository and the system clock', async () => {
+    const findFirst = jest.fn().mockResolvedValue({
+      id: 'relationship-id',
+      requesterId: 'user-contact',
+      recipientId: 'user-actor',
+      status: 'accepted',
+      removedByUserId: null,
+      removedAt: null,
+    });
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const prisma = {
+      contactRelationship: {
+        findFirst,
+        updateMany,
+      },
+    };
+    testingModule = await createCompositionModule(
+      ChatContactRequestModule,
+      productionConfig,
+      [
+        [DIRECTORY_API, { userExists: jest.fn() }],
+        [PROFILE_QUERY_API, { getProfiles: jest.fn() }],
+        [CHAT_PRISMA_CLIENT, prisma],
+      ],
+    );
+    const controller = testingModule.get(ContactsController);
+    expect(testingModule.get(RemoveContactUseCase)).toBeDefined();
+
+    const before = Date.now();
+    await expect(
+      controller.removeContact(
+        {
+          headers: {},
+          user: { userId: 'user-actor' },
+        },
+        'user-contact',
+      ),
+    ).resolves.toBeUndefined();
+    const after = Date.now();
+
+    expect(findFirst).toHaveBeenCalledTimes(1);
+    expect(updateMany).toHaveBeenCalledTimes(1);
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: 'relationship-id', status: 'accepted' },
+      data: {
+        status: 'removed',
+        removedByUserId: 'user-actor',
+        removedAt: expect.any(Date) as Date,
+      },
+    });
+    const removedAt = (
+      updateMany.mock.calls[0] as [{ data: { removedAt: Date } }]
+    )[0].data.removedAt;
+    expect(removedAt.getTime()).toBeGreaterThanOrEqual(before);
+    expect(removedAt.getTime()).toBeLessThanOrEqual(after);
   });
 
   it('registers the Contacts controller with the shared guard and filter in the production graph', async () => {

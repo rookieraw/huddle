@@ -24,6 +24,13 @@ export {
   ContactRequestRejectionUnavailableError,
   RejectContactRequestUseCase,
 } from './application/use-cases/reject-contact-request.use-case';
+export type { ChatClock } from './application/ports/chat-clock.port';
+export { CHAT_CLOCK } from './application/ports/chat-clock.port';
+export {
+  ContactNotFoundError,
+  ContactRemovalUnavailableError,
+  RemoveContactUseCase,
+} from './application/use-cases/remove-contact.use-case';
 export type {
   UserProfile,
   UserProfileDirectory,

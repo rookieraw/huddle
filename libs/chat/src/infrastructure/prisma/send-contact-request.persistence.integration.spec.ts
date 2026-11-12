@@ -109,6 +109,12 @@ class SaveBarrierContactRelationshipRepository implements ContactRelationshipRep
     return this.realRepository.transitionFromPending(relationship);
   }
 
+  async transitionFromAccepted(
+    relationship: ContactRelationship,
+  ): Promise<boolean> {
+    return this.realRepository.transitionFromAccepted(relationship);
+  }
+
   async waitUntilBothSavesAreBlocked(): Promise<void> {
     await this.bothSavesBlocked.promise;
   }

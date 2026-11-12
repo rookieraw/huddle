@@ -82,6 +82,10 @@ class RecordingContactRelationshipRepository implements ContactRelationshipRepos
   );
 
   readonly transitionFromPending = jest.fn(async (): Promise<boolean> => false);
+
+  readonly transitionFromAccepted = jest.fn(
+    async (): Promise<boolean> => false,
+  );
 }
 
 describe('SendContactRequestUseCase', () => {

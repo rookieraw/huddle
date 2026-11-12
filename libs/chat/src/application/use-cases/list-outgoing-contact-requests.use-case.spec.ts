@@ -16,6 +16,7 @@ type ContactRelationshipRepositoryMock = {
   findPendingByRequester: jest.Mock;
   save: jest.Mock;
   transitionFromPending: jest.Mock;
+  transitionFromAccepted: jest.Mock;
 };
 
 function createRepository(
@@ -29,6 +30,7 @@ function createRepository(
     findPendingByRequester: jest.fn(),
     save: jest.fn(),
     transitionFromPending: jest.fn(),
+    transitionFromAccepted: jest.fn(),
     ...overrides,
   };
 }

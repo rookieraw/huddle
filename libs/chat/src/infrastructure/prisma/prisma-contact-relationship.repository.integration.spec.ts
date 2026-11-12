@@ -207,6 +207,292 @@ describe('PrismaContactRelationshipRepository (integration)', () => {
     expect(found?.isAccepted()).toBe(true);
   });
 
+  it('persists and reloads a removal with its removing user and time through the accepted-only transition', async () => {
+    const requesterId = 'user-removal-requester';
+    const recipientId = 'user-removal-recipient';
+    const removedAt = new Date('2026-11-11T10:00:00.000Z');
+    const relationship = ContactRelationship.create({
+      requesterId,
+      recipientId,
+    });
+    await repository.save(relationship);
+    relationship.accept(recipientId);
+    await repository.transitionFromPending(relationship);
+    relationship.remove(recipientId, removedAt);
+
+    const applied = await repository.transitionFromAccepted(relationship);
+    const found = await repository.findById(relationship.id);
+
+    expect(applied).toBe(true);
+    expect(found?.id).toBe(relationship.id);
+    expect(found?.requesterId).toBe(requesterId);
+    expect(found?.recipientId).toBe(recipientId);
+    expect(found?.isRemoved()).toBe(true);
+    expect(found?.removedByUserId).toBe(recipientId);
+    expect(found?.removedAt).toEqual(removedAt);
+  });
+
+  it.each(['pending', 'rejected', 'removed'])(
+    'reports not applied and keeps the stored row when a removal finds it %s',
+    async (storedStatus) => {
+      const requesterId = 'user-not-accepted-requester';
+      const recipientId = 'user-not-accepted-recipient';
+      const relationshipId = `relationship-not-accepted-${storedStatus}`;
+      const storedRemovedAt = new Date('2026-11-10T09:00:00.000Z');
+      const storedRemover = storedStatus === 'removed' ? requesterId : null;
+      const storedRemovalTime =
+        storedStatus === 'removed' ? storedRemovedAt : null;
+      await prisma.contactRelationship.create({
+        data: {
+          id: relationshipId,
+          requesterId,
+          recipientId,
+          status: storedStatus,
+          removedByUserId: storedRemover,
+          removedAt: storedRemovalTime,
+        },
+      });
+      const staleCopy = ContactRelationship.reconstitute({
+        id: relationshipId,
+        requesterId,
+        recipientId,
+        status: 'accepted',
+      });
+      staleCopy.remove(recipientId, new Date('2026-11-12T10:00:00.000Z'));
+
+      const applied = await repository.transitionFromAccepted(staleCopy);
+
+      const row = await prisma.contactRelationship.findUnique({
+        where: { id: relationshipId },
+      });
+      expect(applied).toBe(false);
+      expect(row?.status).toBe(storedStatus);
+      expect(row?.removedByUserId).toBe(storedRemover);
+      expect(row?.removedAt).toEqual(storedRemovalTime);
+    },
+  );
+
+  it('reports not applied when a removal targets a relationship that does not exist', async () => {
+    const relationship = ContactRelationship.reconstitute({
+      id: 'relationship-removal-never-saved',
+      requesterId: 'user-removal-missing-requester',
+      recipientId: 'user-removal-missing-recipient',
+      status: 'accepted',
+    });
+    relationship.remove(
+      'user-removal-missing-recipient',
+      new Date('2026-11-12T10:00:00.000Z'),
+    );
+
+    const applied = await repository.transitionFromAccepted(relationship);
+
+    expect(applied).toBe(false);
+  });
+
+  it('lets exactly one of two concurrent removals win and keeps the winner as the removing user', async () => {
+    const requesterId = 'user-removal-race-requester';
+    const recipientId = 'user-removal-race-recipient';
+    const accepted = ContactRelationship.create({ requesterId, recipientId });
+    accepted.accept(recipientId);
+    await repository.save(accepted);
+    const requesterRemoval = ContactRelationship.reconstitute({
+      id: accepted.id,
+      requesterId,
+      recipientId,
+      status: 'accepted',
+    });
+    const recipientRemoval = ContactRelationship.reconstitute({
+      id: accepted.id,
+      requesterId,
+      recipientId,
+      status: 'accepted',
+    });
+    requesterRemoval.remove(requesterId, new Date('2026-11-12T10:00:00.000Z'));
+    recipientRemoval.remove(recipientId, new Date('2026-11-12T10:00:01.000Z'));
+
+    const [requesterApplied, recipientApplied] = await Promise.all([
+      repository.transitionFromAccepted(requesterRemoval),
+      repository.transitionFromAccepted(recipientRemoval),
+    ]);
+    const found = await repository.findById(accepted.id);
+
+    expect([requesterApplied, recipientApplied].filter(Boolean)).toHaveLength(
+      1,
+    );
+    expect(found?.isRemoved()).toBe(true);
+    expect(found?.removedByUserId).toBe(
+      requesterApplied ? requesterId : recipientId,
+    );
+  });
+
+  it.each([
+    [
+      'by the original requester',
+      'user-after-removal-a',
+      'user-after-removal-b',
+    ],
+    [
+      'by the original recipient',
+      'user-after-removal-b',
+      'user-after-removal-a',
+    ],
+  ])(
+    'allows a new pending request with a new identity after a removal, %s',
+    async (_label, newRequesterId, newRecipientId) => {
+      const originalRequesterId = 'user-after-removal-a';
+      const originalRecipientId = 'user-after-removal-b';
+      const original = ContactRelationship.create({
+        requesterId: originalRequesterId,
+        recipientId: originalRecipientId,
+      });
+      original.accept(originalRecipientId);
+      await repository.save(original);
+      original.remove(
+        originalRecipientId,
+        new Date('2026-11-12T10:00:00.000Z'),
+      );
+      await repository.transitionFromAccepted(original);
+      const currentAfterRemoval = await repository.findCurrentByUserPair(
+        originalRequesterId,
+        originalRecipientId,
+      );
+      const newRequest = ContactRelationship.create({
+        requesterId: newRequesterId,
+        recipientId: newRecipientId,
+      });
+
+      const saved = await repository.save(newRequest);
+      const current = await repository.findCurrentByUserPair(
+        originalRequesterId,
+        originalRecipientId,
+      );
+      const previous = await repository.findById(original.id);
+
+      expect(currentAfterRemoval).toBeNull();
+      expect(saved.id).toBe(newRequest.id);
+      expect(saved.id).not.toBe(original.id);
+      expect(current?.id).toBe(newRequest.id);
+      expect(current?.isPending()).toBe(true);
+      expect(previous?.isRemoved()).toBe(true);
+    },
+  );
+
+  it('keeps at most one current relationship when a removal races a new request for the same pair', async () => {
+    const requesterId = 'user-removal-request-race-a';
+    const recipientId = 'user-removal-request-race-b';
+    const accepted = ContactRelationship.create({ requesterId, recipientId });
+    accepted.accept(recipientId);
+    await repository.save(accepted);
+    accepted.remove(recipientId, new Date('2026-11-12T10:00:00.000Z'));
+    const newRequest = ContactRelationship.create({
+      requesterId: recipientId,
+      recipientId: requesterId,
+    });
+
+    const [removalApplied] = await Promise.all([
+      repository.transitionFromAccepted(accepted),
+      repository.save(newRequest),
+    ]);
+
+    const rows = await prisma.contactRelationship.findMany();
+    const currentRows = rows.filter(
+      (row) => row.status === 'pending' || row.status === 'accepted',
+    );
+    expect(removalApplied).toBe(true);
+    expect(currentRows.length).toBeLessThanOrEqual(1);
+    expect(currentRows.every((row) => row.id === newRequest.id)).toBe(true);
+    expect(rows.find((row) => row.id === accepted.id)?.status).toBe('removed');
+  });
+
+  it('loads a removed relationship by identifier but excludes it from the current-pair, accepted and pending queries', async () => {
+    const userId = 'user-removed-excluded';
+    const counterpartId = 'user-removed-excluded-counterpart';
+    const removedAt = new Date('2026-11-12T10:00:00.000Z');
+    const relationship = ContactRelationship.create({
+      requesterId: userId,
+      recipientId: counterpartId,
+    });
+    relationship.accept(counterpartId);
+    await repository.save(relationship);
+    relationship.remove(userId, removedAt);
+    await repository.transitionFromAccepted(relationship);
+
+    const byId = await repository.findById(relationship.id);
+    const current = await repository.findCurrentByUserPair(
+      userId,
+      counterpartId,
+    );
+    const accepted = await repository.findAcceptedByUser({ userId, take: 50 });
+    const acceptedForCounterpart = await repository.findAcceptedByUser({
+      userId: counterpartId,
+      take: 50,
+    });
+    const pendingByRecipient = await repository.findPendingByRecipient({
+      recipientId: counterpartId,
+      take: 50,
+    });
+    const pendingByRequester = await repository.findPendingByRequester({
+      requesterId: userId,
+      take: 50,
+    });
+
+    expect(byId?.isRemoved()).toBe(true);
+    expect(byId?.removedByUserId).toBe(userId);
+    expect(byId?.removedAt).toEqual(removedAt);
+    expect(current).toBeNull();
+    expect(accepted).toEqual([]);
+    expect(acceptedForCounterpart).toEqual([]);
+    expect(pendingByRecipient).toEqual([]);
+    expect(pendingByRequester).toEqual([]);
+  });
+
+  it('refuses to save a removed relationship and keeps the stored accepted row', async () => {
+    const recipientId = 'user-save-removed-recipient';
+    const relationship = ContactRelationship.create({
+      requesterId: 'user-save-removed-requester',
+      recipientId,
+    });
+    relationship.accept(recipientId);
+    await repository.save(relationship);
+    relationship.remove(recipientId, new Date('2026-11-12T10:00:00.000Z'));
+
+    const execution = repository.save(relationship);
+
+    await expect(execution).rejects.toThrow(
+      'Unsupported ContactRelationship status.',
+    );
+    const row = await prisma.contactRelationship.findUnique({
+      where: { id: relationship.id },
+    });
+    expect(row?.status).toBe('accepted');
+    expect(row?.removedByUserId).toBeNull();
+    expect(row?.removedAt).toBeNull();
+  });
+
+  it('refuses to transition a removed relationship from pending and keeps the stored pending row', async () => {
+    const requesterId = 'user-pending-removed-requester';
+    const recipientId = 'user-pending-removed-recipient';
+    const stored = ContactRelationship.create({ requesterId, recipientId });
+    await repository.save(stored);
+    const removedCopy = ContactRelationship.reconstitute({
+      id: stored.id,
+      requesterId,
+      recipientId,
+      status: 'accepted',
+    });
+    removedCopy.remove(recipientId, new Date('2026-11-12T10:00:00.000Z'));
+
+    const execution = repository.transitionFromPending(removedCopy);
+
+    await expect(execution).rejects.toThrow(
+      'Only a resolved ContactRelationship can be transitioned from pending.',
+    );
+    const row = await prisma.contactRelationship.findUnique({
+      where: { id: stored.id },
+    });
+    expect(row?.status).toBe('pending');
+  });
+
   it('reports not applied and keeps the stored state when the relationship is no longer pending', async () => {
     const recipientId = 'user-stale-recipient';
     const relationship = ContactRelationship.create({

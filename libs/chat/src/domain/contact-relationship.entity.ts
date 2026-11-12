@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { DomainError } from '@huddle/shared-kernel';
 
-type ContactRelationshipStatus = 'pending' | 'accepted' | 'rejected';
+type ContactRelationshipStatus =
+  'pending' | 'accepted' | 'rejected' | 'removed';
 
 type CreateContactRelationshipInput = {
   requesterId: string;
@@ -13,6 +14,8 @@ type ReconstituteContactRelationshipInput = {
   requesterId: string;
   recipientId: string;
   status: ContactRelationshipStatus;
+  removedByUserId?: string | null;
+  removedAt?: Date | null;
 };
 
 export class ContactRelationship {
@@ -21,6 +24,8 @@ export class ContactRelationship {
     public readonly requesterId: string,
     public readonly recipientId: string,
     private status: ContactRelationshipStatus,
+    private removingUserId: string | null,
+    private removalTime: Date | null,
   ) {}
 
   static create(input: CreateContactRelationshipInput): ContactRelationship {
@@ -33,6 +38,8 @@ export class ContactRelationship {
       input.requesterId,
       input.recipientId,
       'pending',
+      null,
+      null,
     );
   }
 
@@ -44,7 +51,17 @@ export class ContactRelationship {
       input.requesterId,
       input.recipientId,
       input.status,
+      input.removedByUserId ?? null,
+      input.removedAt ?? null,
     );
+  }
+
+  get removedByUserId(): string | null {
+    return this.removingUserId;
+  }
+
+  get removedAt(): Date | null {
+    return this.removalTime;
   }
 
   isPending(): boolean {
@@ -81,5 +98,28 @@ export class ContactRelationship {
     }
 
     this.status = 'rejected';
+  }
+
+  isRemoved(): boolean {
+    return this.status === 'removed';
+  }
+
+  remove(removingUserId: string, now: Date): void {
+    if (
+      removingUserId !== this.requesterId &&
+      removingUserId !== this.recipientId
+    ) {
+      throw new DomainError(
+        'Only a user of the relationship can remove a Contact.',
+      );
+    }
+
+    if (!this.isAccepted()) {
+      throw new DomainError('Only an accepted Contact can be removed.');
+    }
+
+    this.status = 'removed';
+    this.removingUserId = removingUserId;
+    this.removalTime = now;
   }
 }

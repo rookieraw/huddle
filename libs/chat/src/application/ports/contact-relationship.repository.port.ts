@@ -39,4 +39,5 @@ export interface ContactRelationshipRepository {
   ): Promise<ContactRelationship[]>;
   save(relationship: ContactRelationship): Promise<ContactRelationship>;
   transitionFromPending(relationship: ContactRelationship): Promise<boolean>;
+  transitionFromAccepted(relationship: ContactRelationship): Promise<boolean>;
 }

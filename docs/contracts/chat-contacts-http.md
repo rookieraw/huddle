@@ -1,13 +1,14 @@
 # Chat Contacts HTTP Contract
 
-Status: Contact-request creation Implemented; Contact-request acceptance Implemented; Contact-request rejection Implemented; incoming Contact-request listing Implemented; outgoing Contact-request listing Implemented; accepted Contact listing Implemented; Contact removal Accepted, not implemented
-Last reviewed: 2026-11-10
+Status: Contact-request creation Implemented; Contact-request acceptance Implemented; Contact-request rejection Implemented; incoming Contact-request listing Implemented; outgoing Contact-request listing Implemented; accepted Contact listing Implemented; Contact removal Implemented
+Last reviewed: 2026-11-12
 
 ## Purpose
 
 This document is the authoritative HTTP contract for accepted and implemented
 Contact endpoints. Each operation carries its own contract state; an
-`Accepted` operation is a decided target and not evidence of an endpoint.
+`Accepted` operation, if one is added later, is a decided target and not
+evidence of an endpoint.
 
 Rules that apply to more than one Chat contract file, and the index of Chat
 HTTP contract files, are in [`chat-http.md`](chat-http.md).
@@ -112,8 +113,8 @@ changing it. A rejected relationship is not current
 ([`../contexts/chat.md`](../contexts/chat.md)): it is never reused by this
 operation, and a request for a pair whose only relationship is rejected
 creates a new pending relationship with a new `id`, in either direction.
-Under the accepted Contact removal ([Remove a Contact](#remove-a-contact)), a
-removed relationship is likewise not current and is never reused.
+Under Contact removal ([Remove a Contact](#remove-a-contact)), a removed
+relationship is likewise not current and is never reused.
 
 ### Error Responses
 
@@ -270,7 +271,9 @@ match the caller, and does not create a new relationship identity.
 The operation preserves the Application command's ordering:
 
 1. Look up the relationship by opaque identifier.
-2. Return the public not-found outcome if it is missing.
+2. Return the public not-found outcome if it is missing or removed. A removed
+   relationship is no longer a Contact request, so its former identifier is
+   treated as missing for every actor.
 3. Authorize the verified actor as the original recipient.
 4. Return the same public not-found outcome if authorization fails.
 5. Only for the authorized recipient, attempt the transition from pending to
@@ -281,10 +284,10 @@ The operation preserves the Application command's ordering:
 
 A requester or unrelated user receives the same public response whether the
 identifier is missing, identifies a pending relationship, an accepted
-relationship, or a rejected relationship. The selected non-recipient outcome
-is `404`, not `403`. An unauthorized actor therefore cannot use this operation
-to learn resource existence or distinguish pending, accepted, or rejected
-state.
+relationship, a rejected relationship, or a removed relationship. The selected
+non-recipient outcome is `404`, not `403`. An unauthorized actor therefore
+cannot use this operation to learn resource existence or distinguish pending,
+accepted, rejected, or removed state.
 
 ### Error Responses
 
@@ -294,7 +297,7 @@ Non-validation errors omit `error.details`.
 | Situation                                                          | HTTP status | Stable code                              | Public message                                         | Consumer action                                                                                                      |
 | ------------------------------------------------------------------ | ----------: | ---------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | Authentication is missing or unusable                              |         401 | `AUTHENTICATION_REQUIRED`                | Authentication is required.                            | Stop the protected interaction and reauthenticate.                                                                   |
-| Relationship is missing                                            |         404 | `CONTACT_REQUEST_NOT_FOUND`              | Contact request was not found.                         | Do not retry unchanged; return to a stable Contacts state.                                                           |
+| Relationship is missing or removed                                 |         404 | `CONTACT_REQUEST_NOT_FOUND`              | Contact request was not found.                         | Do not retry unchanged; return to a stable Contacts state.                                                           |
 | Verified actor is not the original recipient                       |         404 | `CONTACT_REQUEST_NOT_FOUND`              | Contact request was not found.                         | Do not retry unchanged; return to a stable Contacts state.                                                           |
 | Original recipient repeats acceptance after it is already accepted |         409 | `CONTACT_REQUEST_ALREADY_ACCEPTED`       | Contact request has already been accepted.             | Reconcile the relationship as accepted and do not repeat acceptance unchanged.                                       |
 | Original recipient accepts a relationship that is already rejected |         409 | `CONTACT_REQUEST_ALREADY_REJECTED`       | Contact request has already been rejected.             | Reconcile the relationship as rejected and do not repeat acceptance; a new request would be a new relationship.      |
@@ -332,11 +335,16 @@ operation with the same `contactRequestId` according to bounded client policy:
 
 - A later `200` confirms successful acceptance.
 - A later authorized `409 CONTACT_REQUEST_ALREADY_ACCEPTED` reconciles an
-  earlier uncertain attempt as accepted.
+  earlier uncertain attempt as accepted, while the relationship is still
+  accepted.
 - A later authorized `409 CONTACT_REQUEST_ALREADY_REJECTED` means the
   recipient's relationship was rejected instead; reconcile as rejected.
 - A `404 CONTACT_REQUEST_NOT_FOUND` means the client has no visible actionable
-  resource and should return to a stable Contacts state.
+  resource and should return to a stable Contacts state. This includes an
+  identifier whose accepted relationship has since been removed
+  ([Remove a Contact](#remove-a-contact)): a removed relationship is no longer
+  a Contact request, and the retry receives this `404`, not
+  `CONTACT_REQUEST_ALREADY_ACCEPTED`.
 - Another `503` remains retryable according to policy.
 
 The contract does not promise automatic retries, an idempotency key, a second
@@ -345,7 +353,8 @@ transition, or a success response for repeated acceptance.
 Resolution is atomic. Acceptance and rejection of one pending relationship
 apply at most one transition, and a concurrent attempt that loses receives the
 authorized state-specific `409` for the state that won, never a contradictory
-success.
+success. This concerns attempts that act on the same pending relationship; it
+does not extend to a removed relationship, whose former identifier is missing.
 
 ## Reject a Contact Request
 
@@ -419,7 +428,7 @@ created.
 The operation follows the same ordering as acceptance:
 
 1. Look up the relationship by opaque identifier.
-2. Return the public not-found outcome if it is missing.
+2. Return the public not-found outcome if it is missing or removed.
 3. Authorize the verified actor as the original recipient.
 4. Return the same public not-found outcome if authorization fails.
 5. Only for the authorized recipient, attempt the transition from pending to
@@ -429,7 +438,7 @@ The operation follows the same ordering as acceptance:
 
 The requester, who cannot reject or cancel their own request through this
 operation, and any unrelated user receive the same public response whether the
-identifier is missing or identifies a pending, accepted, or rejected
+identifier is missing or identifies a pending, accepted, rejected, or removed
 relationship. The non-recipient outcome is `404`, not `403`, so the operation
 cannot be used to learn resource existence or state.
 
@@ -441,7 +450,7 @@ Non-validation errors omit `error.details`.
 | Situation                                                          | HTTP status | Stable code                             | Public message                                        | Consumer action                                                                                                      |
 | ------------------------------------------------------------------ | ----------: | --------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | Authentication is missing or unusable                              |         401 | `AUTHENTICATION_REQUIRED`               | Authentication is required.                           | Stop the protected interaction and reauthenticate.                                                                   |
-| Relationship is missing                                            |         404 | `CONTACT_REQUEST_NOT_FOUND`             | Contact request was not found.                        | Do not retry unchanged; return to a stable Contacts state.                                                           |
+| Relationship is missing or removed                                 |         404 | `CONTACT_REQUEST_NOT_FOUND`             | Contact request was not found.                        | Do not retry unchanged; return to a stable Contacts state.                                                           |
 | Verified actor is not the original recipient                       |         404 | `CONTACT_REQUEST_NOT_FOUND`             | Contact request was not found.                        | Do not retry unchanged; return to a stable Contacts state.                                                           |
 | Original recipient repeats rejection after it is already rejected  |         409 | `CONTACT_REQUEST_ALREADY_REJECTED`      | Contact request has already been rejected.            | Reconcile the relationship as rejected and do not repeat rejection unchanged.                                        |
 | Original recipient rejects a relationship that is already accepted |         409 | `CONTACT_REQUEST_ALREADY_ACCEPTED`      | Contact request has already been accepted.            | Reconcile the relationship as accepted and do not repeat rejection.                                                  |
@@ -482,13 +491,16 @@ operation with the same `contactRequestId` according to bounded client policy:
   relationship was accepted instead; reconcile as accepted and do not repeat
   rejection.
 - A `404 CONTACT_REQUEST_NOT_FOUND` means the client has no visible actionable
-  resource and should return to a stable Contacts state.
+  resource and should return to a stable Contacts state. This includes an
+  identifier whose accepted relationship has since been removed, which is no
+  longer a Contact request ([Remove a Contact](#remove-a-contact)).
 - Another `503` remains retryable according to policy.
 
 The contract does not promise automatic retries, an idempotency key, or a
 success response for repeated rejection. Resolution is atomic as described in
-the acceptance retry section: a concurrent attempt that loses receives the
-state-specific `409`.
+the acceptance retry section: a concurrent attempt on the same pending
+relationship that loses receives the state-specific `409`, and a removed
+relationship's former identifier receives the `404` instead.
 
 ### Re-request After Rejection
 
@@ -1099,8 +1111,8 @@ Responses must not expose:
 Accepted Contacts are visible by design: a requester must be able to see who
 accepted. A user can compare this list with the pending outgoing listing. If a
 request they sent is absent from both, the user can infer that it was
-rejected. Under the accepted [Contact removal](#remove-a-contact), it may
-instead have been accepted and later removed. This is an inference and not a
+rejected. Under [Contact removal](#remove-a-contact), it may instead have
+been accepted and later removed. This is an inference and not a
 statement of the API. No response names a rejection or a removal. Rejected and
 removed relationships are never listed. The contract does not claim that either
 is indistinguishable from other absences. This accepted limit applies to
@@ -1113,7 +1125,7 @@ caught exception or echoed from client input.
 
 ## Remove a Contact
 
-Contract state: `Accepted` — not implemented
+Contract state: `Implemented`
 
 Authentication: Authenticated; scoped to the verified actor's own Contacts
 
@@ -1122,10 +1134,9 @@ DELETE /contacts/{contactUserId}
 Authorization: Bearer <access-token>
 ```
 
-This operation is a decided target, and this section is not evidence of an
-endpoint. It becomes `Implemented` only under the alignment rule in
-[`chat-http.md`](chat-http.md), and current state is recorded in
-[`../delivery/status.md`](../delivery/status.md).
+Implementation state is recorded in
+[`../delivery/status.md`](../delivery/status.md), under the alignment rule in
+[`chat-http.md`](chat-http.md).
 
 The operation ends the accepted relationship between the verified actor and
 the Contact identified by `contactUserId`. It removes one relationship. It does

@@ -18,6 +18,7 @@ type ContactRelationshipRepositoryMock = {
   findPendingByRequester: jest.Mock;
   save: jest.Mock;
   transitionFromPending: jest.Mock;
+  transitionFromAccepted: jest.Mock;
 };
 
 function createRepository(
@@ -31,6 +32,7 @@ function createRepository(
     findPendingByRequester: jest.fn(),
     save: jest.fn(),
     transitionFromPending: jest.fn(),
+    transitionFromAccepted: jest.fn(),
     ...overrides,
   };
 }
@@ -222,6 +224,40 @@ describe('RejectContactRequestUseCase', () => {
     },
   );
 
+  it.each([
+    ['original recipient', 'user-original-recipient'],
+    ['original requester', 'user-original-requester'],
+    ['unrelated user', 'user-unrelated'],
+  ])(
+    'reports a removed relationship as missing for the %s without rejecting or transitioning',
+    async (_actor, rejectingUserId) => {
+      const relationship = ContactRelationship.reconstitute({
+        id: 'relationship-removed',
+        requesterId: 'user-original-requester',
+        recipientId: 'user-original-recipient',
+        status: 'removed',
+        removedByUserId: 'user-original-requester',
+        removedAt: new Date('2026-11-10T10:00:00.000Z'),
+      });
+      const reject = jest.spyOn(relationship, 'reject');
+      const contactRelationshipRepository = createRepository({
+        findById: jest.fn().mockResolvedValue(relationship),
+      });
+      const useCase = new RejectContactRequestUseCase(
+        contactRelationshipRepository,
+      );
+
+      await expect(
+        useCase.execute({ rejectingUserId, relationshipId: relationship.id }),
+      ).rejects.toBeInstanceOf(ContactRelationshipNotFoundError);
+
+      expect(reject).not.toHaveBeenCalled();
+      expect(
+        contactRelationshipRepository.transitionFromPending,
+      ).not.toHaveBeenCalled();
+    },
+  );
+
   it('reports transition unavailability instead of returning success', async () => {
     const recipientId = 'user-original-recipient';
     const relationship = ContactRelationship.reconstitute({
@@ -356,6 +392,48 @@ describe('RejectContactRequestUseCase', () => {
 
     await expect(execution).rejects.toBeInstanceOf(
       ContactRequestRejectionUnavailableError,
+    );
+    expect(contactRelationshipRepository.findById).toHaveBeenCalledTimes(2);
+    expect(
+      contactRelationshipRepository.transitionFromPending,
+    ).toHaveBeenCalledTimes(1);
+    expect(contactRelationshipRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('reports a relationship removed after the first read as missing when the transition is not applied', async () => {
+    const recipientId = 'user-original-recipient';
+    const pending = ContactRelationship.reconstitute({
+      id: 'relationship-removed-after-read',
+      requesterId: 'user-original-requester',
+      recipientId,
+      status: 'pending',
+    });
+    const removed = ContactRelationship.reconstitute({
+      id: pending.id,
+      requesterId: pending.requesterId,
+      recipientId,
+      status: 'removed',
+      removedByUserId: recipientId,
+      removedAt: new Date('2026-11-10T10:00:00.000Z'),
+    });
+    const contactRelationshipRepository = createRepository({
+      findById: jest
+        .fn()
+        .mockResolvedValueOnce(pending)
+        .mockResolvedValueOnce(removed),
+      transitionFromPending: jest.fn().mockResolvedValue(false),
+    });
+    const useCase = new RejectContactRequestUseCase(
+      contactRelationshipRepository,
+    );
+
+    const execution = useCase.execute({
+      rejectingUserId: recipientId,
+      relationshipId: pending.id,
+    });
+
+    await expect(execution).rejects.toBeInstanceOf(
+      ContactRelationshipNotFoundError,
     );
     expect(contactRelationshipRepository.findById).toHaveBeenCalledTimes(2);
     expect(

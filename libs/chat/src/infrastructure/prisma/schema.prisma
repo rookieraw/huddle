@@ -11,10 +11,12 @@ datasource db {
 }
 
 model ContactRelationship {
-  id          String @id
-  requesterId String @map("requester_id")
-  recipientId String @map("recipient_id")
-  status      String
+  id              String    @id
+  requesterId     String    @map("requester_id")
+  recipientId     String    @map("recipient_id")
+  status          String
+  removedByUserId String?   @map("removed_by_user_id")
+  removedAt       DateTime? @map("removed_at") @db.Timestamptz(6)
 
   @@map("contact_relationships")
   @@schema("chat")
