@@ -19,6 +19,7 @@ import {
   type ContactRequestAuthenticatedRequest,
 } from './contact-request-authentication.guard';
 import { ContactRequestExceptionFilter } from './contact-request-exception.filter';
+import { ApiContactListQuery } from './contact-list-query.decorator';
 
 type VerifiedContactRequest = ContactRequestAuthenticatedRequest & {
   user: {
@@ -36,6 +37,7 @@ export class ContactsController {
   ) {}
 
   @Get()
+  @ApiContactListQuery()
   listAcceptedContacts(
     @Req() request: VerifiedContactRequest,
     @Query() query: Record<string, unknown>,

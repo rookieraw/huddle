@@ -23,6 +23,7 @@ import {
   type ContactRequestAuthenticatedRequest,
 } from './contact-request-authentication.guard';
 import { ContactRequestExceptionFilter } from './contact-request-exception.filter';
+import { ApiContactListQuery } from './contact-list-query.decorator';
 import { SendContactRequestDto } from './dto/send-contact-request.dto';
 
 type VerifiedContactRequest = ContactRequestAuthenticatedRequest & {
@@ -44,6 +45,7 @@ export class ContactRequestsController {
   ) {}
 
   @Get('incoming')
+  @ApiContactListQuery()
   listIncomingContactRequests(
     @Req() request: VerifiedContactRequest,
     @Query() query: Record<string, unknown>,
@@ -56,6 +58,7 @@ export class ContactRequestsController {
   }
 
   @Get('outgoing')
+  @ApiContactListQuery()
   listOutgoingContactRequests(
     @Req() request: VerifiedContactRequest,
     @Query() query: Record<string, unknown>,
