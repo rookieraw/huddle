@@ -20,10 +20,28 @@ type OpenApiParameter = {
 
 type OpenApiOperation = {
   parameters?: OpenApiParameter[];
+  requestBody?: {
+    required?: boolean;
+    content?: Record<string, { schema?: Record<string, unknown> }>;
+  };
+  responses?: Record<
+    string,
+    {
+      description?: string;
+      content?: Record<string, { schema?: Record<string, unknown> }>;
+    }
+  >;
+};
+
+type SchemaObject = {
+  type?: string;
+  required?: string[];
+  properties?: Record<string, Record<string, unknown>>;
 };
 
 type OpenApiDocument = {
   paths: Record<string, Record<string, OpenApiOperation>>;
+  components?: { schemas?: Record<string, SchemaObject> };
 };
 
 describe('OpenAPI description (e2e)', () => {
@@ -147,5 +165,181 @@ describe('OpenAPI description (e2e)', () => {
         [],
       );
     });
+  });
+
+  describe('request body', () => {
+    it('describes the create request body as a required JSON SendContactRequestDto', () => {
+      const requestBody = document.paths['/contact-requests'].post.requestBody;
+
+      expect(requestBody?.required).toBe(true);
+      expect(Object.keys(requestBody?.content ?? {})).toEqual([
+        'application/json',
+      ]);
+      expect(requestBody?.content?.['application/json'].schema).toEqual({
+        $ref: '#/components/schemas/SendContactRequestDto',
+      });
+    });
+
+    it('describes targetUserId as the only, required, non-empty string field', () => {
+      expect(document.components?.schemas?.SendContactRequestDto).toEqual(
+        expect.objectContaining({
+          type: 'object',
+          required: ['targetUserId'],
+          properties: {
+            targetUserId: expect.objectContaining({
+              type: 'string',
+              minLength: 1,
+            }) as unknown,
+          },
+        }),
+      );
+    });
+
+    it.each([
+      ['post', '/contact-requests/{contactRequestId}/accept'],
+      ['post', '/contact-requests/{contactRequestId}/reject'],
+      ['get', '/contact-requests/incoming'],
+      ['get', '/contact-requests/outgoing'],
+      ['get', '/contacts'],
+      ['delete', '/contacts/{contactUserId}'],
+    ])('declares no request body for %s %s', (method, path) => {
+      expect(document.paths[path][method].requestBody).toBeUndefined();
+    });
+  });
+
+  describe('success responses', () => {
+    const relationshipFields = ['id', 'requesterId', 'recipientId', 'status'];
+
+    it.each([
+      ['/contact-requests', 'ContactRequestDto', ['pending', 'accepted']],
+      [
+        '/contact-requests/{contactRequestId}/accept',
+        'AcceptedContactRequestDto',
+        ['accepted'],
+      ],
+      [
+        '/contact-requests/{contactRequestId}/reject',
+        'RejectedContactRequestDto',
+        ['rejected'],
+      ],
+    ])(
+      'describes post %s as 200 JSON %s with no other success status',
+      (path, schemaName, statuses) => {
+        const responses = document.paths[path].post.responses ?? {};
+
+        expect(
+          Object.keys(responses).filter((status) => status.startsWith('2')),
+        ).toEqual(['200']);
+        expect(Object.keys(responses['200'].content ?? {})).toEqual([
+          'application/json',
+        ]);
+        expect(responses['200'].content?.['application/json'].schema).toEqual({
+          $ref: `#/components/schemas/${schemaName}`,
+        });
+
+        const schema = document.components?.schemas?.[schemaName];
+        expect(schema?.type).toBe('object');
+        expect([...(schema?.required ?? [])].sort()).toEqual(
+          [...relationshipFields].sort(),
+        );
+        expect(Object.keys(schema?.properties ?? {}).sort()).toEqual(
+          [...relationshipFields].sort(),
+        );
+        expect(schema?.properties?.id.type).toBe('string');
+        expect(schema?.properties?.requesterId.type).toBe('string');
+        expect(schema?.properties?.recipientId.type).toBe('string');
+        expect(schema?.properties?.status).toEqual(
+          expect.objectContaining({ type: 'string', enum: statuses }),
+        );
+      },
+    );
+
+    it('describes delete /contacts/{contactUserId} as 204 with no content', () => {
+      const responses =
+        document.paths['/contacts/{contactUserId}'].delete.responses ?? {};
+
+      expect(
+        Object.keys(responses).filter((status) => status.startsWith('2')),
+      ).toEqual(['204']);
+      expect(responses['204'].content).toBeUndefined();
+    });
+  });
+
+  describe('listing responses', () => {
+    it.each([
+      [
+        '/contact-requests/incoming',
+        'IncomingContactRequestPageDto',
+        'IncomingContactRequestDto',
+        ['id', 'requesterId', 'displayName', 'status'],
+        ['pending'],
+      ],
+      [
+        '/contact-requests/outgoing',
+        'OutgoingContactRequestPageDto',
+        'OutgoingContactRequestDto',
+        ['id', 'recipientId', 'displayName', 'status'],
+        ['pending'],
+      ],
+      [
+        '/contacts',
+        'AcceptedContactPageDto',
+        'AcceptedContactDto',
+        ['userId', 'displayName'],
+        undefined,
+      ],
+    ])(
+      'describes get %s as 200 JSON %s of %s items',
+      (path, pageName, itemName, itemFields, statusEnum) => {
+        const responses = document.paths[path].get.responses ?? {};
+
+        expect(
+          Object.keys(responses).filter((status) => status.startsWith('2')),
+        ).toEqual(['200']);
+        expect(Object.keys(responses['200'].content ?? {})).toEqual([
+          'application/json',
+        ]);
+        expect(responses['200'].content?.['application/json'].schema).toEqual({
+          $ref: `#/components/schemas/${pageName}`,
+        });
+
+        const page = document.components?.schemas?.[pageName];
+        expect(page?.type).toBe('object');
+        expect([...(page?.required ?? [])].sort()).toEqual([
+          'items',
+          'nextCursor',
+        ]);
+        expect(Object.keys(page?.properties ?? {}).sort()).toEqual([
+          'items',
+          'nextCursor',
+        ]);
+        expect(page?.properties?.items).toEqual(
+          expect.objectContaining({
+            type: 'array',
+            items: { $ref: `#/components/schemas/${itemName}` },
+          }),
+        );
+        expect(page?.properties?.nextCursor).toEqual(
+          expect.objectContaining({ type: 'string', nullable: true }),
+        );
+
+        const item = document.components?.schemas?.[itemName];
+        expect(item?.type).toBe('object');
+        expect([...(item?.required ?? [])].sort()).toEqual(
+          [...itemFields].sort(),
+        );
+        expect(Object.keys(item?.properties ?? {}).sort()).toEqual(
+          [...itemFields].sort(),
+        );
+        expect(item?.properties?.displayName).toEqual(
+          expect.objectContaining({ type: 'string', nullable: true }),
+        );
+        if (statusEnum) {
+          expect(item?.properties?.status).toEqual(
+            expect.objectContaining({ type: 'string', enum: statusEnum }),
+          );
+        }
+      },
+    );
   });
 });

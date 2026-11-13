@@ -18,12 +18,22 @@ import {
   UseFilters,
   UseGuards,
 } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
 import {
   ContactRequestAuthenticationGuard,
   type ContactRequestAuthenticatedRequest,
 } from './contact-request-authentication.guard';
 import { ContactRequestExceptionFilter } from './contact-request-exception.filter';
 import { ApiContactListQuery } from './contact-list-query.decorator';
+import {
+  AcceptedContactRequestDto,
+  ContactRequestDto,
+  RejectedContactRequestDto,
+} from './dto/contact-request-response.dto';
+import {
+  IncomingContactRequestPageDto,
+  OutgoingContactRequestPageDto,
+} from './dto/contact-listing-response.dto';
 import { SendContactRequestDto } from './dto/send-contact-request.dto';
 
 type VerifiedContactRequest = ContactRequestAuthenticatedRequest & {
@@ -46,6 +56,11 @@ export class ContactRequestsController {
 
   @Get('incoming')
   @ApiContactListQuery()
+  @ApiOkResponse({
+    type: IncomingContactRequestPageDto,
+    description:
+      'A page of pending Contact requests addressed to the verified actor.',
+  })
   listIncomingContactRequests(
     @Req() request: VerifiedContactRequest,
     @Query() query: Record<string, unknown>,
@@ -59,6 +74,11 @@ export class ContactRequestsController {
 
   @Get('outgoing')
   @ApiContactListQuery()
+  @ApiOkResponse({
+    type: OutgoingContactRequestPageDto,
+    description:
+      'A page of pending Contact requests created by the verified actor.',
+  })
   listOutgoingContactRequests(
     @Req() request: VerifiedContactRequest,
     @Query() query: Record<string, unknown>,
@@ -72,6 +92,10 @@ export class ContactRequestsController {
 
   @Post(':contactRequestId/reject')
   @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({
+    type: RejectedContactRequestDto,
+    description: 'The Contact request is persisted as rejected.',
+  })
   async rejectContactRequest(
     @Req() request: VerifiedContactRequest,
     @Param('contactRequestId') contactRequestId: string,
@@ -91,6 +115,10 @@ export class ContactRequestsController {
 
   @Post(':contactRequestId/accept')
   @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({
+    type: AcceptedContactRequestDto,
+    description: 'The Contact request is persisted as accepted.',
+  })
   async acceptContactRequest(
     @Req() request: VerifiedContactRequest,
     @Param('contactRequestId') contactRequestId: string,
@@ -114,6 +142,11 @@ export class ContactRequestsController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({
+    type: ContactRequestDto,
+    description:
+      'The persisted relationship, whether newly created or reused. Its status is returned as persisted.',
+  })
   async createContactRequest(
     @Req() request: VerifiedContactRequest,
     @Body() dto: SendContactRequestDto,

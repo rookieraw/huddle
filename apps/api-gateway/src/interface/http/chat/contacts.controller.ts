@@ -19,7 +19,9 @@ import {
   type ContactRequestAuthenticatedRequest,
 } from './contact-request-authentication.guard';
 import { ContactRequestExceptionFilter } from './contact-request-exception.filter';
+import { ApiOkResponse } from '@nestjs/swagger';
 import { ApiContactListQuery } from './contact-list-query.decorator';
+import { AcceptedContactPageDto } from './dto/contact-listing-response.dto';
 
 type VerifiedContactRequest = ContactRequestAuthenticatedRequest & {
   user: {
@@ -38,6 +40,10 @@ export class ContactsController {
 
   @Get()
   @ApiContactListQuery()
+  @ApiOkResponse({
+    type: AcceptedContactPageDto,
+    description: 'A page of accepted Contacts of the verified actor.',
+  })
   listAcceptedContacts(
     @Req() request: VerifiedContactRequest,
     @Query() query: Record<string, unknown>,
