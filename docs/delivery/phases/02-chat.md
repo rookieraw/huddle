@@ -25,7 +25,7 @@ Calling, Meetings, Billing, and Notification are not part of this phase.
 
 ## Implementation Authority
 
-Phase 2 may implement only the Chat and user-visible capabilities authorized by this document.
+Phase 2 may implement only the Chat and user-visible capabilities authorized by this document, and the one engineering slice described at the end of this section.
 
 Target behavior is defined in:
 
@@ -40,6 +40,32 @@ The User Experience document defines cross-capability experience principles.
 This phase defines which parts of those targets may be implemented now.
 
 The existence of a future interface, journey, navigation seam, Conversation type, Integration Event, entitlement, or extension point does not authorize its early implementation.
+
+Phase 2 may also deliver one engineering slice early: the
+[Initial OpenAPI Foundation](#initial-openapi-foundation). It is neither a
+Chat capability nor a user-visible capability. Its implementation may change
+only:
+
+- API Gateway bootstrap and configuration for document generation, the
+  documentation routes, and their environment switch;
+- documentation metadata in the HTTP transport layer: the API Gateway's Chat
+  transport and Identity's own HTTP interface in `libs/identity`;
+- the `@nestjs/swagger` dependency declaration in `libs/identity`, with the
+  lockfile change it brings; the API Gateway already declares it;
+- one entry in the local environment template;
+- the committed generated description under `docs/api/` and a `package.json`
+  script that regenerates it;
+- tests for the slice;
+- formatting configuration, only where needed to keep the generated
+  description stable;
+- the documentation that records the slice.
+
+It must not change the behavior of any existing application endpoint: no
+route, payload, error, validation, or status change.
+
+Describing Identity's existing HTTP endpoints is documentation metadata. It is
+not an Identity extension under [Minimum Identity Support](#minimum-identity-support),
+and it does not reopen Phase 1.
 
 ## Entry Criteria
 
@@ -72,6 +98,7 @@ A completed Phase 1 backend does not automatically establish a browser-safe Auth
 | Quota enforcement      | This phase file, `product/tiers.md`, `contexts/chat.md`, and `contexts/billing.md`                                                             |
 | Frontend experience    | This phase file, `product/user-experience.md`, applicable HTTP or realtime contracts, `architecture/security.md`, and `engineering/testing.md` |
 | Tests                  | Relevant task documents and `engineering/testing.md`                                                                                           |
+| OpenAPI foundation     | This phase file, `contracts/http.md`, owning contracts of the described operations, `architecture/security.md`, and `engineering/testing.md`   |
 
 Do not load Calling, Meeting, Stripe, or Notification documents for an ordinary Phase 2 Chat or frontend task.
 
@@ -297,6 +324,28 @@ Before an additional Chat controller or consuming frontend slice:
 - applicable pagination behavior must be defined.
 
 A target user journey is not an HTTP contract.
+
+### Initial OpenAPI Foundation
+
+Phase 2 may deliver the initial OpenAPI foundation early: a generated OpenAPI
+description of implemented HTTP operations and a Swagger UI presentation. The
+changes it may make are listed under
+[Implementation Authority](#implementation-authority). Its described
+operations, schema source, committed description, routes, environment switch,
+information minimization, and maintenance rule belong to
+[`contracts/http.md`](../../contracts/http.md#openapi-documentation-direction).
+
+The foundation may be delivered in increments. It is not part of this Phase's
+Definition of Done. Whatever is not delivered while Phase 2 is active remains
+with [Phase 2.5](02.5-deployment-foundation.md#openapi-documentation-foundation).
+
+Required evidence:
+
+- generated operations and schemas agree with the owning contracts and with
+  real responses;
+- the committed description equals the generated output;
+- the documentation routes are available when the switch is enabled, and
+  absent when it is disabled or unset.
 
 ### Frontend Experience
 
