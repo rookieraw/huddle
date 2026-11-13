@@ -1,8 +1,8 @@
 # HTTP Contracts
 
 Status: Shared conventions accepted; Identity endpoints and first Chat subset implemented
-Last reviewed: 2026-11-12
-Last verified against source: 2026-11-12
+Last reviewed: 2026-11-13
+Last verified against source: 2026-11-13
 
 ## Purpose
 
@@ -48,7 +48,7 @@ Before implementing a new controller operation:
 | Current implementation status                | [`../delivery/status.md`](../delivery/status.md)                                                                                                                                                     |
 | System-wide security principles              | [`../architecture/security.md`](../architecture/security.md)                                                                                                                                         |
 | Executable behavior                          | Controllers, DTOs, guards, and tests                                                                                                                                                                 |
-| OpenAPI documentation relationship           | This document; generated output remains derived from implemented executable behavior and owning HTTP contracts                                                                                       |
+| OpenAPI documentation and exposure           | This document; the generated description, served or committed, remains derived from implemented executable behavior and owning HTTP contracts and is not authoritative                               |
 | Chat realtime events                         | [`chat-realtime.md`](chat-realtime.md)                                                                                                                                                               |
 | Conferencing realtime contracts              | [`conferencing-realtime.md`](conferencing-realtime.md), [`conferencing-p2p.md`](conferencing-p2p.md), [`conferencing-sfu.md`](conferencing-sfu.md), and [`meeting-realtime.md`](meeting-realtime.md) |
 | Integration Events                           | [`integration-events.md`](integration-events.md)                                                                                                                                                     |
@@ -106,17 +106,137 @@ source of truth:
   endpoints and must agree with both executable behavior and the owning
   contracts.
 
-The initial OpenAPI foundation is a required future
-[`Phase 2.5`](../delivery/phases/02.5-deployment-foundation.md) deliverable. It
-includes a generated OpenAPI description of the implemented Phase 2 HTTP
-surface and a Swagger UI presentation within an explicitly selected security
-and network boundary. The future implementation task must define the exact
-route and environment exposure; this contract does not authorize a public
-documentation endpoint by itself.
+### Initial Foundation
 
-After that foundation exists, each endpoint-owning Phase must update and verify
-the generated documentation in the same change as an implemented endpoint.
-Planned endpoints must not appear as generated operations.
+The initial OpenAPI foundation is a generated OpenAPI description with a
+Swagger UI presentation. It is authorized as an early slice of
+[Phase 2](../delivery/phases/02-chat.md#initial-openapi-foundation) and may be
+delivered in increments. Whatever is not delivered while Phase 2 is active,
+and any exposure of the documentation in a deployed environment, remains with
+[Phase 2.5](../delivery/phases/02.5-deployment-foundation.md#openapi-documentation-foundation).
+
+The following subsections define accepted rules for the foundation. They are
+not evidence that it exists; see [Current State](#current-state).
+
+### Described Operations
+
+The initial foundation describes:
+
+- the implemented Contacts operations in
+  [`chat-contacts-http.md`](chat-contacts-http.md);
+- the implemented Identity endpoints in [`identity-http.md`](identity-http.md).
+
+An operation implemented before the first increment of the foundation is
+merged appears only once it is fully described. Until then it is omitted,
+never published with incomplete schemas. The root route `GET /` has no
+contract and is never described. Planned and Accepted operations without an
+implementing endpoint never appear.
+
+Identity endpoints are described as their contract states them, and each
+transitional behavior is marked as transitional:
+
+- Identity error responses use a separate schema for the framework-generated
+  body described under
+  [Transitional Identity Error Envelope](#transitional-identity-error-envelope).
+  That schema is descriptive, not normative: `message` may be a string or an
+  array of strings, `error` may be absent, and `statusCode` carries the HTTP
+  status. It is never presented as the stable application error envelope.
+- The registration response field `verificationToken` and the hardcoded Free
+  tier of the current-user response are marked transitional.
+- The OAuth start and callback routes are described as browser redirects and
+  provider callbacks, not as operations a documentation client can complete.
+
+### Schema Source
+
+The running API Gateway generates the description from request and response
+types owned by the HTTP transport layer. No standalone OpenAPI file is
+maintained by hand.
+
+Domain and Application code carries no OpenAPI metadata. Documentation
+metadata lives in the HTTP transport layer wherever
+[ADR 0008](../decisions/0008-place-http-transport-by-integration-boundary.md)
+places it: the API Gateway for Chat, and Identity's own HTTP interface for
+Identity.
+
+The owning contract files remain authoritative for semantics.
+
+### Committed Description
+
+The generated description is also committed to the repository as
+`docs/api/openapi.json`. The `docs/api/` folder is dedicated to OpenAPI and
+holds only generated output.
+
+- The committed copy comes from the same generation the documentation route
+  serves, through a repeatable command, and is never edited by hand.
+- Generation is deterministic: the output contains no timestamp and no host,
+  port, or other environment-dependent value.
+- The committed copy is derived, not an authority. When it, the HTTP transport
+  layer, and the owning contract disagree, the transport layer or the contract
+  is corrected and the description is regenerated.
+- The committed copy is public with the repository in every environment. It
+  follows the same information-minimization rules as the served description
+  and exposes nothing beyond the public contract files.
+
+### Documentation Routes and Exposure
+
+The `/docs/api` path prefix is reserved for OpenAPI documentation:
+
+| Route                        | Content                                       |
+| ---------------------------- | --------------------------------------------- |
+| `GET /docs/api`              | Swagger UI presentation and its static assets |
+| `GET /docs/api/openapi.json` | Machine-readable OpenAPI description (JSON)   |
+
+No documentation route exists outside this prefix, including `/docs`, and no
+other description format is served. While enabled, the routes belong to the
+`public` category of
+[HTTP Authentication](../architecture/security.md#http-authentication) and
+require no authentication. When disabled, they are not registered and respond
+like any unregistered path.
+
+One explicit opt-in API Gateway configuration value enables the routes. It is
+read at startup and:
+
+- enables the routes only when set to its explicit enable value; an absent,
+  empty, or any other value disables them;
+- is not derived from `NODE_ENV` or any other general mode value;
+- cannot be set by a client or changed at runtime.
+
+The environments are named:
+
+| Environment | Meaning                                                                                   | Documentation routes                                                                                                                                    |
+| ----------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Local       | A developer's own machine                                                                 | Enabled through the local environment template                                                                                                          |
+| Test        | Automated tests, locally and in CI                                                        | Enabled only explicitly                                                                                                                                 |
+| Deployment  | The cloud deployment defined in [`operations/deployment.md`](../operations/deployment.md) | Disabled unless a Phase selects a deployed boundary; see [Phase 2.5](../delivery/phases/02.5-deployment-foundation.md#openapi-documentation-foundation) |
+
+### Information Minimization in Generated Documentation
+
+The [Information Minimization](#information-minimization) rules apply to every
+OpenAPI description, example, and schema, whether served or committed. In
+addition:
+
+- only described operations appear;
+- each documented error response lists only the outcomes the owning contract
+  lists for that operation; Chat operations use the stable application error
+  envelope and codes, and Identity operations use the transitional schema
+  described under [Described Operations](#described-operations);
+- examples use placeholder values only;
+- no `servers` entry carries a host or port;
+- schema component names are HTTP transport names, not Domain, Application,
+  persistence, or provider type names;
+- Swagger UI does not persist entered access tokens in browser storage.
+
+### Keeping the Description Current
+
+The maintenance rule starts when the first increment of the initial foundation
+is merged. From then on:
+
+- a change that implements a new HTTP endpoint adds it to the generated
+  description, fully described, in the same change;
+- a change to an operation already in the description updates and verifies the
+  description in the same change.
+
+### Current State
 
 Currently, the API Gateway declares the `@nestjs/swagger` dependency, but it
 does not generate an OpenAPI description or configure Swagger UI. Dependency

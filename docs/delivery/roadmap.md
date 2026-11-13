@@ -2,7 +2,7 @@
 
 Status: Accepted
 
-Last reviewed: 2026-08-22
+Last reviewed: 2026-11-13
 
 Current implementation phase: Phase 2 — Contacts and Chat
 
@@ -113,12 +113,15 @@ Deliver persistent authenticated communication through Contacts, Direct Conversa
 
 Phase 2 also introduces only the minimal Identity capabilities required by Chat.
 
+Phase 2 may also deliver the initial OpenAPI foundation for its implemented HTTP surface early, as defined in its Phase file.
+
 ### Phase 2.5 — CI/CD and Deployment Foundation
 
 Establish repeatable validation, container builds, Next.js and API delivery,
-OpenAPI documentation for the implemented HTTP surface, OCI deployment, HTTPS,
-WebSocket operation, migration execution, rollback, and secrets handling before
-introducing media infrastructure.
+verified OpenAPI documentation for the whole implemented HTTP surface and any
+deployed presentation of it, OCI deployment, HTTPS, WebSocket operation,
+migration execution, rollback, and secrets handling before introducing media
+infrastructure.
 
 ### Phase 3 — Voice and Video Calling
 

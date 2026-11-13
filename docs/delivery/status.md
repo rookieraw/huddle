@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-11-12
+Last updated: 2026-11-13
 
 Current implementation phase: Phase 2 — Contacts and Chat
 
@@ -33,7 +33,7 @@ It does not define target architecture, detailed Phase scope, or task-level work
 | MongoDB Message persistence | Not started                                                                                                                                                                              |
 | Realtime Chat               | Not started                                                                                                                                                                              |
 | Deployment foundation       | Planned                                                                                                                                                                                  |
-| OpenAPI and Swagger UI      | Dependency declared; generation and UI not configured; planned for Phase 2.5                                                                                                             |
+| OpenAPI and Swagger UI      | Dependency declared; generation and UI not configured; initial foundation authorized early in Phase 2; deployed exposure and gate verification remain in Phase 2.5                       |
 | Voice and Video Calling     | Planned                                                                                                                                                                                  |
 | Billing                     | Planned                                                                                                                                                                                  |
 | First Portfolio Release     | Planned                                                                                                                                                                                  |
@@ -118,6 +118,7 @@ Contacts state is recorded under Implemented; the Contacts frontend flow remains
 
 The remaining Phase 2 implementation includes:
 
+- the initial OpenAPI foundation, an early slice authorized by Phase 2;
 - Contacts frontend delivery;
 - Direct and Group Conversations;
 - MongoDB Message persistence;
@@ -130,12 +131,13 @@ Accepted target documentation is not evidence of implementation for the remainin
 
 ## Next Implementation Work
 
-Further Phase 2 implementation continues with the Contacts frontend delivery, followed by the remaining Chat capabilities and their authorized frontend slices in:
+Further Phase 2 implementation continues with the initial OpenAPI foundation, then the Contacts frontend delivery, followed by the remaining Chat capabilities and their authorized frontend slices in:
 
 [`phases/02-chat.md`](phases/02-chat.md)
 
 Its remaining high-level outcome is:
 
+- the initial OpenAPI foundation;
 - Contacts frontend delivery;
 - Direct Conversations;
 - Group Conversations;
