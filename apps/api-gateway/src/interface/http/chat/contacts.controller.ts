@@ -19,7 +19,7 @@ import {
   type ContactRequestAuthenticatedRequest,
 } from './contact-request-authentication.guard';
 import { ContactRequestExceptionFilter } from './contact-request-exception.filter';
-import { ApiOkResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
 import { ApiContactListQuery } from './contact-list-query.decorator';
 import { AcceptedContactPageDto } from './dto/contact-listing-response.dto';
 
@@ -30,6 +30,7 @@ type VerifiedContactRequest = ContactRequestAuthenticatedRequest & {
 };
 
 @Controller('contacts')
+@ApiBearerAuth()
 @UseGuards(ContactRequestAuthenticationGuard)
 @UseFilters(ContactRequestExceptionFilter)
 export class ContactsController {

@@ -17,6 +17,7 @@ export function setupApiDocumentation(
   const config = new DocumentBuilder()
     .setTitle('Huddle API')
     .setVersion('1.0.0')
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config, {
     include: [ChatContactRequestModule],

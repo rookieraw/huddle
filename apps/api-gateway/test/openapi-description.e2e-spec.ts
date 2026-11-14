@@ -24,6 +24,7 @@ type OpenApiOperation = {
     required?: boolean;
     content?: Record<string, { schema?: Record<string, unknown> }>;
   };
+  security?: Record<string, string[]>[];
   responses?: Record<
     string,
     {
@@ -41,7 +42,10 @@ type SchemaObject = {
 
 type OpenApiDocument = {
   paths: Record<string, Record<string, OpenApiOperation>>;
-  components?: { schemas?: Record<string, SchemaObject> };
+  components?: {
+    schemas?: Record<string, SchemaObject>;
+    securitySchemes?: Record<string, Record<string, unknown>>;
+  };
 };
 
 describe('OpenAPI description (e2e)', () => {
@@ -341,5 +345,29 @@ describe('OpenAPI description (e2e)', () => {
         }
       },
     );
+  });
+
+  describe('bearer authentication', () => {
+    it('declares exactly one HTTP bearer security scheme', () => {
+      const schemes = document.components?.securitySchemes ?? {};
+
+      expect(Object.values(schemes)).toEqual([
+        expect.objectContaining({ type: 'http', scheme: 'bearer' }),
+      ]);
+    });
+
+    it('requires that scheme on every described operation', () => {
+      const [schemeName] = Object.keys(
+        document.components?.securitySchemes ?? {},
+      );
+      const operations = Object.values(document.paths).flatMap((methods) =>
+        Object.values(methods),
+      );
+
+      expect(operations).toHaveLength(7);
+      for (const operation of operations) {
+        expect(operation.security).toEqual([{ [schemeName]: [] }]);
+      }
+    });
   });
 });
