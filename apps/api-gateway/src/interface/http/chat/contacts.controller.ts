@@ -19,7 +19,12 @@ import {
   type ContactRequestAuthenticatedRequest,
 } from './contact-request-authentication.guard';
 import { ContactRequestExceptionFilter } from './contact-request-exception.filter';
-import { ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiNoContentResponse,
+  ApiOkResponse,
+} from '@nestjs/swagger';
+import { ApiContactErrorResponses } from './contact-error-responses.decorator';
 import { ApiContactListQuery } from './contact-list-query.decorator';
 import { AcceptedContactPageDto } from './dto/contact-listing-response.dto';
 
@@ -45,6 +50,12 @@ export class ContactsController {
     type: AcceptedContactPageDto,
     description: 'A page of accepted Contacts of the verified actor.',
   })
+  @ApiContactErrorResponses({
+    400: ['VALIDATION_FAILED'],
+    401: ['AUTHENTICATION_REQUIRED'],
+    500: ['INTERNAL_ERROR'],
+    503: ['ACCEPTED_CONTACT_LISTING_UNAVAILABLE'],
+  })
   listAcceptedContacts(
     @Req() request: VerifiedContactRequest,
     @Query() query: Record<string, unknown>,
@@ -58,6 +69,16 @@ export class ContactsController {
 
   @Delete(':contactUserId')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse({
+    description:
+      'The accepted Contact is removed. The response has no content.',
+  })
+  @ApiContactErrorResponses({
+    401: ['AUTHENTICATION_REQUIRED'],
+    404: ['CONTACT_NOT_FOUND'],
+    500: ['INTERNAL_ERROR'],
+    503: ['CONTACT_REMOVAL_UNAVAILABLE'],
+  })
   async removeContact(
     @Req() request: VerifiedContactRequest,
     @Param('contactUserId') contactUserId: string,

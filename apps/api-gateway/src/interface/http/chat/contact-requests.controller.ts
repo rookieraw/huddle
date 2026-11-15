@@ -24,6 +24,7 @@ import {
   type ContactRequestAuthenticatedRequest,
 } from './contact-request-authentication.guard';
 import { ContactRequestExceptionFilter } from './contact-request-exception.filter';
+import { ApiContactErrorResponses } from './contact-error-responses.decorator';
 import { ApiContactListQuery } from './contact-list-query.decorator';
 import {
   AcceptedContactRequestDto,
@@ -62,6 +63,12 @@ export class ContactRequestsController {
     description:
       'A page of pending Contact requests addressed to the verified actor.',
   })
+  @ApiContactErrorResponses({
+    400: ['VALIDATION_FAILED'],
+    401: ['AUTHENTICATION_REQUIRED'],
+    500: ['INTERNAL_ERROR'],
+    503: ['CONTACT_REQUEST_LISTING_UNAVAILABLE'],
+  })
   listIncomingContactRequests(
     @Req() request: VerifiedContactRequest,
     @Query() query: Record<string, unknown>,
@@ -80,6 +87,12 @@ export class ContactRequestsController {
     description:
       'A page of pending Contact requests created by the verified actor.',
   })
+  @ApiContactErrorResponses({
+    400: ['VALIDATION_FAILED'],
+    401: ['AUTHENTICATION_REQUIRED'],
+    500: ['INTERNAL_ERROR'],
+    503: ['OUTGOING_CONTACT_REQUEST_LISTING_UNAVAILABLE'],
+  })
   listOutgoingContactRequests(
     @Req() request: VerifiedContactRequest,
     @Query() query: Record<string, unknown>,
@@ -96,6 +109,16 @@ export class ContactRequestsController {
   @ApiOkResponse({
     type: RejectedContactRequestDto,
     description: 'The Contact request is persisted as rejected.',
+  })
+  @ApiContactErrorResponses({
+    401: ['AUTHENTICATION_REQUIRED'],
+    404: ['CONTACT_REQUEST_NOT_FOUND'],
+    409: [
+      'CONTACT_REQUEST_ALREADY_REJECTED',
+      'CONTACT_REQUEST_ALREADY_ACCEPTED',
+    ],
+    500: ['INTERNAL_ERROR'],
+    503: ['CONTACT_REQUEST_REJECTION_UNAVAILABLE'],
   })
   async rejectContactRequest(
     @Req() request: VerifiedContactRequest,
@@ -119,6 +142,16 @@ export class ContactRequestsController {
   @ApiOkResponse({
     type: AcceptedContactRequestDto,
     description: 'The Contact request is persisted as accepted.',
+  })
+  @ApiContactErrorResponses({
+    401: ['AUTHENTICATION_REQUIRED'],
+    404: ['CONTACT_REQUEST_NOT_FOUND'],
+    409: [
+      'CONTACT_REQUEST_ALREADY_ACCEPTED',
+      'CONTACT_REQUEST_ALREADY_REJECTED',
+    ],
+    500: ['INTERNAL_ERROR'],
+    503: ['CONTACT_REQUEST_ACCEPTANCE_UNAVAILABLE'],
   })
   async acceptContactRequest(
     @Req() request: VerifiedContactRequest,
@@ -147,6 +180,13 @@ export class ContactRequestsController {
     type: ContactRequestDto,
     description:
       'The persisted relationship, whether newly created or reused. Its status is returned as persisted.',
+  })
+  @ApiContactErrorResponses({
+    400: ['VALIDATION_FAILED', 'SELF_CONTACT_REQUEST'],
+    401: ['AUTHENTICATION_REQUIRED'],
+    404: ['CONTACT_TARGET_NOT_FOUND'],
+    500: ['INTERNAL_ERROR'],
+    503: ['CONTACT_TARGET_LOOKUP_UNAVAILABLE', 'CONTACT_REQUEST_UNAVAILABLE'],
   })
   async createContactRequest(
     @Req() request: VerifiedContactRequest,

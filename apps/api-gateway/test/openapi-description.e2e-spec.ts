@@ -347,6 +347,182 @@ describe('OpenAPI description (e2e)', () => {
     );
   });
 
+  describe('error responses', () => {
+    const errorMatrix: Array<[string, string, Record<string, string[]>]> = [
+      [
+        'post',
+        '/contact-requests',
+        {
+          '400': ['VALIDATION_FAILED', 'SELF_CONTACT_REQUEST'],
+          '401': ['AUTHENTICATION_REQUIRED'],
+          '404': ['CONTACT_TARGET_NOT_FOUND'],
+          '500': ['INTERNAL_ERROR'],
+          '503': [
+            'CONTACT_TARGET_LOOKUP_UNAVAILABLE',
+            'CONTACT_REQUEST_UNAVAILABLE',
+          ],
+        },
+      ],
+      [
+        'post',
+        '/contact-requests/{contactRequestId}/accept',
+        {
+          '401': ['AUTHENTICATION_REQUIRED'],
+          '404': ['CONTACT_REQUEST_NOT_FOUND'],
+          '409': [
+            'CONTACT_REQUEST_ALREADY_ACCEPTED',
+            'CONTACT_REQUEST_ALREADY_REJECTED',
+          ],
+          '500': ['INTERNAL_ERROR'],
+          '503': ['CONTACT_REQUEST_ACCEPTANCE_UNAVAILABLE'],
+        },
+      ],
+      [
+        'post',
+        '/contact-requests/{contactRequestId}/reject',
+        {
+          '401': ['AUTHENTICATION_REQUIRED'],
+          '404': ['CONTACT_REQUEST_NOT_FOUND'],
+          '409': [
+            'CONTACT_REQUEST_ALREADY_REJECTED',
+            'CONTACT_REQUEST_ALREADY_ACCEPTED',
+          ],
+          '500': ['INTERNAL_ERROR'],
+          '503': ['CONTACT_REQUEST_REJECTION_UNAVAILABLE'],
+        },
+      ],
+      [
+        'get',
+        '/contact-requests/incoming',
+        {
+          '400': ['VALIDATION_FAILED'],
+          '401': ['AUTHENTICATION_REQUIRED'],
+          '500': ['INTERNAL_ERROR'],
+          '503': ['CONTACT_REQUEST_LISTING_UNAVAILABLE'],
+        },
+      ],
+      [
+        'get',
+        '/contact-requests/outgoing',
+        {
+          '400': ['VALIDATION_FAILED'],
+          '401': ['AUTHENTICATION_REQUIRED'],
+          '500': ['INTERNAL_ERROR'],
+          '503': ['OUTGOING_CONTACT_REQUEST_LISTING_UNAVAILABLE'],
+        },
+      ],
+      [
+        'get',
+        '/contacts',
+        {
+          '400': ['VALIDATION_FAILED'],
+          '401': ['AUTHENTICATION_REQUIRED'],
+          '500': ['INTERNAL_ERROR'],
+          '503': ['ACCEPTED_CONTACT_LISTING_UNAVAILABLE'],
+        },
+      ],
+      [
+        'delete',
+        '/contacts/{contactUserId}',
+        {
+          '401': ['AUTHENTICATION_REQUIRED'],
+          '404': ['CONTACT_NOT_FOUND'],
+          '500': ['INTERNAL_ERROR'],
+          '503': ['CONTACT_REMOVAL_UNAVAILABLE'],
+        },
+      ],
+    ];
+
+    it.each(errorMatrix)(
+      'describes no non-success status other than the contract error statuses for %s %s',
+      (method, path, expected) => {
+        const responses = document.paths[path][method].responses ?? {};
+        // Everything outside 2xx, including 1xx, 3xx and `default`, must be a
+        // documented contract error status.
+        const nonSuccessStatuses = Object.keys(responses)
+          .filter((status) => !status.startsWith('2'))
+          .sort();
+
+        expect(nonSuccessStatuses).toEqual(Object.keys(expected).sort());
+      },
+    );
+
+    it.each(errorMatrix)(
+      'narrows error.code to the contract codes for each error response of %s %s',
+      (method, path, expected) => {
+        const responses = document.paths[path][method].responses ?? {};
+
+        for (const [status, codes] of Object.entries(expected)) {
+          const schema = responses[status]?.content?.['application/json']
+            ?.schema as
+            | {
+                allOf?: [
+                  Record<string, unknown>,
+                  {
+                    properties?: {
+                      error?: {
+                        properties?: { code?: { enum?: string[] } };
+                      };
+                    };
+                  },
+                ];
+              }
+            | undefined;
+
+          expect(schema?.allOf?.[0]).toEqual({
+            $ref: '#/components/schemas/ApplicationErrorEnvelopeDto',
+          });
+          expect(
+            [
+              ...(schema?.allOf?.[1].properties?.error?.properties?.code
+                ?.enum ?? []),
+            ].sort(),
+          ).toEqual([...codes].sort());
+        }
+      },
+    );
+
+    it('describes the shared error envelope, error, and detail schemas', () => {
+      const schemas = document.components?.schemas ?? {};
+
+      expect(schemas.ApplicationErrorEnvelopeDto).toEqual(
+        expect.objectContaining({
+          type: 'object',
+          required: ['error'],
+          properties: {
+            error: { $ref: '#/components/schemas/ApplicationErrorDto' },
+          },
+        }),
+      );
+
+      const error = schemas.ApplicationErrorDto;
+      expect(error?.type).toBe('object');
+      expect([...(error?.required ?? [])].sort()).toEqual(['code', 'message']);
+      expect(Object.keys(error?.properties ?? {}).sort()).toEqual([
+        'code',
+        'details',
+        'message',
+      ]);
+      expect(error?.properties?.details).toEqual(
+        expect.objectContaining({
+          type: 'array',
+          items: { $ref: '#/components/schemas/ApplicationErrorDetailDto' },
+        }),
+      );
+
+      const detail = schemas.ApplicationErrorDetailDto;
+      expect(detail?.type).toBe('object');
+      expect([...(detail?.required ?? [])].sort()).toEqual([
+        'field',
+        'message',
+      ]);
+      expect(Object.keys(detail?.properties ?? {}).sort()).toEqual([
+        'field',
+        'message',
+      ]);
+    });
+  });
+
   describe('bearer authentication', () => {
     it('declares exactly one HTTP bearer security scheme', () => {
       const schemes = document.components?.securitySchemes ?? {};
