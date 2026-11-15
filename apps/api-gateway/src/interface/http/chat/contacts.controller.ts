@@ -23,6 +23,7 @@ import {
   ApiBearerAuth,
   ApiNoContentResponse,
   ApiOkResponse,
+  ApiParam,
 } from '@nestjs/swagger';
 import { ApiContactErrorResponses } from './contact-error-responses.decorator';
 import { ApiContactListQuery } from './contact-list-query.decorator';
@@ -69,6 +70,10 @@ export class ContactsController {
 
   @Delete(':contactUserId')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiParam({
+    name: 'contactUserId',
+    description: 'The user id of the accepted Contact to remove.',
+  })
   @ApiNoContentResponse({
     description:
       'The accepted Contact is removed. The response has no content.',

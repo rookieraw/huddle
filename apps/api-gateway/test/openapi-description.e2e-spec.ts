@@ -164,6 +164,17 @@ describe('OpenAPI description (e2e)', () => {
       },
     );
 
+    it.each([
+      ['post', '/contact-requests/{contactRequestId}/accept'],
+      ['post', '/contact-requests/{contactRequestId}/reject'],
+      ['delete', '/contacts/{contactUserId}'],
+    ])('describes the path parameter of %s %s', (method, path) => {
+      const [parameter] = document.paths[path][method].parameters ?? [];
+
+      expect(parameter.description).toEqual(expect.any(String));
+      expect(parameter.description?.length).toBeGreaterThan(0);
+    });
+
     it('declares no parameters for create', () => {
       expect(document.paths['/contact-requests'].post.parameters ?? []).toEqual(
         [],
@@ -478,6 +489,61 @@ describe('OpenAPI description (e2e)', () => {
                 ?.enum ?? []),
             ].sort(),
           ).toEqual([...codes].sort());
+        }
+      },
+    );
+
+    // Fixed messages as listed in the Chat Contacts HTTP contract.
+    const contractMessages: Record<string, string> = {
+      AUTHENTICATION_REQUIRED: 'Authentication is required.',
+      VALIDATION_FAILED: 'Request validation failed.',
+      SELF_CONTACT_REQUEST: 'A Contact request cannot target the requester.',
+      CONTACT_TARGET_NOT_FOUND: 'Contact target was not found.',
+      CONTACT_TARGET_LOOKUP_UNAVAILABLE:
+        'Contact target validation is temporarily unavailable.',
+      CONTACT_REQUEST_UNAVAILABLE:
+        'Contact request service is temporarily unavailable.',
+      CONTACT_REQUEST_NOT_FOUND: 'Contact request was not found.',
+      CONTACT_REQUEST_ALREADY_ACCEPTED:
+        'Contact request has already been accepted.',
+      CONTACT_REQUEST_ALREADY_REJECTED:
+        'Contact request has already been rejected.',
+      CONTACT_REQUEST_ACCEPTANCE_UNAVAILABLE:
+        'Contact request acceptance is temporarily unavailable.',
+      CONTACT_REQUEST_REJECTION_UNAVAILABLE:
+        'Contact request rejection is temporarily unavailable.',
+      CONTACT_REQUEST_LISTING_UNAVAILABLE:
+        'Incoming Contact requests are temporarily unavailable.',
+      OUTGOING_CONTACT_REQUEST_LISTING_UNAVAILABLE:
+        'Outgoing Contact requests are temporarily unavailable.',
+      ACCEPTED_CONTACT_LISTING_UNAVAILABLE:
+        'Accepted Contacts are temporarily unavailable.',
+      CONTACT_NOT_FOUND: 'Contact was not found.',
+      CONTACT_REMOVAL_UNAVAILABLE:
+        'Contact removal is temporarily unavailable.',
+      INTERNAL_ERROR: 'An unexpected error occurred.',
+    };
+
+    it.each(errorMatrix)(
+      'carries one example per code with the contract message for each error response of %s %s',
+      (method, path, expected) => {
+        const responses = document.paths[path][method].responses ?? {};
+
+        for (const [status, codes] of Object.entries(expected)) {
+          const media = responses[status]?.content?.['application/json'] as
+            { examples?: Record<string, { value?: unknown }> } | undefined;
+          const examples = Object.values(media?.examples ?? {}).map(
+            (example) => example.value,
+          );
+
+          expect(examples).toHaveLength(codes.length);
+          expect(examples).toEqual(
+            expect.arrayContaining(
+              codes.map((code) => ({
+                error: { code, message: contractMessages[code] },
+              })),
+            ),
+          );
         }
       },
     );

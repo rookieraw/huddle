@@ -18,7 +18,7 @@ import {
   UseFilters,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiParam } from '@nestjs/swagger';
 import {
   ContactRequestAuthenticationGuard,
   type ContactRequestAuthenticatedRequest,
@@ -106,6 +106,11 @@ export class ContactRequestsController {
 
   @Post(':contactRequestId/reject')
   @HttpCode(HttpStatus.OK)
+  @ApiParam({
+    name: 'contactRequestId',
+    description:
+      'The id of the Contact request, as returned by creation or incoming listing.',
+  })
   @ApiOkResponse({
     type: RejectedContactRequestDto,
     description: 'The Contact request is persisted as rejected.',
@@ -139,6 +144,11 @@ export class ContactRequestsController {
 
   @Post(':contactRequestId/accept')
   @HttpCode(HttpStatus.OK)
+  @ApiParam({
+    name: 'contactRequestId',
+    description:
+      'The id of the Contact request, as returned by creation or incoming listing.',
+  })
   @ApiOkResponse({
     type: AcceptedContactRequestDto,
     description: 'The Contact request is persisted as accepted.',
