@@ -589,6 +589,66 @@ describe('OpenAPI description (e2e)', () => {
     });
   });
 
+  describe('information minimization', () => {
+    const collectStrings = (value: unknown): string[] => {
+      if (typeof value === 'string') {
+        return [value];
+      }
+
+      if (Array.isArray(value)) {
+        return value.flatMap(collectStrings);
+      }
+
+      if (value !== null && typeof value === 'object') {
+        return Object.values(value).flatMap(collectStrings);
+      }
+
+      return [];
+    };
+
+    it('declares no servers', () => {
+      expect(
+        (document as unknown as { servers?: unknown[] }).servers ?? [],
+      ).toEqual([]);
+    });
+
+    it('contains no host, address, email, or timestamp values', () => {
+      const leaks = collectStrings(document).filter((text) =>
+        /https?:\/\/|localhost|\b\d{1,3}(\.\d{1,3}){3}\b|\S+@\S+|\d{4}-\d{2}-\d{2}T/i.test(
+          text,
+        ),
+      );
+
+      expect(leaks).toEqual([]);
+    });
+
+    it('names components exactly with the HTTP transport names', () => {
+      expect(Object.keys(document.components?.schemas ?? {}).sort()).toEqual([
+        'AcceptedContactDto',
+        'AcceptedContactPageDto',
+        'AcceptedContactRequestDto',
+        'ApplicationErrorDetailDto',
+        'ApplicationErrorDto',
+        'ApplicationErrorEnvelopeDto',
+        'ContactRequestDto',
+        'IncomingContactRequestDto',
+        'IncomingContactRequestPageDto',
+        'OutgoingContactRequestDto',
+        'OutgoingContactRequestPageDto',
+        'RejectedContactRequestDto',
+        'SendContactRequestDto',
+      ]);
+    });
+
+    it('tells Swagger UI not to persist entered access tokens', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/docs/api/swagger-ui-init.js')
+        .expect(200);
+
+      expect(response.text).toMatch(/"persistAuthorization":\s*false/);
+    });
+  });
+
   describe('bearer authentication', () => {
     it('declares exactly one HTTP bearer security scheme', () => {
       const schemes = document.components?.securitySchemes ?? {};

@@ -26,5 +26,6 @@ export function setupApiDocumentation(
   SwaggerModule.setup(API_DOCUMENTATION_PATH, app, document, {
     raw: ['json'],
     jsonDocumentUrl: API_DOCUMENTATION_JSON_PATH,
+    swaggerOptions: { persistAuthorization: false },
   });
 }
