@@ -1,4 +1,14 @@
 /**
+ * Fixed validation detail message of each request field a Contacts operation
+ * can report, used only to document examples.
+ */
+export const contactValidationDetailMessages: Record<string, string> = {
+  targetUserId: 'targetUserId must be a non-empty string.',
+  limit: 'limit must be an integer from 1 to 50.',
+  cursor: 'cursor must be a valid cursor.',
+};
+
+/**
  * Fixed public messages of the Contacts error codes, used only to document
  * examples. The exception filter owns the real responses.
  */

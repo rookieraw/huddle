@@ -69,12 +69,15 @@ export class ContactRequestsController {
     description:
       'A page of pending Contact requests addressed to the verified actor.',
   })
-  @ApiContactErrorResponses({
-    400: ['VALIDATION_FAILED'],
-    401: ['AUTHENTICATION_REQUIRED'],
-    500: ['INTERNAL_ERROR'],
-    503: ['CONTACT_REQUEST_LISTING_UNAVAILABLE'],
-  })
+  @ApiContactErrorResponses(
+    {
+      400: ['VALIDATION_FAILED'],
+      401: ['AUTHENTICATION_REQUIRED'],
+      500: ['INTERNAL_ERROR'],
+      503: ['CONTACT_REQUEST_LISTING_UNAVAILABLE'],
+    },
+    ['limit', 'cursor'],
+  )
   listIncomingContactRequests(
     @Req() request: VerifiedContactRequest,
     @Query() query: Record<string, unknown>,
@@ -93,12 +96,15 @@ export class ContactRequestsController {
     description:
       'A page of pending Contact requests created by the verified actor.',
   })
-  @ApiContactErrorResponses({
-    400: ['VALIDATION_FAILED'],
-    401: ['AUTHENTICATION_REQUIRED'],
-    500: ['INTERNAL_ERROR'],
-    503: ['OUTGOING_CONTACT_REQUEST_LISTING_UNAVAILABLE'],
-  })
+  @ApiContactErrorResponses(
+    {
+      400: ['VALIDATION_FAILED'],
+      401: ['AUTHENTICATION_REQUIRED'],
+      500: ['INTERNAL_ERROR'],
+      503: ['OUTGOING_CONTACT_REQUEST_LISTING_UNAVAILABLE'],
+    },
+    ['limit', 'cursor'],
+  )
   listOutgoingContactRequests(
     @Req() request: VerifiedContactRequest,
     @Query() query: Record<string, unknown>,
@@ -197,13 +203,16 @@ export class ContactRequestsController {
     description:
       'The persisted relationship, whether newly created or reused. Its status is returned as persisted.',
   })
-  @ApiContactErrorResponses({
-    400: ['VALIDATION_FAILED', 'SELF_CONTACT_REQUEST'],
-    401: ['AUTHENTICATION_REQUIRED'],
-    404: ['CONTACT_TARGET_NOT_FOUND'],
-    500: ['INTERNAL_ERROR'],
-    503: ['CONTACT_TARGET_LOOKUP_UNAVAILABLE', 'CONTACT_REQUEST_UNAVAILABLE'],
-  })
+  @ApiContactErrorResponses(
+    {
+      400: ['VALIDATION_FAILED', 'SELF_CONTACT_REQUEST'],
+      401: ['AUTHENTICATION_REQUIRED'],
+      404: ['CONTACT_TARGET_NOT_FOUND'],
+      500: ['INTERNAL_ERROR'],
+      503: ['CONTACT_TARGET_LOOKUP_UNAVAILABLE', 'CONTACT_REQUEST_UNAVAILABLE'],
+    },
+    ['targetUserId'],
+  )
   async createContactRequest(
     @Req() request: VerifiedContactRequest,
     @Body() dto: SendContactRequestDto,

@@ -66,12 +66,33 @@
                   ]
                 },
                 "examples": {
-                  "VALIDATION_FAILED": {
-                    "summary": "VALIDATION_FAILED",
+                  "VALIDATION_FAILED_limit": {
+                    "summary": "VALIDATION_FAILED (limit)",
                     "value": {
                       "error": {
                         "code": "VALIDATION_FAILED",
-                        "message": "Request validation failed."
+                        "message": "Request validation failed.",
+                        "details": [
+                          {
+                            "field": "limit",
+                            "message": "limit must be an integer from 1 to 50."
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "VALIDATION_FAILED_cursor": {
+                    "summary": "VALIDATION_FAILED (cursor)",
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Request validation failed.",
+                        "details": [
+                          {
+                            "field": "cursor",
+                            "message": "cursor must be a valid cursor."
+                          }
+                        ]
                       }
                     }
                   }
@@ -278,12 +299,33 @@
                   ]
                 },
                 "examples": {
-                  "VALIDATION_FAILED": {
-                    "summary": "VALIDATION_FAILED",
+                  "VALIDATION_FAILED_limit": {
+                    "summary": "VALIDATION_FAILED (limit)",
                     "value": {
                       "error": {
                         "code": "VALIDATION_FAILED",
-                        "message": "Request validation failed."
+                        "message": "Request validation failed.",
+                        "details": [
+                          {
+                            "field": "limit",
+                            "message": "limit must be an integer from 1 to 50."
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "VALIDATION_FAILED_cursor": {
+                    "summary": "VALIDATION_FAILED (cursor)",
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Request validation failed.",
+                        "details": [
+                          {
+                            "field": "cursor",
+                            "message": "cursor must be a valid cursor."
+                          }
+                        ]
                       }
                     }
                   }
@@ -981,12 +1023,18 @@
                   ]
                 },
                 "examples": {
-                  "VALIDATION_FAILED": {
-                    "summary": "VALIDATION_FAILED",
+                  "VALIDATION_FAILED_targetUserId": {
+                    "summary": "VALIDATION_FAILED (targetUserId)",
                     "value": {
                       "error": {
                         "code": "VALIDATION_FAILED",
-                        "message": "Request validation failed."
+                        "message": "Request validation failed.",
+                        "details": [
+                          {
+                            "field": "targetUserId",
+                            "message": "targetUserId must be a non-empty string."
+                          }
+                        ]
                       }
                     }
                   },
@@ -1253,12 +1301,33 @@
                   ]
                 },
                 "examples": {
-                  "VALIDATION_FAILED": {
-                    "summary": "VALIDATION_FAILED",
+                  "VALIDATION_FAILED_limit": {
+                    "summary": "VALIDATION_FAILED (limit)",
                     "value": {
                       "error": {
                         "code": "VALIDATION_FAILED",
-                        "message": "Request validation failed."
+                        "message": "Request validation failed.",
+                        "details": [
+                          {
+                            "field": "limit",
+                            "message": "limit must be an integer from 1 to 50."
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "VALIDATION_FAILED_cursor": {
+                    "summary": "VALIDATION_FAILED (cursor)",
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Request validation failed.",
+                        "details": [
+                          {
+                            "field": "cursor",
+                            "message": "cursor must be a valid cursor."
+                          }
+                        ]
                       }
                     }
                   }

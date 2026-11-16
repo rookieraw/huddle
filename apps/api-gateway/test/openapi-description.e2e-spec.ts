@@ -572,8 +572,38 @@ describe('OpenAPI description (e2e)', () => {
       INTERNAL_ERROR: 'An unexpected error occurred.',
     };
 
+    // Validation failures carry exactly one detail. The contract lists which
+    // detail each operation can produce.
+    const validationDetails: Record<
+      string,
+      Array<{ field: string; message: string }>
+    > = {
+      '/contact-requests': [
+        {
+          field: 'targetUserId',
+          message: 'targetUserId must be a non-empty string.',
+        },
+      ],
+      ...Object.fromEntries(
+        [
+          '/contact-requests/incoming',
+          '/contact-requests/outgoing',
+          '/contacts',
+        ].map((listingPath) => [
+          listingPath,
+          [
+            {
+              field: 'limit',
+              message: 'limit must be an integer from 1 to 50.',
+            },
+            { field: 'cursor', message: 'cursor must be a valid cursor.' },
+          ],
+        ]),
+      ),
+    };
+
     it.each(errorMatrix)(
-      'carries one example per code with the contract message for each error response of %s %s',
+      'carries the contract examples, with details for validation failures, for each error response of %s %s',
       (method, path, expected) => {
         const responses = document.paths[path][method].responses ?? {};
 
@@ -583,15 +613,20 @@ describe('OpenAPI description (e2e)', () => {
           const examples = Object.values(media?.examples ?? {}).map(
             (example) => example.value,
           );
-
-          expect(examples).toHaveLength(codes.length);
-          expect(examples).toEqual(
-            expect.arrayContaining(
-              codes.map((code) => ({
-                error: { code, message: contractMessages[code] },
-              })),
-            ),
+          const expectedExamples = codes.flatMap((code) =>
+            code === 'VALIDATION_FAILED'
+              ? validationDetails[path].map((detail) => ({
+                  error: {
+                    code,
+                    message: contractMessages[code],
+                    details: [detail],
+                  },
+                }))
+              : [{ error: { code, message: contractMessages[code] } }],
           );
+
+          expect(examples).toHaveLength(expectedExamples.length);
+          expect(examples).toEqual(expect.arrayContaining(expectedExamples));
         }
       },
     );

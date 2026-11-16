@@ -53,12 +53,15 @@ export class ContactsController {
     type: AcceptedContactPageDto,
     description: 'A page of accepted Contacts of the verified actor.',
   })
-  @ApiContactErrorResponses({
-    400: ['VALIDATION_FAILED'],
-    401: ['AUTHENTICATION_REQUIRED'],
-    500: ['INTERNAL_ERROR'],
-    503: ['ACCEPTED_CONTACT_LISTING_UNAVAILABLE'],
-  })
+  @ApiContactErrorResponses(
+    {
+      400: ['VALIDATION_FAILED'],
+      401: ['AUTHENTICATION_REQUIRED'],
+      500: ['INTERNAL_ERROR'],
+      503: ['ACCEPTED_CONTACT_LISTING_UNAVAILABLE'],
+    },
+    ['limit', 'cursor'],
+  )
   listAcceptedContacts(
     @Req() request: VerifiedContactRequest,
     @Query() query: Record<string, unknown>,
