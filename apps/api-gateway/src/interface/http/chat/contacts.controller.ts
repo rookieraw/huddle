@@ -19,6 +19,16 @@ import {
   type ContactRequestAuthenticatedRequest,
 } from './contact-request-authentication.guard';
 import { ContactRequestExceptionFilter } from './contact-request-exception.filter';
+import {
+  ApiBearerAuth,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
+import { ApiContactErrorResponses } from './contact-error-responses.decorator';
+import { ApiContactListQuery } from './contact-list-query.decorator';
+import { AcceptedContactPageDto } from './dto/contact-listing-response.dto';
 
 type VerifiedContactRequest = ContactRequestAuthenticatedRequest & {
   user: {
@@ -27,6 +37,8 @@ type VerifiedContactRequest = ContactRequestAuthenticatedRequest & {
 };
 
 @Controller('contacts')
+@ApiTags('Contacts')
+@ApiBearerAuth()
 @UseGuards(ContactRequestAuthenticationGuard)
 @UseFilters(ContactRequestExceptionFilter)
 export class ContactsController {
@@ -36,6 +48,20 @@ export class ContactsController {
   ) {}
 
   @Get()
+  @ApiContactListQuery()
+  @ApiOkResponse({
+    type: AcceptedContactPageDto,
+    description: 'A page of accepted Contacts of the verified actor.',
+  })
+  @ApiContactErrorResponses(
+    {
+      400: ['VALIDATION_FAILED'],
+      401: ['AUTHENTICATION_REQUIRED'],
+      500: ['INTERNAL_ERROR'],
+      503: ['ACCEPTED_CONTACT_LISTING_UNAVAILABLE'],
+    },
+    ['limit', 'cursor'],
+  )
   listAcceptedContacts(
     @Req() request: VerifiedContactRequest,
     @Query() query: Record<string, unknown>,
@@ -49,6 +75,20 @@ export class ContactsController {
 
   @Delete(':contactUserId')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiParam({
+    name: 'contactUserId',
+    description: 'The user id of the accepted Contact to remove.',
+  })
+  @ApiNoContentResponse({
+    description:
+      'The accepted Contact is removed. The response has no content.',
+  })
+  @ApiContactErrorResponses({
+    401: ['AUTHENTICATION_REQUIRED'],
+    404: ['CONTACT_NOT_FOUND'],
+    500: ['INTERNAL_ERROR'],
+    503: ['CONTACT_REMOVAL_UNAVAILABLE'],
+  })
   async removeContact(
     @Req() request: VerifiedContactRequest,
     @Param('contactUserId') contactUserId: string,

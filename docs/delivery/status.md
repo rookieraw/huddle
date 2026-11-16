@@ -1,10 +1,10 @@
 # Project Status
 
-Last updated: 2026-11-13
+Last updated: 2026-11-16
 
 Current implementation phase: Phase 2 — Contacts and Chat
 
-Current activity: Contact-request creation, acceptance, rejection, incoming listing, outgoing listing, accepted Contact listing, and Contact removal HTTP delivery implemented and verified
+Current activity: Contact-request creation, acceptance, rejection, incoming listing, outgoing listing, accepted Contact listing, and Contact removal HTTP delivery implemented and verified; the first increment of the initial OpenAPI foundation, covering the Contacts operations, implemented and verified
 
 Portfolio Release target: End of Phase 4
 
@@ -33,7 +33,7 @@ It does not define target architecture, detailed Phase scope, or task-level work
 | MongoDB Message persistence | Not started                                                                                                                                                                              |
 | Realtime Chat               | Not started                                                                                                                                                                              |
 | Deployment foundation       | Planned                                                                                                                                                                                  |
-| OpenAPI and Swagger UI      | Dependency declared; generation and UI not configured; initial foundation authorized early in Phase 2; deployed exposure and gate verification remain in Phase 2.5                       |
+| OpenAPI and Swagger UI      | Contacts description, opt-in Swagger UI, and committed copy implemented; Identity description pending; deployed exposure and gate verification remain in Phase 2.5                       |
 | Voice and Video Calling     | Planned                                                                                                                                                                                  |
 | Billing                     | Planned                                                                                                                                                                                  |
 | First Portfolio Release     | Planned                                                                                                                                                                                  |
@@ -108,7 +108,7 @@ The public boundary does not add Chat production adapters, directory or profile 
 | Accepted Contact listing, `GET /contacts`                                      | [`../contracts/chat-contacts-http.md`](../contracts/chat-contacts-http.md) |
 | Contact removal, `DELETE /contacts/{contactUserId}`                            | [`../contracts/chat-contacts-http.md`](../contracts/chat-contacts-http.md) |
 
-The Contact-request and Contact removal Domain, Application commands and queries, and Chat-owned PostgreSQL persistence are implemented. Persistence is verified against real PostgreSQL integration tests under `libs/chat`. The Contacts HTTP operations have no generated OpenAPI operation and no frontend flow.
+The Contact-request and Contact removal Domain, Application commands and queries, and Chat-owned PostgreSQL persistence are implemented. Persistence is verified against real PostgreSQL integration tests under `libs/chat`. The Contacts HTTP operations are described in the generated OpenAPI description, which does not yet cover the Identity endpoints. They have no frontend flow.
 
 ## Current Activity
 
@@ -118,7 +118,7 @@ Contacts state is recorded under Implemented; the Contacts frontend flow remains
 
 The remaining Phase 2 implementation includes:
 
-- the initial OpenAPI foundation, an early slice authorized by Phase 2;
+- the Identity increment of the initial OpenAPI foundation, an early slice authorized by Phase 2;
 - Contacts frontend delivery;
 - Direct and Group Conversations;
 - MongoDB Message persistence;
@@ -131,13 +131,13 @@ Accepted target documentation is not evidence of implementation for the remainin
 
 ## Next Implementation Work
 
-Further Phase 2 implementation continues with the initial OpenAPI foundation, then the Contacts frontend delivery, followed by the remaining Chat capabilities and their authorized frontend slices in:
+Further Phase 2 implementation continues with the Identity increment of the initial OpenAPI foundation, then the Contacts frontend delivery, followed by the remaining Chat capabilities and their authorized frontend slices in:
 
 [`phases/02-chat.md`](phases/02-chat.md)
 
 Its remaining high-level outcome is:
 
-- the initial OpenAPI foundation;
+- the Identity increment of the initial OpenAPI foundation;
 - Contacts frontend delivery;
 - Direct Conversations;
 - Group Conversations;
@@ -184,7 +184,7 @@ Do not currently assume the existence of:
 - Direct or Group Chat;
 - MongoDB Message persistence;
 - Chat Socket.IO events;
-- generated OpenAPI documentation or Swagger UI;
+- an OpenAPI description of the Identity endpoints, or the documentation exposed in a deployed environment;
 - voice or video Calls;
 - mediasoup;
 - coturn;

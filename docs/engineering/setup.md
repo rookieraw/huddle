@@ -225,6 +225,8 @@ Some current lint scripts include automatic fixes. Review the working tree after
 
 The root `pnpm test` command does not replace the explicit integration and E2E commands below.
 
+After changing a described HTTP operation, regenerate the committed OpenAPI description with `pnpm --filter api-gateway openapi:generate`, as [`contracts/http.md`](../contracts/http.md#keeping-the-description-current) requires. Local Swagger UI is served only when `API_DOCS_ENABLED` has its explicit enable value, set in `.env` or in the process environment; `.env.example` records it.
+
 ---
 
 ## Integration and E2E Verification

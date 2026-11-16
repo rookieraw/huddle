@@ -44,6 +44,7 @@ This model governs new and changed content. Existing text that predates it is br
 | Phase          | What may be implemented in the Phase, and its gates. May carry its own `Status:` header. A completed Phase may keep its historical boundary and completion record.                   | A description of what is implemented, beyond the `Status:` header and a completed Phase's record |
 | Status         | Project-level implementation state, current activity, next work, and blockers, with links to the owning contract                                                                     | Mechanism narrative, test lists, work items                                                      |
 | Code and tests | Implemented behavior and its evidence                                                                                                                                                | n/a (authoritative)                                                                              |
+| Generated API  | Nothing authoritative: the committed OpenAPI description is derived from the code and regenerated from it                                                                            | Contract semantics, current state, or test evidence                                              |
 | ADR            | Why a durable decision was made, and its `Status:`                                                                                                                                   | Current implementation state                                                                     |
 
 ### Task-oriented Reading
@@ -228,6 +229,7 @@ They do not own exact HTTP paths, Socket.IO event names, or tier values.
 | [`contracts/conferencing-sfu.md`](contracts/conferencing-sfu.md)           | mediasoup transport, Producer, and Consumer signaling                           | Group Call or Meeting SFU signaling changes                    |
 | [`contracts/meeting-realtime.md`](contracts/meeting-realtime.md)           | Meeting lobby and Meeting-specific realtime notifications                       | Meeting realtime behavior changes                              |
 | [`contracts/integration-events.md`](contracts/integration-events.md)       | Versioned cross-context event envelope, catalog, payloads, and consumers        | An Integration Event is added or changed                       |
+| [`api/openapi.json`](api/openapi.json)                                     | Generated, derived OpenAPI description of the operations described so far       | A described operation changes, then regenerate it              |
 
 Contracts answer:
 

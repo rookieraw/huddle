@@ -1,0 +1,2014 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/contact-requests/incoming": {
+      "get": {
+        "operationId": "listIncomingContactRequests",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "A single value made only of ASCII digits, from 1 to 50. Defaults to 20 when absent. A larger value is rejected, not clamped.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "A single opaque value previously returned as nextCursor. Clients must not construct, parse, or modify it.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of pending Contact requests addressed to the verified actor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncomingContactRequestPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request failed validation or is not allowed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "VALIDATION_FAILED"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "VALIDATION_FAILED_limit": {
+                    "summary": "VALIDATION_FAILED (limit)",
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Request validation failed.",
+                        "details": [
+                          {
+                            "field": "limit",
+                            "message": "limit must be an integer from 1 to 50."
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "VALIDATION_FAILED_cursor": {
+                    "summary": "VALIDATION_FAILED (cursor)",
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Request validation failed.",
+                        "details": [
+                          {
+                            "field": "cursor",
+                            "message": "cursor must be a valid cursor."
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is missing or unusable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "AUTHENTICATION_REQUIRED"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "AUTHENTICATION_REQUIRED": {
+                    "summary": "AUTHENTICATION_REQUIRED",
+                    "value": {
+                      "error": {
+                        "code": "AUTHENTICATION_REQUIRED",
+                        "message": "Authentication is required."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unclassified unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "INTERNAL_ERROR"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "INTERNAL_ERROR": {
+                    "summary": "INTERNAL_ERROR",
+                    "value": {
+                      "error": {
+                        "code": "INTERNAL_ERROR",
+                        "message": "An unexpected error occurred."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A required dependency is temporarily unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "CONTACT_REQUEST_LISTING_UNAVAILABLE"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "CONTACT_REQUEST_LISTING_UNAVAILABLE": {
+                    "summary": "CONTACT_REQUEST_LISTING_UNAVAILABLE",
+                    "value": {
+                      "error": {
+                        "code": "CONTACT_REQUEST_LISTING_UNAVAILABLE",
+                        "message": "Incoming Contact requests are temporarily unavailable."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Contact requests"
+        ]
+      }
+    },
+    "/contact-requests/outgoing": {
+      "get": {
+        "operationId": "listOutgoingContactRequests",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "A single value made only of ASCII digits, from 1 to 50. Defaults to 20 when absent. A larger value is rejected, not clamped.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "A single opaque value previously returned as nextCursor. Clients must not construct, parse, or modify it.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of pending Contact requests created by the verified actor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutgoingContactRequestPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request failed validation or is not allowed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "VALIDATION_FAILED"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "VALIDATION_FAILED_limit": {
+                    "summary": "VALIDATION_FAILED (limit)",
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Request validation failed.",
+                        "details": [
+                          {
+                            "field": "limit",
+                            "message": "limit must be an integer from 1 to 50."
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "VALIDATION_FAILED_cursor": {
+                    "summary": "VALIDATION_FAILED (cursor)",
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Request validation failed.",
+                        "details": [
+                          {
+                            "field": "cursor",
+                            "message": "cursor must be a valid cursor."
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is missing or unusable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "AUTHENTICATION_REQUIRED"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "AUTHENTICATION_REQUIRED": {
+                    "summary": "AUTHENTICATION_REQUIRED",
+                    "value": {
+                      "error": {
+                        "code": "AUTHENTICATION_REQUIRED",
+                        "message": "Authentication is required."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unclassified unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "INTERNAL_ERROR"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "INTERNAL_ERROR": {
+                    "summary": "INTERNAL_ERROR",
+                    "value": {
+                      "error": {
+                        "code": "INTERNAL_ERROR",
+                        "message": "An unexpected error occurred."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A required dependency is temporarily unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "OUTGOING_CONTACT_REQUEST_LISTING_UNAVAILABLE"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "OUTGOING_CONTACT_REQUEST_LISTING_UNAVAILABLE": {
+                    "summary": "OUTGOING_CONTACT_REQUEST_LISTING_UNAVAILABLE",
+                    "value": {
+                      "error": {
+                        "code": "OUTGOING_CONTACT_REQUEST_LISTING_UNAVAILABLE",
+                        "message": "Outgoing Contact requests are temporarily unavailable."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Contact requests"
+        ]
+      }
+    },
+    "/contact-requests/{contactRequestId}/reject": {
+      "post": {
+        "operationId": "rejectContactRequest",
+        "parameters": [
+          {
+            "name": "contactRequestId",
+            "required": true,
+            "in": "path",
+            "description": "The id of the Contact request, as returned by creation or incoming listing.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Contact request is persisted as rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RejectedContactRequestDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is missing or unusable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "AUTHENTICATION_REQUIRED"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "AUTHENTICATION_REQUIRED": {
+                    "summary": "AUTHENTICATION_REQUIRED",
+                    "value": {
+                      "error": {
+                        "code": "AUTHENTICATION_REQUIRED",
+                        "message": "Authentication is required."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The target resource was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "CONTACT_REQUEST_NOT_FOUND"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "CONTACT_REQUEST_NOT_FOUND": {
+                    "summary": "CONTACT_REQUEST_NOT_FOUND",
+                    "value": {
+                      "error": {
+                        "code": "CONTACT_REQUEST_NOT_FOUND",
+                        "message": "Contact request was not found."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The relationship is in a conflicting state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "CONTACT_REQUEST_ALREADY_REJECTED",
+                                "CONTACT_REQUEST_ALREADY_ACCEPTED"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "CONTACT_REQUEST_ALREADY_REJECTED": {
+                    "summary": "CONTACT_REQUEST_ALREADY_REJECTED",
+                    "value": {
+                      "error": {
+                        "code": "CONTACT_REQUEST_ALREADY_REJECTED",
+                        "message": "Contact request has already been rejected."
+                      }
+                    }
+                  },
+                  "CONTACT_REQUEST_ALREADY_ACCEPTED": {
+                    "summary": "CONTACT_REQUEST_ALREADY_ACCEPTED",
+                    "value": {
+                      "error": {
+                        "code": "CONTACT_REQUEST_ALREADY_ACCEPTED",
+                        "message": "Contact request has already been accepted."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unclassified unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "INTERNAL_ERROR"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "INTERNAL_ERROR": {
+                    "summary": "INTERNAL_ERROR",
+                    "value": {
+                      "error": {
+                        "code": "INTERNAL_ERROR",
+                        "message": "An unexpected error occurred."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A required dependency is temporarily unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "CONTACT_REQUEST_REJECTION_UNAVAILABLE"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "CONTACT_REQUEST_REJECTION_UNAVAILABLE": {
+                    "summary": "CONTACT_REQUEST_REJECTION_UNAVAILABLE",
+                    "value": {
+                      "error": {
+                        "code": "CONTACT_REQUEST_REJECTION_UNAVAILABLE",
+                        "message": "Contact request rejection is temporarily unavailable."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Contact requests"
+        ]
+      }
+    },
+    "/contact-requests/{contactRequestId}/accept": {
+      "post": {
+        "operationId": "acceptContactRequest",
+        "parameters": [
+          {
+            "name": "contactRequestId",
+            "required": true,
+            "in": "path",
+            "description": "The id of the Contact request, as returned by creation or incoming listing.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Contact request is persisted as accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptedContactRequestDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is missing or unusable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "AUTHENTICATION_REQUIRED"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "AUTHENTICATION_REQUIRED": {
+                    "summary": "AUTHENTICATION_REQUIRED",
+                    "value": {
+                      "error": {
+                        "code": "AUTHENTICATION_REQUIRED",
+                        "message": "Authentication is required."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The target resource was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "CONTACT_REQUEST_NOT_FOUND"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "CONTACT_REQUEST_NOT_FOUND": {
+                    "summary": "CONTACT_REQUEST_NOT_FOUND",
+                    "value": {
+                      "error": {
+                        "code": "CONTACT_REQUEST_NOT_FOUND",
+                        "message": "Contact request was not found."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The relationship is in a conflicting state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "CONTACT_REQUEST_ALREADY_ACCEPTED",
+                                "CONTACT_REQUEST_ALREADY_REJECTED"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "CONTACT_REQUEST_ALREADY_ACCEPTED": {
+                    "summary": "CONTACT_REQUEST_ALREADY_ACCEPTED",
+                    "value": {
+                      "error": {
+                        "code": "CONTACT_REQUEST_ALREADY_ACCEPTED",
+                        "message": "Contact request has already been accepted."
+                      }
+                    }
+                  },
+                  "CONTACT_REQUEST_ALREADY_REJECTED": {
+                    "summary": "CONTACT_REQUEST_ALREADY_REJECTED",
+                    "value": {
+                      "error": {
+                        "code": "CONTACT_REQUEST_ALREADY_REJECTED",
+                        "message": "Contact request has already been rejected."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unclassified unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "INTERNAL_ERROR"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "INTERNAL_ERROR": {
+                    "summary": "INTERNAL_ERROR",
+                    "value": {
+                      "error": {
+                        "code": "INTERNAL_ERROR",
+                        "message": "An unexpected error occurred."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A required dependency is temporarily unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "CONTACT_REQUEST_ACCEPTANCE_UNAVAILABLE"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "CONTACT_REQUEST_ACCEPTANCE_UNAVAILABLE": {
+                    "summary": "CONTACT_REQUEST_ACCEPTANCE_UNAVAILABLE",
+                    "value": {
+                      "error": {
+                        "code": "CONTACT_REQUEST_ACCEPTANCE_UNAVAILABLE",
+                        "message": "Contact request acceptance is temporarily unavailable."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Contact requests"
+        ]
+      }
+    },
+    "/contact-requests": {
+      "post": {
+        "operationId": "createContactRequest",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendContactRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The persisted relationship, whether newly created or reused. Its status is returned as persisted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactRequestDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request failed validation or is not allowed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "VALIDATION_FAILED",
+                                "SELF_CONTACT_REQUEST"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "VALIDATION_FAILED_targetUserId": {
+                    "summary": "VALIDATION_FAILED (targetUserId)",
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Request validation failed.",
+                        "details": [
+                          {
+                            "field": "targetUserId",
+                            "message": "targetUserId must be a non-empty string."
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "SELF_CONTACT_REQUEST": {
+                    "summary": "SELF_CONTACT_REQUEST",
+                    "value": {
+                      "error": {
+                        "code": "SELF_CONTACT_REQUEST",
+                        "message": "A Contact request cannot target the requester."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is missing or unusable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "AUTHENTICATION_REQUIRED"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "AUTHENTICATION_REQUIRED": {
+                    "summary": "AUTHENTICATION_REQUIRED",
+                    "value": {
+                      "error": {
+                        "code": "AUTHENTICATION_REQUIRED",
+                        "message": "Authentication is required."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The target resource was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "CONTACT_TARGET_NOT_FOUND"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "CONTACT_TARGET_NOT_FOUND": {
+                    "summary": "CONTACT_TARGET_NOT_FOUND",
+                    "value": {
+                      "error": {
+                        "code": "CONTACT_TARGET_NOT_FOUND",
+                        "message": "Contact target was not found."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unclassified unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "INTERNAL_ERROR"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "INTERNAL_ERROR": {
+                    "summary": "INTERNAL_ERROR",
+                    "value": {
+                      "error": {
+                        "code": "INTERNAL_ERROR",
+                        "message": "An unexpected error occurred."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A required dependency is temporarily unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "CONTACT_TARGET_LOOKUP_UNAVAILABLE",
+                                "CONTACT_REQUEST_UNAVAILABLE"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "CONTACT_TARGET_LOOKUP_UNAVAILABLE": {
+                    "summary": "CONTACT_TARGET_LOOKUP_UNAVAILABLE",
+                    "value": {
+                      "error": {
+                        "code": "CONTACT_TARGET_LOOKUP_UNAVAILABLE",
+                        "message": "Contact target validation is temporarily unavailable."
+                      }
+                    }
+                  },
+                  "CONTACT_REQUEST_UNAVAILABLE": {
+                    "summary": "CONTACT_REQUEST_UNAVAILABLE",
+                    "value": {
+                      "error": {
+                        "code": "CONTACT_REQUEST_UNAVAILABLE",
+                        "message": "Contact request service is temporarily unavailable."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Contact requests"
+        ]
+      }
+    },
+    "/contacts": {
+      "get": {
+        "operationId": "listAcceptedContacts",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "A single value made only of ASCII digits, from 1 to 50. Defaults to 20 when absent. A larger value is rejected, not clamped.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "A single opaque value previously returned as nextCursor. Clients must not construct, parse, or modify it.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of accepted Contacts of the verified actor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptedContactPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request failed validation or is not allowed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "VALIDATION_FAILED"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "VALIDATION_FAILED_limit": {
+                    "summary": "VALIDATION_FAILED (limit)",
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Request validation failed.",
+                        "details": [
+                          {
+                            "field": "limit",
+                            "message": "limit must be an integer from 1 to 50."
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "VALIDATION_FAILED_cursor": {
+                    "summary": "VALIDATION_FAILED (cursor)",
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Request validation failed.",
+                        "details": [
+                          {
+                            "field": "cursor",
+                            "message": "cursor must be a valid cursor."
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is missing or unusable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "AUTHENTICATION_REQUIRED"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "AUTHENTICATION_REQUIRED": {
+                    "summary": "AUTHENTICATION_REQUIRED",
+                    "value": {
+                      "error": {
+                        "code": "AUTHENTICATION_REQUIRED",
+                        "message": "Authentication is required."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unclassified unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "INTERNAL_ERROR"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "INTERNAL_ERROR": {
+                    "summary": "INTERNAL_ERROR",
+                    "value": {
+                      "error": {
+                        "code": "INTERNAL_ERROR",
+                        "message": "An unexpected error occurred."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A required dependency is temporarily unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "ACCEPTED_CONTACT_LISTING_UNAVAILABLE"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "ACCEPTED_CONTACT_LISTING_UNAVAILABLE": {
+                    "summary": "ACCEPTED_CONTACT_LISTING_UNAVAILABLE",
+                    "value": {
+                      "error": {
+                        "code": "ACCEPTED_CONTACT_LISTING_UNAVAILABLE",
+                        "message": "Accepted Contacts are temporarily unavailable."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Contacts"
+        ]
+      }
+    },
+    "/contacts/{contactUserId}": {
+      "delete": {
+        "operationId": "removeContact",
+        "parameters": [
+          {
+            "name": "contactUserId",
+            "required": true,
+            "in": "path",
+            "description": "The user id of the accepted Contact to remove.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The accepted Contact is removed. The response has no content."
+          },
+          "401": {
+            "description": "Authentication is missing or unusable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "AUTHENTICATION_REQUIRED"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "AUTHENTICATION_REQUIRED": {
+                    "summary": "AUTHENTICATION_REQUIRED",
+                    "value": {
+                      "error": {
+                        "code": "AUTHENTICATION_REQUIRED",
+                        "message": "Authentication is required."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The target resource was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "CONTACT_NOT_FOUND"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "CONTACT_NOT_FOUND": {
+                    "summary": "CONTACT_NOT_FOUND",
+                    "value": {
+                      "error": {
+                        "code": "CONTACT_NOT_FOUND",
+                        "message": "Contact was not found."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unclassified unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "INTERNAL_ERROR"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "INTERNAL_ERROR": {
+                    "summary": "INTERNAL_ERROR",
+                    "value": {
+                      "error": {
+                        "code": "INTERNAL_ERROR",
+                        "message": "An unexpected error occurred."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A required dependency is temporarily unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApplicationErrorEnvelopeDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "CONTACT_REMOVAL_UNAVAILABLE"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "CONTACT_REMOVAL_UNAVAILABLE": {
+                    "summary": "CONTACT_REMOVAL_UNAVAILABLE",
+                    "value": {
+                      "error": {
+                        "code": "CONTACT_REMOVAL_UNAVAILABLE",
+                        "message": "Contact removal is temporarily unavailable."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Contacts"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Huddle API",
+    "description": "",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "ApplicationErrorDetailDto": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "The request field the problem refers to.",
+            "example": "targetUserId"
+          },
+          "message": {
+            "type": "string",
+            "description": "What is wrong with that field.",
+            "example": "targetUserId must be a non-empty string."
+          }
+        },
+        "required": [
+          "field",
+          "message"
+        ]
+      },
+      "ApplicationErrorDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Stable machine-readable error code. The values possible for each response are listed on that response.",
+            "example": "VALIDATION_FAILED"
+          },
+          "message": {
+            "type": "string",
+            "description": "Fixed human-readable text for the code.",
+            "example": "Request validation failed."
+          },
+          "details": {
+            "description": "Present only for validation failures.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApplicationErrorDetailDto"
+            }
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "ApplicationErrorEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ApplicationErrorDto"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "IncomingContactRequestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The contactRequestId to use with acceptance and rejection.",
+            "example": "relationship-id"
+          },
+          "requesterId": {
+            "type": "string",
+            "description": "The authoritative user who created the request.",
+            "example": "user-requester"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Current presentation text from Identity. It is non-unique, user-controlled, and untrusted, and it is null when Identity has no profile.",
+            "example": "Requester Name",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "description": "Always pending; no other state is listed.",
+            "enum": [
+              "pending"
+            ],
+            "example": "pending"
+          }
+        },
+        "required": [
+          "id",
+          "requesterId",
+          "displayName",
+          "status"
+        ]
+      },
+      "IncomingContactRequestPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "At most the requested limit of pending requests addressed to the verified actor. Empty when there are none.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IncomingContactRequestDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "Pass it as the cursor query parameter to read the next page. It is null on the last page.",
+            "example": "opaque-cursor",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "OutgoingContactRequestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The opaque identifier of the Contact request.",
+            "example": "relationship-id"
+          },
+          "recipientId": {
+            "type": "string",
+            "description": "The authoritative user the request was sent to.",
+            "example": "user-recipient"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Current presentation text from Identity. It is non-unique, user-controlled, and untrusted, and it is null when Identity has no profile.",
+            "example": "Recipient Name",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "description": "Always pending; no other state is listed.",
+            "enum": [
+              "pending"
+            ],
+            "example": "pending"
+          }
+        },
+        "required": [
+          "id",
+          "recipientId",
+          "displayName",
+          "status"
+        ]
+      },
+      "OutgoingContactRequestPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "At most the requested limit of pending requests created by the verified actor. Empty when there are none.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OutgoingContactRequestDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "Pass it as the cursor query parameter to read the next page. It is null on the last page.",
+            "example": "opaque-cursor",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "RejectedContactRequestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable identifier of the Contact relationship.",
+            "example": "relationship-id"
+          },
+          "requesterId": {
+            "type": "string",
+            "description": "Authoritative user who originally requested the relationship.",
+            "example": "user-requester"
+          },
+          "recipientId": {
+            "type": "string",
+            "description": "Authoritative user who originally received the request.",
+            "example": "user-recipient"
+          },
+          "status": {
+            "type": "string",
+            "description": "Persisted lifecycle state after successful rejection.",
+            "enum": [
+              "rejected"
+            ],
+            "example": "rejected"
+          }
+        },
+        "required": [
+          "id",
+          "requesterId",
+          "recipientId",
+          "status"
+        ]
+      },
+      "AcceptedContactRequestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable identifier of the Contact relationship.",
+            "example": "relationship-id"
+          },
+          "requesterId": {
+            "type": "string",
+            "description": "Authoritative user who originally requested the relationship.",
+            "example": "user-requester"
+          },
+          "recipientId": {
+            "type": "string",
+            "description": "Authoritative user who originally received the request.",
+            "example": "user-recipient"
+          },
+          "status": {
+            "type": "string",
+            "description": "Persisted lifecycle state after successful acceptance.",
+            "enum": [
+              "accepted"
+            ],
+            "example": "accepted"
+          }
+        },
+        "required": [
+          "id",
+          "requesterId",
+          "recipientId",
+          "status"
+        ]
+      },
+      "SendContactRequestDto": {
+        "type": "object",
+        "properties": {
+          "targetUserId": {
+            "type": "string",
+            "description": "Opaque identifier of the user to contact. It is not trimmed or normalized.",
+            "example": "user-target",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "targetUserId"
+        ]
+      },
+      "ContactRequestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable identifier of the Contact relationship.",
+            "example": "relationship-id"
+          },
+          "requesterId": {
+            "type": "string",
+            "description": "Authoritative user who originally requested the relationship.",
+            "example": "user-requester"
+          },
+          "recipientId": {
+            "type": "string",
+            "description": "Authoritative user who originally received the request.",
+            "example": "user-recipient"
+          },
+          "status": {
+            "type": "string",
+            "description": "Persisted current status of the relationship.",
+            "enum": [
+              "pending",
+              "accepted"
+            ],
+            "example": "pending"
+          }
+        },
+        "required": [
+          "id",
+          "requesterId",
+          "recipientId",
+          "status"
+        ]
+      },
+      "AcceptedContactDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "The authoritative user who is the Contact.",
+            "example": "user-contact"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Current presentation text from Identity. It is non-unique, user-controlled, and untrusted, and it is null when Identity has no profile.",
+            "example": "Contact Name",
+            "nullable": true
+          }
+        },
+        "required": [
+          "userId",
+          "displayName"
+        ]
+      },
+      "AcceptedContactPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "At most the requested limit of accepted Contacts of the verified actor. Empty when there are none.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AcceptedContactDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "Pass it as the cursor query parameter to read the next page. It is null on the last page.",
+            "example": "opaque-cursor",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      }
+    }
+  }
+}
