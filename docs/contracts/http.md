@@ -18,7 +18,7 @@ It defines:
 - Contract states
 - The location and delivery state of Context-specific HTTP contracts
 - Implemented, accepted, and planned capability groups and their exact contract locations
-- The relationship between human-maintained HTTP contracts and future generated
+- The relationship between human-maintained HTTP contracts and generated
   OpenAPI documentation
 
 Exact accepted and implemented endpoint paths, methods, payloads, and status
@@ -88,7 +88,7 @@ document is governed by
 
 ## OpenAPI Documentation Direction
 
-Huddle plans a machine-readable OpenAPI description so consumers and reviewers
+Huddle provides a machine-readable OpenAPI description, delivered in increments, so consumers and reviewers
 can discover the implemented HTTP surface, inspect request and response shapes,
 and use the result as portfolio evidence without reconstructing every operation
 from controller source.
@@ -240,8 +240,10 @@ is merged. From then on:
 
 The first increment of the initial foundation is implemented. The API Gateway
 generates an OpenAPI description of the implemented Contacts operations,
-serves it with Swagger UI under `/docs/api` only when the opt-in switch in
-`.env.example` has its explicit enable value, and commits the generated copy as
+serves it with Swagger UI under `/docs/api` only when the opt-in API Gateway
+configuration value has its explicit enable value, read from the process
+environment or the root `.env` (the local environment template enables it for
+Local), and commits the generated copy as
 `docs/api/openapi.json`, regenerated with
 `pnpm --filter api-gateway openapi:generate`. The Identity endpoints are not
 yet described, and exposure in a deployed environment remains with

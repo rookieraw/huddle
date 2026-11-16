@@ -1,11 +1,15 @@
 import { ChildProcess, spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 const gatewayEntryPoint = path.resolve(__dirname, '../dist/main.js');
+const committedDocumentPath = path.resolve(
+  __dirname,
+  '../../../docs/api/openapi.json',
+);
 const readinessTimeoutMs = 30_000;
 const readinessPollMs = 250;
 
@@ -58,10 +62,12 @@ describe('API documentation switch at startup (e2e)', () => {
     const gateway = await startGateway({ switchInEnvironment: 'true' });
 
     const response = await fetch(documentationJsonUrl(gateway.port));
-    const body = (await response.json()) as { openapi: string };
+    const body = (await response.json()) as unknown;
 
     expect(response.status).toBe(200);
-    expect(body.openapi).toMatch(/^3\.0\.\d+$/);
+    expect(body).toEqual(
+      JSON.parse(readFileSync(committedDocumentPath, 'utf8')) as unknown,
+    );
   });
 
   it('enables the routes when the switch is set in the .env file', async () => {
