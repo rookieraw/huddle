@@ -24,6 +24,7 @@ import {
   ApiNoContentResponse,
   ApiOkResponse,
   ApiParam,
+  ApiTags,
 } from '@nestjs/swagger';
 import { ApiContactErrorResponses } from './contact-error-responses.decorator';
 import { ApiContactListQuery } from './contact-list-query.decorator';
@@ -36,6 +37,7 @@ type VerifiedContactRequest = ContactRequestAuthenticatedRequest & {
 };
 
 @Controller('contacts')
+@ApiTags('Contacts')
 @ApiBearerAuth()
 @UseGuards(ContactRequestAuthenticationGuard)
 @UseFilters(ContactRequestExceptionFilter)

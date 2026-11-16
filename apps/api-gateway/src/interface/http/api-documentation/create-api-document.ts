@@ -19,6 +19,9 @@ export function createApiDocument(app: NestExpressApplication): OpenAPIObject {
 
   return SwaggerModule.createDocument(app, config, {
     include: [ChatContactRequestModule],
+    // Handler names are unique across the described controllers.
+    operationIdFactory: (_controllerKey: string, methodKey: string) =>
+      methodKey,
   });
 }
 

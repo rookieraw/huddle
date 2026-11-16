@@ -18,7 +18,12 @@ import {
   UseFilters,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiParam } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import {
   ContactRequestAuthenticationGuard,
   type ContactRequestAuthenticatedRequest,
@@ -44,6 +49,7 @@ type VerifiedContactRequest = ContactRequestAuthenticatedRequest & {
 };
 
 @Controller('contact-requests')
+@ApiTags('Contact requests')
 @ApiBearerAuth()
 @UseGuards(ContactRequestAuthenticationGuard)
 @UseFilters(ContactRequestExceptionFilter)

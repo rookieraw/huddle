@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { CHAT_PRISMA_CLIENT } from '@huddle/chat';
 import {
   AUTHENTICATION_API,
@@ -13,6 +15,11 @@ import {
   serializeApiDocument,
 } from '../src/interface/http/api-documentation/create-api-document';
 import { setupApiDocumentation } from '../src/interface/http/api-documentation/setup-api-documentation';
+
+const committedDocumentPath = resolve(
+  __dirname,
+  '../../../docs/api/openapi.json',
+);
 
 describe('OpenAPI generation (e2e)', () => {
   let app: NestExpressApplication;
@@ -57,6 +64,22 @@ describe('OpenAPI generation (e2e)', () => {
     expect(text.endsWith('}\n')).toBe(true);
     expect(text.endsWith('\n\n')).toBe(false);
     expect(() => JSON.parse(text) as unknown).not.toThrow();
+  });
+
+  it('matches the committed docs/api/openapi.json byte for byte', () => {
+    expect(readFileSync(committedDocumentPath, 'utf8')).toBe(
+      serializeApiDocument(createApiDocument(app)),
+    );
+  });
+
+  it('serves the committed description', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/docs/api/openapi.json')
+      .expect(200);
+
+    expect(response.body).toEqual(
+      JSON.parse(readFileSync(committedDocumentPath, 'utf8')) as unknown,
+    );
   });
 
   it('generates identical text every time', () => {

@@ -25,6 +25,8 @@ type OpenApiOperation = {
     content?: Record<string, { schema?: Record<string, unknown> }>;
   };
   security?: Record<string, string[]>[];
+  operationId?: string;
+  tags?: string[];
   responses?: Record<
     string,
     {
@@ -97,6 +99,52 @@ describe('OpenAPI description (e2e)', () => {
         'post /contact-requests/{contactRequestId}/accept',
         'post /contact-requests/{contactRequestId}/reject',
       ].sort(),
+    );
+  });
+
+  describe('operation identity', () => {
+    const operations: Array<[string, string, string, string]> = [
+      ['post', '/contact-requests', 'createContactRequest', 'Contact requests'],
+      [
+        'post',
+        '/contact-requests/{contactRequestId}/accept',
+        'acceptContactRequest',
+        'Contact requests',
+      ],
+      [
+        'post',
+        '/contact-requests/{contactRequestId}/reject',
+        'rejectContactRequest',
+        'Contact requests',
+      ],
+      [
+        'get',
+        '/contact-requests/incoming',
+        'listIncomingContactRequests',
+        'Contact requests',
+      ],
+      [
+        'get',
+        '/contact-requests/outgoing',
+        'listOutgoingContactRequests',
+        'Contact requests',
+      ],
+      ['get', '/contacts', 'listAcceptedContacts', 'Contacts'],
+      ['delete', '/contacts/{contactUserId}', 'removeContact', 'Contacts'],
+    ];
+
+    it.each(operations)(
+      'uses the handler name as the operation id of %s %s',
+      (method, path, operationId) => {
+        expect(document.paths[path][method].operationId).toBe(operationId);
+      },
+    );
+
+    it.each(operations)(
+      'groups %s %s under exactly one tag',
+      (method, path, _operationId, tag) => {
+        expect(document.paths[path][method].tags).toEqual([tag]);
+      },
     );
   });
 
