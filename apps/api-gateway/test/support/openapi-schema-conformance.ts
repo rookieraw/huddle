@@ -195,22 +195,15 @@ function validate(
   path: string,
   violations: string[],
 ): void {
-  const {
-    type,
-    enum: allowed,
-    nullable,
-    minLength,
-    minimum,
-    maximum,
-  } = schema.scalars;
-
   if (value === null) {
-    if (nullable !== true) {
+    if (schema.scalars.nullable !== true) {
       violations.push(`${path}: null is not allowed.`);
     }
 
     return;
   }
+
+  const { type } = schema.scalars;
 
   if (typeof type === 'string' && !hasType(type, value)) {
     violations.push(
@@ -220,8 +213,26 @@ function validate(
     return;
   }
 
+  // Each step below checks one kind of keyword. Only the oneOf, items and
+  // properties steps call validate again, once per alternative, element or
+  // property, with a narrower schema and value.
+  validateOneOf(document, schema, value, path, violations);
+  validateScalarConstraints(schema, value, path, violations);
+  validateItems(document, schema, value, path, violations);
+  validateProperties(document, schema, value, path, violations);
+}
+
+function validateOneOf(
+  document: OpenApiDocumentLike,
+  schema: NormalizedSchema,
+  value: unknown,
+  path: string,
+  violations: string[],
+): void {
   for (const alternatives of schema.oneOf) {
     const conforming = alternatives.filter((alternative) => {
+      // A failing alternative is expected, so its violations stay out of the
+      // real list. Only whether it conforms matters.
       const own: string[] = [];
 
       validate(document, normalize(document, alternative), value, path, own);
@@ -235,6 +246,15 @@ function validate(
       );
     }
   }
+}
+
+function validateScalarConstraints(
+  schema: NormalizedSchema,
+  value: unknown,
+  path: string,
+  violations: string[],
+): void {
+  const { enum: allowed, minLength, minimum, maximum } = schema.scalars;
 
   if (Array.isArray(allowed) && !allowed.includes(value)) {
     violations.push(`${path}: value is not one of the documented values.`);
@@ -255,40 +275,60 @@ function validate(
       violations.push(`${path}: above ${maximum}.`);
     }
   }
+}
 
-  if (Array.isArray(value) && schema.items.length > 0) {
-    const itemSchema = normalize(document, { allOf: schema.items });
-
-    value.forEach((element, index) => {
-      validate(document, itemSchema, element, `${path}[${index}]`, violations);
-    });
+function validateItems(
+  document: OpenApiDocumentLike,
+  schema: NormalizedSchema,
+  value: unknown,
+  path: string,
+  violations: string[],
+): void {
+  if (!Array.isArray(value) || schema.items.length === 0) {
+    return;
   }
 
-  if (typeof value === 'object' && !Array.isArray(value)) {
-    const record = value as Record<string, unknown>;
+  const itemSchema = normalize(document, { allOf: schema.items });
 
-    for (const name of schema.required) {
-      if (!(name in record)) {
-        violations.push(`${path}.${name}: required property is missing.`);
-      }
+  value.forEach((element, index) => {
+    validate(document, itemSchema, element, `${path}[${index}]`, violations);
+  });
+}
+
+function validateProperties(
+  document: OpenApiDocumentLike,
+  schema: NormalizedSchema,
+  value: unknown,
+  path: string,
+  violations: string[],
+): void {
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    return;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  for (const name of schema.required) {
+    if (!(name in record)) {
+      violations.push(`${path}.${name}: required property is missing.`);
+    }
+  }
+
+  for (const [name, child] of Object.entries(record)) {
+    const declared = schema.properties.get(name);
+
+    if (declared === undefined) {
+      violations.push(`${path}.${name}: undocumented property.`);
+      continue;
     }
 
-    for (const [name, child] of Object.entries(record)) {
-      const declared = schema.properties.get(name);
-
-      if (declared === undefined) {
-        violations.push(`${path}.${name}: undocumented property.`);
-        continue;
-      }
-
-      validate(
-        document,
-        normalize(document, { allOf: declared }),
-        child,
-        `${path}.${name}`,
-        violations,
-      );
-    }
+    validate(
+      document,
+      normalize(document, { allOf: declared }),
+      child,
+      `${path}.${name}`,
+      violations,
+    );
   }
 }
 
