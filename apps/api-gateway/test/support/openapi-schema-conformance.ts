@@ -4,8 +4,13 @@
  * proven without a validator dependency, and so undocumented properties are
  * rejected.
  *
- * It supports exactly the keywords the Contacts description uses and throws on
+ * It supports exactly the keywords the described operations use and throws on
  * any other, so it can never silently skip a constraint.
+ *
+ * `oneOf` is judged with exactly-one semantics: each alternative is checked
+ * closed-world on its own, and exactly one must conform. Use it alone in a
+ * schema (or beside annotations), because sibling keywords are judged against
+ * the value as well and are not merged into the alternatives.
  */
 
 type Schema = Record<string, unknown>;
@@ -44,6 +49,7 @@ type NormalizedSchema = {
   required: Set<string>;
   properties: Map<string, unknown[]>;
   items: unknown[];
+  oneOf: unknown[][];
 };
 
 function asSchema(value: unknown): Schema {
@@ -98,6 +104,12 @@ function collect(
       for (const part of value) {
         collect(document, part, into);
       }
+    } else if (keyword === 'oneOf') {
+      if (!Array.isArray(value) || value.length === 0) {
+        throw new Error('oneOf must be a non-empty array.');
+      }
+
+      into.oneOf.push(value);
     } else if (keyword === 'required') {
       for (const name of value as string[]) {
         into.required.add(name);
@@ -141,6 +153,7 @@ function normalize(
     required: new Set(),
     properties: new Map(),
     items: [],
+    oneOf: [],
   };
 
   collect(document, schema, normalized);
@@ -205,6 +218,22 @@ function validate(
     );
 
     return;
+  }
+
+  for (const alternatives of schema.oneOf) {
+    const conforming = alternatives.filter((alternative) => {
+      const own: string[] = [];
+
+      validate(document, normalize(document, alternative), value, path, own);
+
+      return own.length === 0;
+    }).length;
+
+    if (conforming !== 1) {
+      violations.push(
+        `${path}: matches ${conforming} of ${alternatives.length} oneOf alternatives, expected exactly one.`,
+      );
+    }
   }
 
   if (Array.isArray(allowed) && !allowed.includes(value)) {
