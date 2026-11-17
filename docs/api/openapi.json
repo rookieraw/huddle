@@ -158,13 +158,23 @@
     },
     "/auth/oauth/google": {
       "get": {
+        "description": "A browser redirect into the Google authorization flow, performed by the guard before the handler runs. A documentation client cannot complete it: the provider takes over from the redirect.",
         "operationId": "googleLogin",
         "parameters": [],
         "responses": {
-          "200": {
-            "description": ""
+          "302": {
+            "description": "The browser is redirected to the Google authorization flow.",
+            "headers": {
+              "Location": {
+                "description": "The provider authorization location for the browser.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
         },
+        "summary": "",
         "tags": [
           "OAuth"
         ]
@@ -172,13 +182,22 @@
     },
     "/auth/oauth/google/callback": {
       "get": {
+        "description": "A provider callback: Google redirects the browser back here after authorization, and the response is the token pair as JSON. A documentation client cannot complete it, because the provider supplies the authorization result.",
         "operationId": "googleCallback",
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "The provider authentication is verified, and a token pair is issued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokensDto"
+                }
+              }
+            }
           }
         },
+        "summary": "",
         "tags": [
           "OAuth"
         ]
@@ -186,13 +205,23 @@
     },
     "/auth/oauth/github": {
       "get": {
+        "description": "A browser redirect into the GitHub authorization flow, performed by the guard before the handler runs. A documentation client cannot complete it: the provider takes over from the redirect.",
         "operationId": "githubLogin",
         "parameters": [],
         "responses": {
-          "200": {
-            "description": ""
+          "302": {
+            "description": "The browser is redirected to the GitHub authorization flow.",
+            "headers": {
+              "Location": {
+                "description": "The provider authorization location for the browser.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
         },
+        "summary": "",
         "tags": [
           "OAuth"
         ]
@@ -200,13 +229,22 @@
     },
     "/auth/oauth/github/callback": {
       "get": {
+        "description": "A provider callback: GitHub redirects the browser back here after authorization, and the response is the token pair as JSON. A documentation client cannot complete it, because the provider supplies the authorization result.",
         "operationId": "githubCallback",
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "The provider authentication is verified, and a token pair is issued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokensDto"
+                }
+              }
+            }
           }
         },
+        "summary": "",
         "tags": [
           "OAuth"
         ]

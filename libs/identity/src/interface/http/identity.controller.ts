@@ -21,6 +21,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { DomainError } from '@huddle/shared-kernel';
@@ -175,6 +176,20 @@ export class IdentityController {
 
   @Get('oauth/google')
   @ApiTags('OAuth')
+  @ApiOperation({
+    description:
+      'A browser redirect into the Google authorization flow, performed by the guard before the handler runs. A documentation client cannot complete it: the provider takes over from the redirect.',
+  })
+  @ApiResponse({
+    status: 302,
+    description: 'The browser is redirected to the Google authorization flow.',
+    headers: {
+      Location: {
+        description: 'The provider authorization location for the browser.',
+        schema: { type: 'string' },
+      },
+    },
+  })
   @UseGuards(GoogleAuthGuard)
   googleLogin() {
     // Guard redirects to Google's consent screen; this body never runs.
@@ -182,6 +197,15 @@ export class IdentityController {
 
   @Get('oauth/google/callback')
   @ApiTags('OAuth')
+  @ApiOperation({
+    description:
+      'A provider callback: Google redirects the browser back here after authorization, and the response is the token pair as JSON. A documentation client cannot complete it, because the provider supplies the authorization result.',
+  })
+  @ApiOkResponse({
+    type: AuthTokensDto,
+    description:
+      'The provider authentication is verified, and a token pair is issued.',
+  })
   @UseGuards(GoogleAuthGuard)
   async googleCallback(@Req() req: Request) {
     return this.issueAuthTokensUseCase.execute(req.user as User);
@@ -189,6 +213,20 @@ export class IdentityController {
 
   @Get('oauth/github')
   @ApiTags('OAuth')
+  @ApiOperation({
+    description:
+      'A browser redirect into the GitHub authorization flow, performed by the guard before the handler runs. A documentation client cannot complete it: the provider takes over from the redirect.',
+  })
+  @ApiResponse({
+    status: 302,
+    description: 'The browser is redirected to the GitHub authorization flow.',
+    headers: {
+      Location: {
+        description: 'The provider authorization location for the browser.',
+        schema: { type: 'string' },
+      },
+    },
+  })
   @UseGuards(GithubAuthGuard)
   githubLogin() {
     // Guard redirects to GitHub's consent screen; this body never runs.
@@ -196,6 +234,15 @@ export class IdentityController {
 
   @Get('oauth/github/callback')
   @ApiTags('OAuth')
+  @ApiOperation({
+    description:
+      'A provider callback: GitHub redirects the browser back here after authorization, and the response is the token pair as JSON. A documentation client cannot complete it, because the provider supplies the authorization result.',
+  })
+  @ApiOkResponse({
+    type: AuthTokensDto,
+    description:
+      'The provider authentication is verified, and a token pair is issued.',
+  })
   @UseGuards(GithubAuthGuard)
   async githubCallback(@Req() req: Request) {
     return this.issueAuthTokensUseCase.execute(req.user as User);

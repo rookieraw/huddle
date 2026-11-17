@@ -36,6 +36,14 @@ type OpenApiOperation = {
     string,
     {
       description?: string;
+      headers?: Record<
+        string,
+        {
+          description?: string;
+          schema?: Record<string, unknown>;
+          example?: unknown;
+        }
+      >;
       content?: Record<string, { schema?: Record<string, unknown> }>;
     }
   >;
@@ -212,6 +220,76 @@ describe('Identity OpenAPI description (e2e)', () => {
         }
       }
     });
+  });
+
+  describe('OAuth routes', () => {
+    const starts = ['/auth/oauth/google', '/auth/oauth/github'];
+    const callbacks = [
+      '/auth/oauth/google/callback',
+      '/auth/oauth/github/callback',
+    ];
+
+    const successOrRedirectStatuses = (path: string): string[] =>
+      Object.keys(document.paths[path]?.get?.responses ?? {}).filter(
+        (status) => status.startsWith('2') || status.startsWith('3'),
+      );
+
+    it.each(starts)(
+      'describes get %s as a 302 redirect with no content and no other success status',
+      (path) => {
+        expect(successOrRedirectStatuses(path)).toEqual(['302']);
+        expect(
+          document.paths[path]?.get?.responses?.['302']?.content,
+        ).toBeUndefined();
+      },
+    );
+
+    it.each(starts)(
+      'describes the Location header of get %s without an example',
+      (path) => {
+        const header =
+          document.paths[path]?.get?.responses?.['302']?.headers?.Location;
+
+        expect(header?.description).toEqual(expect.stringMatching(/provider/i));
+        expect(header?.schema?.type).toBe('string');
+        expect(header).not.toHaveProperty('example');
+        expect(header?.schema).not.toHaveProperty('example');
+      },
+    );
+
+    it.each(starts)(
+      'says that get %s is a browser redirect a documentation client cannot complete',
+      (path) => {
+        const description = document.paths[path]?.get?.description;
+
+        expect(description).toEqual(expect.stringMatching(/browser redirect/i));
+        expect(description).toEqual(expect.stringMatching(/cannot complete/i));
+      },
+    );
+
+    it.each(callbacks)(
+      'describes get %s as a 200 JSON AuthTokensDto with no other success status',
+      (path) => {
+        expect(successOrRedirectStatuses(path)).toEqual(['200']);
+        expect(
+          document.paths[path]?.get?.responses?.['200']?.content?.[
+            'application/json'
+          ]?.schema,
+        ).toEqual({ $ref: '#/components/schemas/AuthTokensDto' });
+      },
+    );
+
+    it.each(callbacks)(
+      'says that get %s is a provider callback a documentation client cannot complete',
+      (path) => {
+        const description = document.paths[path]?.get?.description;
+
+        expect(description).toEqual(
+          expect.stringMatching(/provider callback/i),
+        );
+        expect(description).toEqual(expect.stringMatching(/cannot complete/i));
+      },
+    );
   });
 
   describe('transitional behavior', () => {

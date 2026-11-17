@@ -22,7 +22,12 @@ type OpenApiDocument = {
   paths: Record<string, Record<string, { responses?: DescribedResponses }>>;
 };
 
-type Outcome = { status: number; body: unknown; text: string };
+type Outcome = {
+  status: number;
+  body: unknown;
+  text: string;
+  headers: Record<string, unknown>;
+};
 
 type Scenario = {
   name: string;
@@ -163,6 +168,20 @@ describe('Identity OpenAPI response agreement (e2e)', () => {
       },
     },
     {
+      name: 'Google start redirects the browser',
+      method: 'get',
+      template: '/auth/oauth/google',
+      status: 302,
+      perform: () => api().get('/auth/oauth/google'),
+    },
+    {
+      name: 'GitHub start redirects the browser',
+      method: 'get',
+      template: '/auth/oauth/github',
+      status: 302,
+      perform: () => api().get('/auth/oauth/github'),
+    },
+    {
       name: 'current user succeeds',
       method: 'get',
       template: '/users/me',
@@ -235,9 +254,14 @@ describe('Identity OpenAPI response agreement (e2e)', () => {
 
     expect(described).toBeDefined();
 
-    if (scenario.status === 204) {
+    if (scenario.status === 204 || scenario.status === 302) {
       expect(described?.content).toBeUndefined();
       expect(response.text).toBe('');
+
+      if (scenario.status === 302) {
+        // Only its presence is checked: the provider URL is never printed.
+        expect(typeof response.headers.location).toBe('string');
+      }
 
       return;
     }
