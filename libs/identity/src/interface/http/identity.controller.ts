@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtService } from '@nestjs/jwt';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { DomainError } from '@huddle/shared-kernel';
 import { User } from '../../domain/user.entity';
 import { RegisterUserUseCase } from '../../application/use-cases/register-user.use-case';
@@ -117,6 +117,13 @@ export class IdentityController {
 
   @Get('verify')
   @ApiTags('Authentication')
+  @ApiQuery({
+    name: 'token',
+    required: true,
+    description:
+      'The verification token returned by registration. It is single-purpose and time-bounded. Treat it as a secret.',
+    schema: { type: 'string' },
+  })
   @HttpCode(HttpStatus.OK)
   async verify(@Query('token') token: string) {
     try {
