@@ -82,7 +82,7 @@ describe('OpenAPI description (e2e)', () => {
     await app.close();
   });
 
-  it('describes exactly the seven Contacts operations and nothing else', () => {
+  it('describes exactly the seven Contacts and ten Identity operations and nothing else', () => {
     const operations = Object.entries(document.paths)
       .flatMap(([path, methods]) =>
         Object.keys(methods).map((method) => `${method} ${path}`),
@@ -92,14 +92,34 @@ describe('OpenAPI description (e2e)', () => {
     expect(operations).toEqual(
       [
         'delete /contacts/{contactUserId}',
+        'get /auth/oauth/github',
+        'get /auth/oauth/github/callback',
+        'get /auth/oauth/google',
+        'get /auth/oauth/google/callback',
+        'get /auth/verify',
         'get /contact-requests/incoming',
         'get /contact-requests/outgoing',
         'get /contacts',
+        'get /users/me',
+        'post /auth/login',
+        'post /auth/logout',
+        'post /auth/refresh',
+        'post /auth/register',
         'post /contact-requests',
         'post /contact-requests/{contactRequestId}/accept',
         'post /contact-requests/{contactRequestId}/reject',
       ].sort(),
     );
+  });
+
+  // A guard rather than RED evidence: it already holds, and keeps the
+  // handler-name operation ids unique as more controllers are described.
+  it('gives every operation a distinct operation id', () => {
+    const ids = Object.values(document.paths).flatMap((methods) =>
+      Object.values(methods).map((operation) => operation.operationId),
+    );
+
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   describe('operation identity', () => {
@@ -131,19 +151,29 @@ describe('OpenAPI description (e2e)', () => {
       ],
       ['get', '/contacts', 'listAcceptedContacts', 'Contacts'],
       ['delete', '/contacts/{contactUserId}', 'removeContact', 'Contacts'],
+      ['post', '/auth/register', 'register', 'Authentication'],
+      ['get', '/auth/verify', 'verify', 'Authentication'],
+      ['post', '/auth/login', 'login', 'Authentication'],
+      ['post', '/auth/refresh', 'refresh', 'Authentication'],
+      ['post', '/auth/logout', 'logout', 'Authentication'],
+      ['get', '/auth/oauth/google', 'googleLogin', 'OAuth'],
+      ['get', '/auth/oauth/google/callback', 'googleCallback', 'OAuth'],
+      ['get', '/auth/oauth/github', 'githubLogin', 'OAuth'],
+      ['get', '/auth/oauth/github/callback', 'githubCallback', 'OAuth'],
+      ['get', '/users/me', 'me', 'Current user'],
     ];
 
     it.each(operations)(
       'uses the handler name as the operation id of %s %s',
       (method, path, operationId) => {
-        expect(document.paths[path][method].operationId).toBe(operationId);
+        expect(document.paths[path]?.[method]?.operationId).toBe(operationId);
       },
     );
 
     it.each(operations)(
       'groups %s %s under exactly one tag',
       (method, path, _operationId, tag) => {
-        expect(document.paths[path][method].tags).toEqual([tag]);
+        expect(document.paths[path]?.[method]?.tags).toEqual([tag]);
       },
     );
   });
@@ -716,8 +746,12 @@ describe('OpenAPI description (e2e)', () => {
         'ContactRequestDto',
         'IncomingContactRequestDto',
         'IncomingContactRequestPageDto',
+        'LoginUserDto',
+        'LogoutDto',
         'OutgoingContactRequestDto',
         'OutgoingContactRequestPageDto',
+        'RefreshTokenDto',
+        'RegisterUserDto',
         'RejectedContactRequestDto',
         'SendContactRequestDto',
       ]);
@@ -741,17 +775,40 @@ describe('OpenAPI description (e2e)', () => {
       ]);
     });
 
-    it('requires that scheme on every described operation', () => {
+    it('requires that scheme on exactly the seven Contacts operations, logout and the current-user request', () => {
       const [schemeName] = Object.keys(
         document.components?.securitySchemes ?? {},
       );
-      const operations = Object.values(document.paths).flatMap((methods) =>
-        Object.values(methods),
+      const protectedOperations = [
+        'delete /contacts/{contactUserId}',
+        'get /contact-requests/incoming',
+        'get /contact-requests/outgoing',
+        'get /contacts',
+        'get /users/me',
+        'post /auth/logout',
+        'post /contact-requests',
+        'post /contact-requests/{contactRequestId}/accept',
+        'post /contact-requests/{contactRequestId}/reject',
+      ];
+      const entries = Object.entries(document.paths).flatMap(
+        ([path, methods]) =>
+          Object.entries(methods).map(
+            ([method, operation]) => [`${method} ${path}`, operation] as const,
+          ),
       );
 
-      expect(operations).toHaveLength(7);
-      for (const operation of operations) {
-        expect(operation.security).toEqual([{ [schemeName]: [] }]);
+      expect(entries).toHaveLength(17);
+      expect(
+        entries
+          .filter(([, operation]) => operation.security !== undefined)
+          .map(([name]) => name)
+          .sort(),
+      ).toEqual(protectedOperations);
+
+      for (const [name, operation] of entries) {
+        if (protectedOperations.includes(name)) {
+          expect(operation.security).toEqual([{ [schemeName]: [] }]);
+        }
       }
     });
   });

@@ -1,4 +1,5 @@
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../../infrastructure/passport/jwt-auth.guard';
 import { AuthenticatedUser } from '../../infrastructure/passport/jwt.strategy';
@@ -6,6 +7,8 @@ import { AuthenticatedUser } from '../../infrastructure/passport/jwt.strategy';
 @Controller('users')
 export class UsersController {
   @Get('me')
+  @ApiTags('Current user')
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   me(@Req() req: Request) {
     const user = req.user as AuthenticatedUser;

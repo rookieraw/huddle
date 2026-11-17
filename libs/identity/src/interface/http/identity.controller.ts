@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtService } from '@nestjs/jwt';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { DomainError } from '@huddle/shared-kernel';
 import { User } from '../../domain/user.entity';
 import { RegisterUserUseCase } from '../../application/use-cases/register-user.use-case';
@@ -44,6 +45,7 @@ export class IdentityController {
   ) {}
 
   @Post('register')
+  @ApiTags('Authentication')
   async register(@Body() dto: RegisterUserDto) {
     try {
       const { user } = await this.registerUserUseCase.execute(
@@ -68,6 +70,7 @@ export class IdentityController {
   }
 
   @Post('login')
+  @ApiTags('Authentication')
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginUserDto) {
     try {
@@ -82,6 +85,7 @@ export class IdentityController {
   }
 
   @Post('refresh')
+  @ApiTags('Authentication')
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() dto: RefreshTokenDto) {
     try {
@@ -95,6 +99,8 @@ export class IdentityController {
   }
 
   @Post('logout')
+  @ApiTags('Authentication')
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @HttpCode(204)
   async logout(@Req() req: Request, @Body() dto: LogoutDto): Promise<void> {
@@ -110,6 +116,7 @@ export class IdentityController {
   }
 
   @Get('verify')
+  @ApiTags('Authentication')
   @HttpCode(HttpStatus.OK)
   async verify(@Query('token') token: string) {
     try {
@@ -124,24 +131,28 @@ export class IdentityController {
   }
 
   @Get('oauth/google')
+  @ApiTags('OAuth')
   @UseGuards(GoogleAuthGuard)
   googleLogin() {
     // Guard redirects to Google's consent screen; this body never runs.
   }
 
   @Get('oauth/google/callback')
+  @ApiTags('OAuth')
   @UseGuards(GoogleAuthGuard)
   async googleCallback(@Req() req: Request) {
     return this.issueAuthTokensUseCase.execute(req.user as User);
   }
 
   @Get('oauth/github')
+  @ApiTags('OAuth')
   @UseGuards(GithubAuthGuard)
   githubLogin() {
     // Guard redirects to GitHub's consent screen; this body never runs.
   }
 
   @Get('oauth/github/callback')
+  @ApiTags('OAuth')
   @UseGuards(GithubAuthGuard)
   async githubCallback(@Req() req: Request) {
     return this.issueAuthTokensUseCase.execute(req.user as User);
