@@ -293,6 +293,35 @@ describe('Identity OpenAPI description (e2e)', () => {
     );
   });
 
+  describe('authentication categories', () => {
+    it('says that refresh is authenticated by the refresh token in the body, not by a bearer token', () => {
+      const description = document.paths['/auth/refresh']?.post?.description;
+
+      expect(description).toEqual(
+        expect.stringMatching(
+          /authenticated by the refresh token in the request body/i,
+        ),
+      );
+      expect(description).toEqual(
+        expect.stringMatching(/not by a bearer access token/i),
+      );
+    });
+
+    it.each(['/auth/oauth/google/callback', '/auth/oauth/github/callback'])(
+      'says that get %s is authenticated by the provider, not by a bearer token',
+      (path) => {
+        const description = document.paths[path]?.get?.description;
+
+        expect(description).toEqual(
+          expect.stringMatching(/authenticated by the provider/i),
+        );
+        expect(description).toEqual(
+          expect.stringMatching(/not by a bearer access token/i),
+        );
+      },
+    );
+  });
+
   describe('error responses', () => {
     const errorStatuses: Array<[string, string, number[]]> = [
       ['post', '/auth/register', [400, 409, 500]],

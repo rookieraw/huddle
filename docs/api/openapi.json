@@ -217,6 +217,7 @@
     },
     "/auth/refresh": {
       "post": {
+        "description": "Authenticated by the refresh token in the request body, not by a bearer access token. A successful refresh rotates the refresh token.",
         "operationId": "refresh",
         "parameters": [],
         "requestBody": {
@@ -316,6 +317,7 @@
             }
           }
         },
+        "summary": "",
         "tags": [
           "Authentication"
         ]
@@ -532,7 +534,7 @@
     },
     "/auth/oauth/google/callback": {
       "get": {
-        "description": "A provider callback: Google redirects the browser back here after authorization, and the response is the token pair as JSON. A documentation client cannot complete it, because the provider supplies the authorization result.",
+        "description": "A provider callback: Google redirects the browser back here after authorization, and the response is the token pair as JSON. A documentation client cannot complete it, because the provider supplies the authorization result. The request is authenticated by the provider after it verifies the authorization, not by a bearer access token.",
         "operationId": "googleCallback",
         "parameters": [],
         "responses": {
@@ -629,7 +631,7 @@
     },
     "/auth/oauth/github/callback": {
       "get": {
-        "description": "A provider callback: GitHub redirects the browser back here after authorization, and the response is the token pair as JSON. A documentation client cannot complete it, because the provider supplies the authorization result.",
+        "description": "A provider callback: GitHub redirects the browser back here after authorization, and the response is the token pair as JSON. A documentation client cannot complete it, because the provider supplies the authorization result. The request is authenticated by the provider after it verifies the authorization, not by a bearer access token.",
         "operationId": "githubCallback",
         "parameters": [],
         "responses": {

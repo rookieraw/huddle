@@ -395,6 +395,10 @@ describe('Identity OpenAPI response agreement (e2e)', () => {
           .get('/auth/oauth/google/callback')
           .query({ error: 'access_denied' }),
     },
+    // The contract lists a provider authentication failure as 401, but today a
+    // provider-reported error other than access_denied is not mapped and gives
+    // 500. This scenario proves only the body shape of that 500. The mismatch
+    // is a known separate candidate and is not fixed here.
     {
       name: 'Google callback reports a provider error as an unexpected failure',
       method: 'get',
@@ -415,6 +419,7 @@ describe('Identity OpenAPI response agreement (e2e)', () => {
           .get('/auth/oauth/github/callback')
           .query({ error: 'access_denied' }),
     },
+    // Same as the Google scenario above: a known 500 where the contract says 401.
     {
       name: 'GitHub callback reports a provider error as an unexpected failure',
       method: 'get',

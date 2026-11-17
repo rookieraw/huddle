@@ -238,10 +238,11 @@ is merged. From then on:
 
 ### Current State
 
-The initial foundation is implemented for the whole implemented HTTP surface:
-the seven Contacts operations and the ten Identity endpoints. The API Gateway
-generates an OpenAPI description of them, serves it with Swagger UI under
-`/docs/api` only when the opt-in API Gateway configuration value has its
+The initial foundation is implemented for every implemented operation that has
+an HTTP contract: the seven Contacts operations and the ten Identity
+endpoints. The root route `GET /` has no contract and is never described. The
+API Gateway generates an OpenAPI description of them, serves it with Swagger UI
+under `/docs/api` only when the opt-in API Gateway configuration value has its
 explicit enable value, read from the process environment or the root `.env`
 (the local environment template enables it for Local), and commits the
 generated copy as `docs/api/openapi.json`, regenerated with

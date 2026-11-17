@@ -125,6 +125,10 @@ export class IdentityController {
 
   @Post('refresh')
   @ApiTags('Authentication')
+  @ApiOperation({
+    description:
+      'Authenticated by the refresh token in the request body, not by a bearer access token. A successful refresh rotates the refresh token.',
+  })
   @ApiOkResponse({
     type: AuthTokensDto,
     description:
@@ -228,7 +232,7 @@ export class IdentityController {
   @ApiTags('OAuth')
   @ApiOperation({
     description:
-      'A provider callback: Google redirects the browser back here after authorization, and the response is the token pair as JSON. A documentation client cannot complete it, because the provider supplies the authorization result.',
+      'A provider callback: Google redirects the browser back here after authorization, and the response is the token pair as JSON. A documentation client cannot complete it, because the provider supplies the authorization result. The request is authenticated by the provider after it verifies the authorization, not by a bearer access token.',
   })
   @ApiOkResponse({
     type: AuthTokensDto,
@@ -269,7 +273,7 @@ export class IdentityController {
   @ApiTags('OAuth')
   @ApiOperation({
     description:
-      'A provider callback: GitHub redirects the browser back here after authorization, and the response is the token pair as JSON. A documentation client cannot complete it, because the provider supplies the authorization result.',
+      'A provider callback: GitHub redirects the browser back here after authorization, and the response is the token pair as JSON. A documentation client cannot complete it, because the provider supplies the authorization result. The request is authenticated by the provider after it verifies the authorization, not by a bearer access token.',
   })
   @ApiOkResponse({
     type: AuthTokensDto,
