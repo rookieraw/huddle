@@ -19,8 +19,28 @@ type DescribedResponses = Record<
 >;
 
 type OpenApiDocument = {
-  paths: Record<string, Record<string, { responses?: DescribedResponses }>>;
+  paths: Record<
+    string,
+    Record<string, { tags?: string[]; responses?: DescribedResponses }>
+  >;
 };
+
+// A pooled connection to this address is refused at once, so an operation that
+// needs the database fails with an unexpected error.
+const unreachableDatabaseUrl = 'postgresql://nobody:nobody@127.0.0.1:1/none';
+
+// Documented responses that cannot be arranged here: they need a real provider
+// login or access to Identity internals. They are covered by reference
+// identity instead: the callbacks' 200 uses the AuthTokensDto that the login
+// and refresh scenarios prove, and the current-user 500 uses the error schema
+// that the other 500 scenarios prove.
+const unarrangeableResponses = [
+  'get /auth/oauth/google/callback 200',
+  'get /auth/oauth/github/callback 200',
+  'get /users/me 500',
+];
+
+const identityTags = ['Authentication', 'OAuth', 'Current user'];
 
 type Outcome = {
   status: number;
@@ -49,12 +69,14 @@ type Tokens = { accessToken: string; refreshToken: string };
 describe('Identity OpenAPI response agreement (e2e)', () => {
   let container: StartedPostgreSqlContainer;
   let app: NestExpressApplication;
+  let failingApp: NestExpressApplication;
   let document: OpenApiDocument;
   let restoreEnvironment: () => void;
   let previousDatabaseUrl: string | undefined;
   let counter = 0;
 
   const api = () => request(app.getHttpServer());
+  const failingApi = () => request(failingApp.getHttpServer());
 
   const nextEmail = (): string => {
     counter += 1;
@@ -194,6 +216,222 @@ describe('Identity OpenAPI response agreement (e2e)', () => {
           .set('Authorization', `Bearer ${user.accessToken}`);
       },
     },
+    {
+      name: 'register rejects an invalid request',
+      method: 'post',
+      template: '/auth/register',
+      status: 400,
+      perform: () =>
+        api()
+          .post('/auth/register')
+          .send({ email: 'not-an-email', password, displayName: 'Ada' }),
+    },
+    {
+      name: 'register rejects an email that is already registered',
+      method: 'post',
+      template: '/auth/register',
+      status: 409,
+      perform: async () => {
+        const user = await registerUser();
+
+        return api()
+          .post('/auth/register')
+          .send({ email: user.email, password, displayName: 'Ada Lovelace' });
+      },
+    },
+    {
+      name: 'register reports an unexpected failure',
+      method: 'post',
+      template: '/auth/register',
+      status: 500,
+      perform: () =>
+        failingApi()
+          .post('/auth/register')
+          .send({ email: nextEmail(), password, displayName: 'Ada Lovelace' }),
+    },
+    {
+      name: 'verify rejects an unknown token',
+      method: 'get',
+      template: '/auth/verify',
+      status: 400,
+      perform: () =>
+        api().get('/auth/verify').query({ token: 'unknown-token' }),
+    },
+    {
+      name: 'verify reports an unexpected failure',
+      method: 'get',
+      template: '/auth/verify',
+      status: 500,
+      perform: () =>
+        failingApi().get('/auth/verify').query({ token: 'any-token' }),
+    },
+    {
+      name: 'login rejects an invalid request',
+      method: 'post',
+      template: '/auth/login',
+      status: 400,
+      perform: () =>
+        api().post('/auth/login').send({ email: 'not-an-email', password }),
+    },
+    {
+      name: 'login rejects a wrong password',
+      method: 'post',
+      template: '/auth/login',
+      status: 401,
+      perform: async () => {
+        const user = await verifiedUser();
+
+        return api()
+          .post('/auth/login')
+          .send({ email: user.email, password: 'a-different-password' });
+      },
+    },
+    {
+      name: 'login rejects an email that is not verified',
+      method: 'post',
+      template: '/auth/login',
+      status: 401,
+      perform: async () => {
+        const user = await registerUser();
+
+        return api()
+          .post('/auth/login')
+          .send({ email: user.email, password: user.password });
+      },
+    },
+    {
+      name: 'login reports an unexpected failure',
+      method: 'post',
+      template: '/auth/login',
+      status: 500,
+      perform: () =>
+        failingApi().post('/auth/login').send({ email: nextEmail(), password }),
+    },
+    {
+      name: 'refresh rejects an invalid request',
+      method: 'post',
+      template: '/auth/refresh',
+      status: 400,
+      perform: () => api().post('/auth/refresh').send({}),
+    },
+    {
+      name: 'refresh rejects an unknown refresh token',
+      method: 'post',
+      template: '/auth/refresh',
+      status: 401,
+      perform: () =>
+        api()
+          .post('/auth/refresh')
+          .send({ refreshToken: 'unknown-refresh-token' }),
+    },
+    {
+      name: 'refresh reports an unexpected failure',
+      method: 'post',
+      template: '/auth/refresh',
+      status: 500,
+      perform: () =>
+        failingApi()
+          .post('/auth/refresh')
+          .send({ refreshToken: 'any-refresh-token' }),
+    },
+    {
+      name: 'logout rejects an invalid request',
+      method: 'post',
+      template: '/auth/logout',
+      status: 400,
+      perform: async () => {
+        const user = await loggedInUser();
+
+        return api()
+          .post('/auth/logout')
+          .set('Authorization', `Bearer ${user.accessToken}`)
+          .send({});
+      },
+    },
+    {
+      name: 'logout rejects a request without an access token',
+      method: 'post',
+      template: '/auth/logout',
+      status: 401,
+      perform: () =>
+        api().post('/auth/logout').send({ refreshToken: 'any-refresh-token' }),
+    },
+    {
+      name: 'logout rejects a refresh token that belongs to another user',
+      method: 'post',
+      template: '/auth/logout',
+      status: 401,
+      perform: async () => {
+        const user = await loggedInUser();
+        const other = await loggedInUser();
+
+        return api()
+          .post('/auth/logout')
+          .set('Authorization', `Bearer ${user.accessToken}`)
+          .send({ refreshToken: other.refreshToken });
+      },
+    },
+    {
+      name: 'logout reports an unexpected failure',
+      method: 'post',
+      template: '/auth/logout',
+      status: 500,
+      perform: async () => {
+        const user = await loggedInUser();
+
+        return failingApi()
+          .post('/auth/logout')
+          .set('Authorization', `Bearer ${user.accessToken}`)
+          .send({ refreshToken: user.refreshToken });
+      },
+    },
+    {
+      name: 'Google callback rejects a denied authorization',
+      method: 'get',
+      template: '/auth/oauth/google/callback',
+      status: 401,
+      perform: () =>
+        api()
+          .get('/auth/oauth/google/callback')
+          .query({ error: 'access_denied' }),
+    },
+    {
+      name: 'Google callback reports a provider error as an unexpected failure',
+      method: 'get',
+      template: '/auth/oauth/google/callback',
+      status: 500,
+      perform: () =>
+        api()
+          .get('/auth/oauth/google/callback')
+          .query({ error: 'server_error' }),
+    },
+    {
+      name: 'GitHub callback rejects a denied authorization',
+      method: 'get',
+      template: '/auth/oauth/github/callback',
+      status: 401,
+      perform: () =>
+        api()
+          .get('/auth/oauth/github/callback')
+          .query({ error: 'access_denied' }),
+    },
+    {
+      name: 'GitHub callback reports a provider error as an unexpected failure',
+      method: 'get',
+      template: '/auth/oauth/github/callback',
+      status: 500,
+      perform: () =>
+        api()
+          .get('/auth/oauth/github/callback')
+          .query({ error: 'server_error' }),
+    },
+    {
+      name: 'current user rejects a request without an access token',
+      method: 'get',
+      template: '/users/me',
+      status: 401,
+      perform: () => api().get('/users/me'),
+    },
   ];
 
   beforeAll(async () => {
@@ -221,6 +459,21 @@ describe('Identity OpenAPI response agreement (e2e)', () => {
     setupApiDocumentation(app, 'true');
     await app.init();
 
+    // A second application whose database cannot be reached, for the
+    // unexpected-failure responses. Only its connection string differs.
+    process.env.DATABASE_URL = unreachableDatabaseUrl;
+    const failingFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    // Its failures are intended, so Nest's error logging stays off.
+    failingApp = failingFixture.createNestApplication<NestExpressApplication>({
+      logger: false,
+    });
+    failingApp.useGlobalPipes(new ApiValidationPipe());
+    await failingApp.init();
+    process.env.DATABASE_URL = container.getConnectionUri();
+
     const response = await request(app.getHttpServer())
       .get('/docs/api/openapi.json')
       .expect(200);
@@ -228,6 +481,7 @@ describe('Identity OpenAPI response agreement (e2e)', () => {
   }, 60000);
 
   afterAll(async () => {
+    await failingApp.close();
     await app.close();
     await container.stop();
 
@@ -270,5 +524,33 @@ describe('Identity OpenAPI response agreement (e2e)', () => {
 
     expect(schema).toBeDefined();
     expect(validateAgainstSchema(document, schema, response.body)).toEqual([]);
+  });
+
+  it('arranges every documented Identity response except the named exceptions', () => {
+    const documented = Object.entries(document.paths).flatMap(
+      ([path, methods]) =>
+        Object.entries(methods)
+          .filter(([, operation]) =>
+            (operation.tags ?? []).some((tag) => identityTags.includes(tag)),
+          )
+          .flatMap(([method, operation]) =>
+            Object.keys(operation.responses ?? {}).map(
+              (status) => `${method} ${path} ${status}`,
+            ),
+          ),
+    );
+    const arranged = new Set(
+      scenarios.map(
+        (scenario) =>
+          `${scenario.method} ${scenario.template} ${scenario.status}`,
+      ),
+    );
+
+    expect(
+      unarrangeableResponses.filter((response) => arranged.has(response)),
+    ).toEqual([]);
+    expect([...arranged, ...unarrangeableResponses].sort()).toEqual(
+      [...documented].sort(),
+    );
   });
 });

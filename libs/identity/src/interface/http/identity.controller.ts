@@ -39,6 +39,11 @@ import { LogoutDto } from './dto/logout.dto';
 import { AuthTokensDto } from './dto/auth-tokens.dto';
 import { RegisteredUserDto } from './dto/registered-user.dto';
 import { VerifiedUserDto } from './dto/verified-user.dto';
+import {
+  ApiIdentityErrorResponses,
+  UNEXPECTED_FAILURE,
+  VALIDATION_FAILURE,
+} from './identity-error-responses.decorator';
 import { GoogleAuthGuard } from '../../infrastructure/passport/google-auth.guard';
 import { GithubAuthGuard } from '../../infrastructure/passport/github-auth.guard';
 import { JwtAuthGuard } from '../../infrastructure/passport/jwt-auth.guard';
@@ -65,6 +70,11 @@ export class IdentityController {
   @ApiCreatedResponse({
     type: RegisteredUserDto,
     description: 'The account is created and awaits email verification.',
+  })
+  @ApiIdentityErrorResponses({
+    400: VALIDATION_FAILURE,
+    409: 'The email is already registered.',
+    500: UNEXPECTED_FAILURE,
   })
   async register(@Body() dto: RegisterUserDto) {
     try {
@@ -95,6 +105,11 @@ export class IdentityController {
     type: AuthTokensDto,
     description: 'The credentials are valid, and a token pair is issued.',
   })
+  @ApiIdentityErrorResponses({
+    400: VALIDATION_FAILURE,
+    401: 'The email or password is invalid, or the email is not verified.',
+    500: UNEXPECTED_FAILURE,
+  })
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginUserDto) {
     try {
@@ -115,6 +130,11 @@ export class IdentityController {
     description:
       'The refresh token is rotated, and a new token pair is issued.',
   })
+  @ApiIdentityErrorResponses({
+    400: VALIDATION_FAILURE,
+    401: 'The refresh token is missing, unknown, expired or revoked.',
+    500: UNEXPECTED_FAILURE,
+  })
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() dto: RefreshTokenDto) {
     try {
@@ -133,6 +153,11 @@ export class IdentityController {
   @ApiNoContentResponse({
     description:
       'The refresh token is revoked, or was already unknown. The response has no content.',
+  })
+  @ApiIdentityErrorResponses({
+    400: VALIDATION_FAILURE,
+    401: 'The access token is invalid or missing, or the refresh token belongs to another user.',
+    500: UNEXPECTED_FAILURE,
   })
   @UseGuards(JwtAuthGuard)
   @HttpCode(204)
@@ -153,6 +178,10 @@ export class IdentityController {
   @ApiOkResponse({
     type: VerifiedUserDto,
     description: 'The email address is verified.',
+  })
+  @ApiIdentityErrorResponses({
+    400: 'The verification token is invalid or expired.',
+    500: UNEXPECTED_FAILURE,
   })
   @ApiQuery({
     name: 'token',
@@ -206,6 +235,10 @@ export class IdentityController {
     description:
       'The provider authentication is verified, and a token pair is issued.',
   })
+  @ApiIdentityErrorResponses({
+    401: 'The provider authentication failed, or the provider email cannot be safely linked.',
+    500: UNEXPECTED_FAILURE,
+  })
   @UseGuards(GoogleAuthGuard)
   async googleCallback(@Req() req: Request) {
     return this.issueAuthTokensUseCase.execute(req.user as User);
@@ -242,6 +275,10 @@ export class IdentityController {
     type: AuthTokensDto,
     description:
       'The provider authentication is verified, and a token pair is issued.',
+  })
+  @ApiIdentityErrorResponses({
+    401: 'The provider authentication failed, or the provider email cannot be safely linked.',
+    500: UNEXPECTED_FAILURE,
   })
   @UseGuards(GithubAuthGuard)
   async githubCallback(@Req() req: Request) {

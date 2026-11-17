@@ -8,6 +8,10 @@ import {
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../../infrastructure/passport/jwt-auth.guard';
 import { CurrentUserDto } from './dto/current-user.dto';
+import {
+  ApiIdentityErrorResponses,
+  UNEXPECTED_FAILURE,
+} from './identity-error-responses.decorator';
 import { AuthenticatedUser } from '../../infrastructure/passport/jwt.strategy';
 
 @Controller('users')
@@ -22,6 +26,10 @@ export class UsersController {
   @ApiOkResponse({
     type: CurrentUserDto,
     description: 'The authenticated user.',
+  })
+  @ApiIdentityErrorResponses({
+    401: 'The access token is missing, invalid or expired.',
+    500: UNEXPECTED_FAILURE,
   })
   @UseGuards(JwtAuthGuard)
   me(@Req() req: Request) {

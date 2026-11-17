@@ -26,6 +26,81 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "The request body failed validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            400
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The email is already registered.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            409
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected infrastructure failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            500
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
           }
         },
         "summary": "",
@@ -55,6 +130,81 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuthTokensDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request body failed validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            400
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The email or password is invalid, or the email is not verified.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            401
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected infrastructure failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            500
+                          ]
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -89,6 +239,81 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "The request body failed validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            400
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The refresh token is missing, unknown, expired or revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            401
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected infrastructure failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            500
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -113,6 +338,81 @@
         "responses": {
           "204": {
             "description": "The refresh token is revoked, or was already unknown. The response has no content."
+          },
+          "400": {
+            "description": "The request body failed validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            400
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The access token is invalid or missing, or the refresh token belongs to another user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            401
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected infrastructure failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            500
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
           }
         },
         "security": [
@@ -146,6 +446,56 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/VerifiedUserDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The verification token is invalid or expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            400
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected infrastructure failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            500
+                          ]
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -192,6 +542,56 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuthTokensDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The provider authentication failed, or the provider email cannot be safely linked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            401
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected infrastructure failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            500
+                          ]
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -242,6 +642,56 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "The provider authentication failed, or the provider email cannot be safely linked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            401
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected infrastructure failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            500
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
           }
         },
         "summary": "",
@@ -262,6 +712,56 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CurrentUserDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The access token is missing, invalid or expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            401
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected infrastructure failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/TransitionalIdentityErrorDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "enum": [
+                            500
+                          ]
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -1957,6 +2457,38 @@
       }
     },
     "schemas": {
+      "TransitionalIdentityErrorDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "description": "The HTTP status of the response."
+          },
+          "message": {
+            "description": "Human-readable text: one message, or one message per failed validation rule.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          },
+          "error": {
+            "type": "string",
+            "description": "The name of the HTTP status. It can be absent."
+          }
+        },
+        "description": "Transitional, framework-generated error body of the Identity operations. It describes what the framework produces today and is not the stable application error envelope: message may be a string or an array of strings, error may be absent, and statusCode carries the HTTP status. Clients must not branch on message.",
+        "required": [
+          "statusCode",
+          "message"
+        ]
+      },
       "RegisterUserDto": {
         "type": "object",
         "properties": {

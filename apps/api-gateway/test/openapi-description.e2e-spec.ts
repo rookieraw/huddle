@@ -757,6 +757,7 @@ describe('OpenAPI description (e2e)', () => {
         'RegisteredUserDto',
         'RejectedContactRequestDto',
         'SendContactRequestDto',
+        'TransitionalIdentityErrorDto',
         'VerifiedUserDto',
       ]);
     });
