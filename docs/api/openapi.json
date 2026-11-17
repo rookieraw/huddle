@@ -3,6 +3,7 @@
   "paths": {
     "/auth/register": {
       "post": {
+        "description": "Transitional: the response includes the verification token, which real email delivery will replace.",
         "operationId": "register",
         "parameters": [],
         "requestBody": {
@@ -17,9 +18,17 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "The account is created and awaits email verification.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisteredUserDto"
+                }
+              }
+            }
           }
         },
+        "summary": "",
         "tags": [
           "Authentication"
         ]
@@ -41,7 +50,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "The credentials are valid, and a token pair is issued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokensDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -65,7 +81,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "The refresh token is rotated, and a new token pair is issued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokensDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -89,7 +112,7 @@
         },
         "responses": {
           "204": {
-            "description": ""
+            "description": "The refresh token is revoked, or was already unknown. The response has no content."
           }
         },
         "security": [
@@ -118,7 +141,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "The email address is verified.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifiedUserDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -184,11 +214,19 @@
     },
     "/users/me": {
       "get": {
+        "description": "Transitional: the tier is hardcoded to Free until Billing exists, and a composed current-user endpoint will replace this operation.",
         "operationId": "me",
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "The authenticated user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentUserDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -196,6 +234,7 @@
             "bearer": []
           }
         ],
+        "summary": "",
         "tags": [
           "Current user"
         ]
@@ -1907,6 +1946,35 @@
           "displayName"
         ]
       },
+      "RegisteredUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable identifier of the new user.",
+            "example": "user-id"
+          },
+          "email": {
+            "type": "string",
+            "description": "The registered email address."
+          },
+          "displayName": {
+            "type": "string",
+            "description": "The display name, after trimming.",
+            "example": "User Name"
+          },
+          "verificationToken": {
+            "type": "string",
+            "description": "Transitional: returned only because verification email delivery does not exist yet. It will be removed from the response once real email delivery exists."
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "verificationToken"
+        ]
+      },
       "LoginUserDto": {
         "type": "object",
         "properties": {
@@ -1923,6 +1991,23 @@
         "required": [
           "email",
           "password"
+        ]
+      },
+      "AuthTokensDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "A short-lived JWT access token, sent as a bearer token on protected operations."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "An opaque refresh token. The refresh operation rotates it, so clients must replace the previous value."
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken"
         ]
       },
       "RefreshTokenDto": {
@@ -1947,6 +2032,55 @@
         },
         "required": [
           "refreshToken"
+        ]
+      },
+      "VerifiedUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable identifier of the verified user.",
+            "example": "user-id"
+          },
+          "email": {
+            "type": "string",
+            "description": "The verified email address."
+          },
+          "verified": {
+            "type": "boolean",
+            "description": "Always true: a successful response means the email is verified."
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "verified"
+        ]
+      },
+      "CurrentUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable identifier of the authenticated user.",
+            "example": "user-id"
+          },
+          "email": {
+            "type": "string",
+            "description": "The email address of the authenticated user."
+          },
+          "tier": {
+            "type": "string",
+            "description": "Transitional: a hardcoded Free tier. Billing will own the tier once it exists, and a composed current-user endpoint will replace this one.",
+            "enum": [
+              "free"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "tier"
         ]
       },
       "ApplicationErrorDetailDto": {

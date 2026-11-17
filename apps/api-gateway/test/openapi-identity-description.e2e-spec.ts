@@ -9,6 +9,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { setupApiDocumentation } from '../src/interface/http/api-documentation/setup-api-documentation';
+import { applyPlaceholderIdentityEnvironment } from './support/placeholder-identity-environment';
 
 type SchemaObject = {
   type?: string;
@@ -17,6 +18,8 @@ type SchemaObject = {
 };
 
 type OpenApiOperation = {
+  description?: string;
+  deprecated?: boolean;
   parameters?: Array<{
     name: string;
     in: string;
@@ -29,6 +32,13 @@ type OpenApiOperation = {
     required?: boolean;
     content?: Record<string, { schema?: Record<string, unknown> }>;
   };
+  responses?: Record<
+    string,
+    {
+      description?: string;
+      content?: Record<string, { schema?: Record<string, unknown> }>;
+    }
+  >;
 };
 
 type OpenApiDocument = {
@@ -36,28 +46,13 @@ type OpenApiDocument = {
   components?: { schemas?: Record<string, SchemaObject> };
 };
 
-// Placeholder values only: the Identity module needs them to start, and the
-// description never depends on real credentials.
-const placeholderEnvironment: Record<string, string> = {
-  JWT_SECRET: 'test-placeholder-jwt-secret',
-  GOOGLE_CLIENT_ID: 'test-placeholder-google-client-id',
-  GOOGLE_CLIENT_SECRET: 'test-placeholder-google-client-secret',
-  GOOGLE_CALLBACK_URL: 'http://localhost:4000/auth/oauth/google/callback',
-  GITHUB_CLIENT_ID: 'test-placeholder-github-client-id',
-  GITHUB_CLIENT_SECRET: 'test-placeholder-github-client-secret',
-  GITHUB_CALLBACK_URL: 'http://localhost:4000/auth/oauth/github/callback',
-};
-
 describe('Identity OpenAPI description (e2e)', () => {
   let app: NestExpressApplication;
   let document: OpenApiDocument;
-  const previousEnvironment: Record<string, string | undefined> = {};
+  let restoreEnvironment: () => void;
 
   beforeAll(async () => {
-    for (const [name, value] of Object.entries(placeholderEnvironment)) {
-      previousEnvironment[name] = process.env[name];
-      process.env[name] = value;
-    }
+    restoreEnvironment = applyPlaceholderIdentityEnvironment();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -84,18 +79,185 @@ describe('Identity OpenAPI description (e2e)', () => {
 
   afterAll(async () => {
     await app.close();
-
-    for (const [name, value] of Object.entries(previousEnvironment)) {
-      if (value === undefined) {
-        delete process.env[name];
-      } else {
-        process.env[name] = value;
-      }
-    }
+    restoreEnvironment();
   });
 
   const schemaOf = (name: string): SchemaObject =>
     document.components?.schemas?.[name] ?? {};
+
+  describe('success responses', () => {
+    const successes: Array<[string, string, string, string]> = [
+      ['post', '/auth/register', '201', 'RegisteredUserDto'],
+      ['get', '/auth/verify', '200', 'VerifiedUserDto'],
+      ['post', '/auth/login', '200', 'AuthTokensDto'],
+      ['post', '/auth/refresh', '200', 'AuthTokensDto'],
+      ['get', '/users/me', '200', 'CurrentUserDto'],
+    ];
+
+    const successStatuses = (method: string, path: string): string[] =>
+      Object.keys(document.paths[path]?.[method]?.responses ?? {}).filter(
+        (status) => status.startsWith('2'),
+      );
+
+    it.each(successes)(
+      'describes %s %s as %s JSON %s with no other success status',
+      (method, path, status, schemaName) => {
+        expect(successStatuses(method, path)).toEqual([status]);
+        expect(
+          document.paths[path]?.[method]?.responses?.[status]?.content?.[
+            'application/json'
+          ]?.schema,
+        ).toEqual({ $ref: `#/components/schemas/${schemaName}` });
+      },
+    );
+
+    it('describes post /auth/logout as 204 with no content', () => {
+      const responses = document.paths['/auth/logout']?.post?.responses ?? {};
+
+      expect(successStatuses('post', '/auth/logout')).toEqual(['204']);
+      expect(responses['204']).toBeDefined();
+      expect(responses['204']?.content).toBeUndefined();
+    });
+
+    it('describes RegisteredUserDto with its four required string fields', () => {
+      const schema = schemaOf('RegisteredUserDto');
+
+      expect(schema.type).toBe('object');
+      expect([...(schema.required ?? [])].sort()).toEqual([
+        'displayName',
+        'email',
+        'id',
+        'verificationToken',
+      ]);
+      expect(Object.keys(schema.properties ?? {}).sort()).toEqual([
+        'displayName',
+        'email',
+        'id',
+        'verificationToken',
+      ]);
+
+      for (const property of Object.values(schema.properties ?? {})) {
+        expect(property.type).toBe('string');
+      }
+    });
+
+    it('describes VerifiedUserDto with a boolean verified flag', () => {
+      const schema = schemaOf('VerifiedUserDto');
+
+      expect(schema.type).toBe('object');
+      expect([...(schema.required ?? [])].sort()).toEqual([
+        'email',
+        'id',
+        'verified',
+      ]);
+      expect(Object.keys(schema.properties ?? {}).sort()).toEqual([
+        'email',
+        'id',
+        'verified',
+      ]);
+      expect(schema.properties?.verified?.type).toBe('boolean');
+    });
+
+    it('describes AuthTokensDto with an access token and a refresh token', () => {
+      const schema = schemaOf('AuthTokensDto');
+
+      expect(schema.type).toBe('object');
+      expect([...(schema.required ?? [])].sort()).toEqual([
+        'accessToken',
+        'refreshToken',
+      ]);
+      expect(Object.keys(schema.properties ?? {}).sort()).toEqual([
+        'accessToken',
+        'refreshToken',
+      ]);
+      expect(schema.properties?.accessToken?.type).toBe('string');
+      expect(schema.properties?.refreshToken?.type).toBe('string');
+    });
+
+    it('describes CurrentUserDto with id, email and the free tier', () => {
+      const schema = schemaOf('CurrentUserDto');
+
+      expect(schema.type).toBe('object');
+      expect([...(schema.required ?? [])].sort()).toEqual([
+        'email',
+        'id',
+        'tier',
+      ]);
+      expect(Object.keys(schema.properties ?? {}).sort()).toEqual([
+        'email',
+        'id',
+        'tier',
+      ]);
+      expect(schema.properties?.tier?.enum).toEqual(['free']);
+    });
+
+    it('carries no example on any email or token property of a response', () => {
+      for (const schemaName of [
+        'RegisteredUserDto',
+        'VerifiedUserDto',
+        'AuthTokensDto',
+        'CurrentUserDto',
+      ]) {
+        const properties = schemaOf(schemaName).properties ?? {};
+
+        for (const name of [
+          'email',
+          'verificationToken',
+          'accessToken',
+          'refreshToken',
+        ]) {
+          if (name in properties) {
+            expect(properties[name]).not.toHaveProperty('example');
+          }
+        }
+      }
+    });
+  });
+
+  describe('transitional behavior', () => {
+    it('marks verificationToken as transitional and says when it goes away', () => {
+      const description =
+        schemaOf('RegisteredUserDto').properties?.verificationToken
+          ?.description;
+
+      expect(description).toEqual(expect.stringMatching(/^Transitional:/));
+      expect(description).toEqual(expect.stringMatching(/email delivery/i));
+      expect(description).toEqual(expect.stringMatching(/removed/i));
+    });
+
+    it('marks the Free tier as transitional and names its replacement owner', () => {
+      const description =
+        schemaOf('CurrentUserDto').properties?.tier?.description;
+
+      expect(description).toEqual(expect.stringMatching(/^Transitional:/));
+      expect(description).toEqual(expect.stringMatching(/hardcoded/i));
+      expect(description).toEqual(expect.stringMatching(/Billing/));
+    });
+
+    it.each([
+      ['post', '/auth/register'],
+      ['get', '/users/me'],
+    ])('says that %s %s is a transitional operation', (method, path) => {
+      expect(document.paths[path]?.[method]?.description).toEqual(
+        expect.stringMatching(/transitional/i),
+      );
+    });
+
+    // A guard rather than RED evidence: the fields are still returned today,
+    // so they are marked transitional in words, not deprecated.
+    it('does not mark the transitional operations or fields as deprecated', () => {
+      expect(
+        document.paths['/auth/register']?.post?.deprecated,
+      ).toBeUndefined();
+      expect(document.paths['/users/me']?.get?.deprecated).toBeUndefined();
+      expect(
+        schemaOf('RegisteredUserDto').properties?.verificationToken,
+      ).not.toHaveProperty('deprecated');
+      expect(schemaOf('CurrentUserDto').properties?.tier).not.toHaveProperty(
+        'deprecated',
+      );
+    });
+  });
 
   describe('parameters', () => {
     it('describes verify with exactly one required string token query parameter', () => {

@@ -743,7 +743,9 @@ describe('OpenAPI description (e2e)', () => {
         'ApplicationErrorDetailDto',
         'ApplicationErrorDto',
         'ApplicationErrorEnvelopeDto',
+        'AuthTokensDto',
         'ContactRequestDto',
+        'CurrentUserDto',
         'IncomingContactRequestDto',
         'IncomingContactRequestPageDto',
         'LoginUserDto',
@@ -752,8 +754,10 @@ describe('OpenAPI description (e2e)', () => {
         'OutgoingContactRequestPageDto',
         'RefreshTokenDto',
         'RegisterUserDto',
+        'RegisteredUserDto',
         'RejectedContactRequestDto',
         'SendContactRequestDto',
+        'VerifiedUserDto',
       ]);
     });
 

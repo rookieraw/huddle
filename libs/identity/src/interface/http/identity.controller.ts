@@ -14,7 +14,15 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtService } from '@nestjs/jwt';
-import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { DomainError } from '@huddle/shared-kernel';
 import { User } from '../../domain/user.entity';
 import { RegisterUserUseCase } from '../../application/use-cases/register-user.use-case';
@@ -27,6 +35,9 @@ import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LogoutDto } from './dto/logout.dto';
+import { AuthTokensDto } from './dto/auth-tokens.dto';
+import { RegisteredUserDto } from './dto/registered-user.dto';
+import { VerifiedUserDto } from './dto/verified-user.dto';
 import { GoogleAuthGuard } from '../../infrastructure/passport/google-auth.guard';
 import { GithubAuthGuard } from '../../infrastructure/passport/github-auth.guard';
 import { JwtAuthGuard } from '../../infrastructure/passport/jwt-auth.guard';
@@ -46,6 +57,14 @@ export class IdentityController {
 
   @Post('register')
   @ApiTags('Authentication')
+  @ApiOperation({
+    description:
+      'Transitional: the response includes the verification token, which real email delivery will replace.',
+  })
+  @ApiCreatedResponse({
+    type: RegisteredUserDto,
+    description: 'The account is created and awaits email verification.',
+  })
   async register(@Body() dto: RegisterUserDto) {
     try {
       const { user } = await this.registerUserUseCase.execute(
@@ -71,6 +90,10 @@ export class IdentityController {
 
   @Post('login')
   @ApiTags('Authentication')
+  @ApiOkResponse({
+    type: AuthTokensDto,
+    description: 'The credentials are valid, and a token pair is issued.',
+  })
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginUserDto) {
     try {
@@ -86,6 +109,11 @@ export class IdentityController {
 
   @Post('refresh')
   @ApiTags('Authentication')
+  @ApiOkResponse({
+    type: AuthTokensDto,
+    description:
+      'The refresh token is rotated, and a new token pair is issued.',
+  })
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() dto: RefreshTokenDto) {
     try {
@@ -101,6 +129,10 @@ export class IdentityController {
   @Post('logout')
   @ApiTags('Authentication')
   @ApiBearerAuth()
+  @ApiNoContentResponse({
+    description:
+      'The refresh token is revoked, or was already unknown. The response has no content.',
+  })
   @UseGuards(JwtAuthGuard)
   @HttpCode(204)
   async logout(@Req() req: Request, @Body() dto: LogoutDto): Promise<void> {
@@ -117,6 +149,10 @@ export class IdentityController {
 
   @Get('verify')
   @ApiTags('Authentication')
+  @ApiOkResponse({
+    type: VerifiedUserDto,
+    description: 'The email address is verified.',
+  })
   @ApiQuery({
     name: 'token',
     required: true,
