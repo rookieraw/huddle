@@ -225,7 +225,7 @@ Some current lint scripts include automatic fixes. Review the working tree after
 
 The root `pnpm test` command does not replace the explicit integration and E2E commands below.
 
-After changing a described HTTP operation, regenerate the committed OpenAPI description with `pnpm --filter api-gateway openapi:generate`, as [`contracts/http.md`](../contracts/http.md#keeping-the-description-current) requires. Local Swagger UI is served only when `API_DOCS_ENABLED` has its explicit enable value, set in `.env` or in the process environment; `.env.example` records it.
+After changing a described HTTP operation, regenerate the committed OpenAPI description with `pnpm --filter api-gateway openapi:generate`, as [`contracts/http.md`](../contracts/http.md#keeping-the-description-current) requires. The generator resolves `@huddle/identity` and `@huddle/chat` from their built `dist` output, so build a Context library you changed (for example `pnpm --filter @huddle/identity build`) first, or the description reflects the previous build. Local Swagger UI is served only when `API_DOCS_ENABLED` has its explicit enable value, set in `.env` or in the process environment; `.env.example` records it.
 
 ---
 

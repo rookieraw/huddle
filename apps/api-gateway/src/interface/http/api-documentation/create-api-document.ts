@@ -4,6 +4,7 @@ import {
   SwaggerModule,
   type OpenAPIObject,
 } from '@nestjs/swagger';
+import { IdentityModule } from '@huddle/identity';
 import { ChatContactRequestModule } from '../../../composition/chat/chat-contact-request.module';
 
 /**
@@ -18,7 +19,10 @@ export function createApiDocument(app: NestExpressApplication): OpenAPIObject {
     .build();
 
   return SwaggerModule.createDocument(app, config, {
-    include: [ChatContactRequestModule],
+    include: [IdentityModule, ChatContactRequestModule],
+    // Tags are declared explicitly. The library would otherwise add a tag
+    // derived from the class name to any controller without a class-level one.
+    autoTagControllers: false,
     // Handler names are unique across the described controllers.
     operationIdFactory: (_controllerKey: string, methodKey: string) =>
       methodKey,

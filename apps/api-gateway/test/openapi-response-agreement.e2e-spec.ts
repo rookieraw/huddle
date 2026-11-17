@@ -160,6 +160,44 @@ describe('OpenAPI response agreement (e2e)', () => {
         /conflict/i,
       );
     });
+
+    describe('oneOf', () => {
+      const stringOrStrings = {
+        oneOf: [
+          { type: 'string' },
+          { type: 'array', items: { type: 'string' } },
+        ],
+      };
+
+      it('accepts a string and an array of strings', () => {
+        expect(validateAgainstSchema(document, stringOrStrings, 'a')).toEqual(
+          [],
+        );
+        expect(
+          validateAgainstSchema(document, stringOrStrings, ['a', 'b']),
+        ).toEqual([]);
+      });
+
+      it('rejects a value that matches no alternative', () => {
+        expect(
+          validateAgainstSchema(document, stringOrStrings, 1),
+        ).toHaveLength(1);
+        expect(
+          validateAgainstSchema(document, stringOrStrings, ['a', 1]),
+        ).toHaveLength(1);
+      });
+
+      it('rejects a value that matches more than one alternative', () => {
+        const overlapping = {
+          oneOf: [{ type: 'string' }, { type: 'string', minLength: 1 }],
+        };
+
+        expect(validateAgainstSchema(document, overlapping, 'a')).toHaveLength(
+          1,
+        );
+        expect(validateAgainstSchema(document, overlapping, '')).toEqual([]);
+      });
+    });
   });
 
   describe('real responses against the generated description', () => {

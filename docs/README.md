@@ -229,7 +229,7 @@ They do not own exact HTTP paths, Socket.IO event names, or tier values.
 | [`contracts/conferencing-sfu.md`](contracts/conferencing-sfu.md)           | mediasoup transport, Producer, and Consumer signaling                           | Group Call or Meeting SFU signaling changes                    |
 | [`contracts/meeting-realtime.md`](contracts/meeting-realtime.md)           | Meeting lobby and Meeting-specific realtime notifications                       | Meeting realtime behavior changes                              |
 | [`contracts/integration-events.md`](contracts/integration-events.md)       | Versioned cross-context event envelope, catalog, payloads, and consumers        | An Integration Event is added or changed                       |
-| [`api/openapi.json`](api/openapi.json)                                     | Generated, derived OpenAPI description of the operations described so far       | A described operation changes, then regenerate it              |
+| [`api/openapi.json`](api/openapi.json)                                     | Generated, derived OpenAPI description of the operations with an HTTP contract  | A described operation changes, then regenerate it              |
 
 Contracts answer:
 

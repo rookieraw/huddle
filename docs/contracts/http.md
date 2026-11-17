@@ -1,8 +1,8 @@
 # HTTP Contracts
 
 Status: Shared conventions accepted; Identity endpoints and first Chat subset implemented
-Last reviewed: 2026-11-16
-Last verified against source: 2026-11-16
+Last reviewed: 2026-11-17
+Last verified against source: 2026-11-17
 
 ## Purpose
 
@@ -238,15 +238,19 @@ is merged. From then on:
 
 ### Current State
 
-The first increment of the initial foundation is implemented. The API Gateway
-generates an OpenAPI description of the implemented Contacts operations,
-serves it with Swagger UI under `/docs/api` only when the opt-in API Gateway
-configuration value has its explicit enable value, read from the process
-environment or the root `.env` (the local environment template enables it for
-Local), and commits the generated copy as
-`docs/api/openapi.json`, regenerated with
-`pnpm --filter api-gateway openapi:generate`. The Identity endpoints are not
-yet described, and exposure in a deployed environment remains with
+The initial foundation is implemented for every implemented operation that has
+an HTTP contract: the seven Contacts operations and the ten Identity
+endpoints. The root route `GET /` has no contract and is never described. The
+API Gateway generates an OpenAPI description of them, serves it with Swagger UI
+under `/docs/api` only when the opt-in API Gateway configuration value has its
+explicit enable value, read from the process environment or the root `.env`
+(the local environment template enables it for Local), and commits the
+generated copy as `docs/api/openapi.json`, regenerated with
+`pnpm --filter api-gateway openapi:generate`. Identity errors are described
+with the transitional schema in
+[Described Operations](#described-operations), and the registration
+`verificationToken` and the hardcoded Free tier are marked transitional.
+Exposure in a deployed environment remains with
 [Phase 2.5](../delivery/phases/02.5-deployment-foundation.md#openapi-documentation-foundation).
 Current state remains owned by [`delivery/status.md`](../delivery/status.md).
 

@@ -4,8 +4,13 @@
  * proven without a validator dependency, and so undocumented properties are
  * rejected.
  *
- * It supports exactly the keywords the Contacts description uses and throws on
+ * It supports exactly the keywords the described operations use and throws on
  * any other, so it can never silently skip a constraint.
+ *
+ * `oneOf` is judged with exactly-one semantics: each alternative is checked
+ * closed-world on its own, and exactly one must conform. Use it alone in a
+ * schema (or beside annotations), because sibling keywords are judged against
+ * the value as well and are not merged into the alternatives.
  */
 
 type Schema = Record<string, unknown>;
@@ -44,6 +49,7 @@ type NormalizedSchema = {
   required: Set<string>;
   properties: Map<string, unknown[]>;
   items: unknown[];
+  oneOf: unknown[][];
 };
 
 function asSchema(value: unknown): Schema {
@@ -98,6 +104,12 @@ function collect(
       for (const part of value) {
         collect(document, part, into);
       }
+    } else if (keyword === 'oneOf') {
+      if (!Array.isArray(value) || value.length === 0) {
+        throw new Error('oneOf must be a non-empty array.');
+      }
+
+      into.oneOf.push(value);
     } else if (keyword === 'required') {
       for (const name of value as string[]) {
         into.required.add(name);
@@ -141,6 +153,7 @@ function normalize(
     required: new Set(),
     properties: new Map(),
     items: [],
+    oneOf: [],
   };
 
   collect(document, schema, normalized);
@@ -182,22 +195,15 @@ function validate(
   path: string,
   violations: string[],
 ): void {
-  const {
-    type,
-    enum: allowed,
-    nullable,
-    minLength,
-    minimum,
-    maximum,
-  } = schema.scalars;
-
   if (value === null) {
-    if (nullable !== true) {
+    if (schema.scalars.nullable !== true) {
       violations.push(`${path}: null is not allowed.`);
     }
 
     return;
   }
+
+  const { type } = schema.scalars;
 
   if (typeof type === 'string' && !hasType(type, value)) {
     violations.push(
@@ -206,6 +212,49 @@ function validate(
 
     return;
   }
+
+  // Each step below checks one kind of keyword. Only the oneOf, items and
+  // properties steps call validate again, once per alternative, element or
+  // property, with a narrower schema and value.
+  validateOneOf(document, schema, value, path, violations);
+  validateScalarConstraints(schema, value, path, violations);
+  validateItems(document, schema, value, path, violations);
+  validateProperties(document, schema, value, path, violations);
+}
+
+function validateOneOf(
+  document: OpenApiDocumentLike,
+  schema: NormalizedSchema,
+  value: unknown,
+  path: string,
+  violations: string[],
+): void {
+  for (const alternatives of schema.oneOf) {
+    const conforming = alternatives.filter((alternative) => {
+      // A failing alternative is expected, so its violations stay out of the
+      // real list. Only whether it conforms matters.
+      const own: string[] = [];
+
+      validate(document, normalize(document, alternative), value, path, own);
+
+      return own.length === 0;
+    }).length;
+
+    if (conforming !== 1) {
+      violations.push(
+        `${path}: matches ${conforming} of ${alternatives.length} oneOf alternatives, expected exactly one.`,
+      );
+    }
+  }
+}
+
+function validateScalarConstraints(
+  schema: NormalizedSchema,
+  value: unknown,
+  path: string,
+  violations: string[],
+): void {
+  const { enum: allowed, minLength, minimum, maximum } = schema.scalars;
 
   if (Array.isArray(allowed) && !allowed.includes(value)) {
     violations.push(`${path}: value is not one of the documented values.`);
@@ -226,40 +275,60 @@ function validate(
       violations.push(`${path}: above ${maximum}.`);
     }
   }
+}
 
-  if (Array.isArray(value) && schema.items.length > 0) {
-    const itemSchema = normalize(document, { allOf: schema.items });
-
-    value.forEach((element, index) => {
-      validate(document, itemSchema, element, `${path}[${index}]`, violations);
-    });
+function validateItems(
+  document: OpenApiDocumentLike,
+  schema: NormalizedSchema,
+  value: unknown,
+  path: string,
+  violations: string[],
+): void {
+  if (!Array.isArray(value) || schema.items.length === 0) {
+    return;
   }
 
-  if (typeof value === 'object' && !Array.isArray(value)) {
-    const record = value as Record<string, unknown>;
+  const itemSchema = normalize(document, { allOf: schema.items });
 
-    for (const name of schema.required) {
-      if (!(name in record)) {
-        violations.push(`${path}.${name}: required property is missing.`);
-      }
+  value.forEach((element, index) => {
+    validate(document, itemSchema, element, `${path}[${index}]`, violations);
+  });
+}
+
+function validateProperties(
+  document: OpenApiDocumentLike,
+  schema: NormalizedSchema,
+  value: unknown,
+  path: string,
+  violations: string[],
+): void {
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    return;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  for (const name of schema.required) {
+    if (!(name in record)) {
+      violations.push(`${path}.${name}: required property is missing.`);
+    }
+  }
+
+  for (const [name, child] of Object.entries(record)) {
+    const declared = schema.properties.get(name);
+
+    if (declared === undefined) {
+      violations.push(`${path}.${name}: undocumented property.`);
+      continue;
     }
 
-    for (const [name, child] of Object.entries(record)) {
-      const declared = schema.properties.get(name);
-
-      if (declared === undefined) {
-        violations.push(`${path}.${name}: undocumented property.`);
-        continue;
-      }
-
-      validate(
-        document,
-        normalize(document, { allOf: declared }),
-        child,
-        `${path}.${name}`,
-        violations,
-      );
-    }
+    validate(
+      document,
+      normalize(document, { allOf: declared }),
+      child,
+      `${path}.${name}`,
+      violations,
+    );
   }
 }
 
