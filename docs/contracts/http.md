@@ -1,8 +1,8 @@
 # HTTP Contracts
 
 Status: Shared conventions accepted; Identity endpoints and first Chat subset implemented
-Last reviewed: 2026-11-17
-Last verified against source: 2026-11-17
+Last reviewed: 2026-11-18
+Last verified against source: 2026-11-18
 
 ## Purpose
 
@@ -71,7 +71,7 @@ A Planned capability name is not a stable public route.
 
 | Context or capability | State                                                                                                                                                                                  | Contract document                                                                           |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Identity              | Implemented with transitional behavior                                                                                                                                                 | [`identity-http.md`](identity-http.md)                                                      |
+| Identity              | Implemented with transitional behavior; stable application error envelope Accepted, not implemented                                                                                    | [`identity-http.md`](identity-http.md)                                                      |
 | Chat                  | Contact-request creation, acceptance, rejection, incoming listing, outgoing listing, accepted Contact listing, and Contact removal Implemented; remaining Phase 2 capabilities Planned | [`chat-http.md`](chat-http.md) (index) and [`chat-contacts-http.md`](chat-contacts-http.md) |
 | Calling               | Planned for Phase 3                                                                                                                                                                    | Create only if a required HTTP capability is identified                                     |
 | Billing               | Planned for Phase 4                                                                                                                                                                    | Create when the exact Billing HTTP contract is defined                                      |
@@ -141,6 +141,8 @@ transitional behavior is marked as transitional:
   That schema is descriptive, not normative: `message` may be a string or an
   array of strings, `error` may be absent, and `statusCode` carries the HTTP
   status. It is never presented as the stable application error envelope.
+  It is retired when Identity adopts the stable envelope, as described in
+  that section.
 - The registration response field `verificationToken` and the hardcoded Free
   tier of the current-user response are marked transitional.
 - The OAuth start and callback routes are described as browser redirects and
@@ -159,6 +161,12 @@ places it: the API Gateway for Chat, and Identity's own HTTP interface for
 Identity.
 
 The owning contract files remain authoritative for semantics.
+
+The stable application error envelope is described by one schema component,
+which every Context that uses the envelope references. No Context defines a
+parallel envelope schema. The API Gateway hosts the component because it
+assembles the description. Chat references it today; Identity's reference is
+Accepted, not implemented.
 
 ### Committed Description
 
@@ -220,6 +228,12 @@ addition:
   lists for that operation; Chat operations use the stable application error
   envelope and codes, and Identity operations use the transitional schema
   described under [Described Operations](#described-operations);
+- outcomes of [Requests Rejected Before Routing](#requests-rejected-before-routing)
+  are the one exception: they apply to every operation, so they are not
+  documented per operation;
+- every documented `401` lists the `WWW-Authenticate` response header
+  ([Error Response Headers](#error-response-headers); Accepted, not
+  implemented);
 - examples use placeholder values only;
 - no `servers` entry carries a host or port;
 - schema component names are HTTP transport names, not Domain, Application,
@@ -354,6 +368,17 @@ Unsupported body fields are removed by the current configuration rather than rej
 
 A future decision to reject unknown fields must update the global configuration, this contract, and affected tests together.
 
+Validation failure reporting (Accepted, not implemented): the global
+validation pipe reports which declared top-level fields failed, as structured
+data, and contributes no public text. Each Context's error handling selects
+the fixed detail message for each field from its owning contract. Today the
+pipe's failure carries only the validation library's message strings, which
+are never public text. Chat's validation responses do not change.
+
+The pipe runs inside the route, after authentication. A body that cannot be
+parsed never reaches it; see
+[Requests Rejected Before Routing](#requests-rejected-before-routing).
+
 ### Successful Empty Response
 
 An operation that succeeds without a response body uses:
@@ -386,14 +411,43 @@ The exact framework-generated body is not the stable application error
 envelope defined below.
 
 The existing Identity endpoints remain transitional and have not implemented
-the stable envelope. Adopting it for Identity requires a separately authorized
-implementation change with updated Identity contract and transport evidence.
-This shared decision must not be used to describe unchanged Identity responses
-as already migrated.
+the stable envelope. Identity's adoption of the stable envelope is Accepted,
+not implemented: its codes, fixed messages, validation details, and route
+outcomes are defined in
+[`identity-http.md`](identity-http.md#error-responses). The implementation is
+a separately authorized change with Identity transport evidence. Until it is
+verified, unchanged Identity responses must not be described as migrated.
+
+The implementing change retires the transitional form in the same change, per
+[Keeping the Description Current](#keeping-the-description-current):
+
+- Identity error responses in the generated description reference the one
+  stable envelope component (see [Schema Source](#schema-source)); the
+  transitional schema and its string-or-array `message` are removed.
+- Each Identity error response lists its stable codes, with one example per
+  code and one validation example per field, using the same fixed messages as
+  the responses.
+- Response descriptions match `identity-http.md`, and the documented
+  responses change where it records a decided change or a known defect: the
+  verification `400` gains `VALIDATION_FAILED`; the OAuth callbacks document
+  `401` and `500` and no redirect; the OAuth start routes keep their redirect
+  and gain `401` and `500`; login and logout each gain a `403`.
+- Every documented `401` lists the `WWW-Authenticate` header
+  ([Error Response Headers](#error-response-headers)).
+- Each newly documented response is exercised by a response-agreement test,
+  or named as not arrangeable with a reason.
+- This section and the transitional-schema statements under
+  [Described Operations](#described-operations),
+  [Information Minimization in Generated Documentation](#information-minimization-in-generated-documentation),
+  and [Current State](#current-state) are removed. The transitional markers
+  for `verificationToken` and the hardcoded Free tier stay.
 
 ### Stable Application Error Envelope
 
-New Context-specific HTTP contracts use this envelope for application errors:
+New Context-specific HTTP contracts use this envelope for application errors.
+Chat implements it; Identity's adoption is Accepted, not implemented (see
+[Transitional Identity Error Envelope](#transitional-identity-error-envelope)).
+Its shape is:
 
 ```json
 {
@@ -439,15 +493,29 @@ by its consumer. It must not reflect arbitrary client input into the response.
 
 The following codes are the stable shared defaults:
 
-| Category               | Stable code               | HTTP status | Consumer semantics                                      |
-| ---------------------- | ------------------------- | ----------: | ------------------------------------------------------- |
-| Validation failure     | `VALIDATION_FAILED`       |         400 | Correct the request before retrying.                    |
-| Authentication failure | `AUTHENTICATION_REQUIRED` |         401 | Stop protected interaction and reauthenticate.          |
-| Authorization failure  | `FORBIDDEN`               |         403 | Do not retry unchanged.                                 |
-| Resource not found     | `RESOURCE_NOT_FOUND`      |         404 | Do not retry unchanged; return to a stable resource.    |
-| State conflict         | `CONFLICT`                |         409 | Follow the owning operation's reconciliation guidance.  |
-| Dependency unavailable | `DEPENDENCY_UNAVAILABLE`  |         503 | Preserve confirmed state and retry according to policy. |
-| Unexpected failure     | `INTERNAL_ERROR`          |         500 | Do not assume whether the operation completed safely.   |
+| Category                     | Stable code               | HTTP status | Public message                                              | Consumer semantics                                                                               |
+| ---------------------------- | ------------------------- | ----------: | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Validation failure           | `VALIDATION_FAILED`       |         400 | Request validation failed.                                  | Correct the request before retrying.                                                             |
+| Authentication failure       | `AUTHENTICATION_REQUIRED` |         401 | Authentication is required.                                 | Stop protected interaction and reauthenticate.                                                   |
+| Authorization failure        | `FORBIDDEN`               |         403 | Access is not allowed.                                      | Do not retry unchanged.                                                                          |
+| Resource not found           | `RESOURCE_NOT_FOUND`      |         404 | Resource was not found.                                     | Do not retry unchanged; return to a stable resource.                                             |
+| State conflict               | `CONFLICT`                |         409 | Defined when first used                                     | Follow the owning operation's reconciliation guidance.                                           |
+| Request too large            | `PAYLOAD_TOO_LARGE`       |         413 | Request body is too large.                                  | Reduce the request body before retrying.                                                         |
+| Unsupported request encoding | `UNSUPPORTED_MEDIA_TYPE`  |         415 | Request content type, charset or encoding is not supported. | Send the body in a supported charset and content coding (see `Accept-Encoding`) before retrying. |
+| Dependency unavailable       | `DEPENDENCY_UNAVAILABLE`  |         503 | Defined when first used                                     | Preserve confirmed state and retry according to policy.                                          |
+| Unexpected failure           | `INTERNAL_ERROR`          |         500 | An unexpected error occurred.                               | Do not assume whether the operation completed safely.                                            |
+
+Each shared code in use has one fixed public message, shown above. A shared
+code without one gets it when it is first used. No public message or detail
+comes from an exception, a validation library, an authentication library, the
+database, or the body parser, and client input is never echoed.
+
+`VALIDATION_FAILED`, `AUTHENTICATION_REQUIRED`, and `INTERNAL_ERROR` are
+implemented by Chat with these messages. The messages for `FORBIDDEN` and
+`RESOURCE_NOT_FOUND`, and the codes `PAYLOAD_TOO_LARGE` and
+`UNSUPPORTED_MEDIA_TYPE`, are Accepted, not implemented. The last two are
+returned only for
+[Requests Rejected Before Routing](#requests-rejected-before-routing).
 
 An owning Context contract may define a narrower stable code only when its
 consumer must distinguish that outcome. The narrower code retains this
@@ -457,6 +525,82 @@ It must not expose an internal exception class or infrastructure identifier.
 `AUTHENTICATION_REQUIRED` does not distinguish whether authentication was
 missing, invalid, expired, or otherwise unusable unless an owning accepted
 contract establishes a safe consumer requirement.
+
+### Error Response Headers
+
+State: Accepted, not implemented, for every Context. Today no `401` or `415`
+response carries these headers.
+
+- Every `401` response carries `WWW-Authenticate: Bearer realm="huddle"`.
+  RFC 9110 §15.5.2 requires a challenge on every `401`, and RFC 6750 §3
+  defines the `Bearer` scheme. A `Bearer` challenge does not open a browser's
+  built-in login dialog.
+- The RFC 6750 §3.1 `error` attribute is not used. It would distinguish a
+  missing token from an invalid one, which `AUTHENTICATION_REQUIRED`
+  deliberately does not.
+- Every `415` response carries `Accept-Encoding`, listing the content codings
+  the API accepts for request bodies (RFC 9110 §15.5.16).
+- The generated description lists the `WWW-Authenticate` header on every
+  documented `401`. A `415` occurs only before routing, so it is not
+  documented per operation.
+
+### Requests Rejected Before Routing
+
+State: Accepted, not implemented. Current state is owned by
+[`delivery/status.md`](../delivery/status.md).
+
+Some requests are rejected before any route's own error handling runs: a body
+the API cannot parse or accept, a path segment that cannot be decoded, and an
+unknown method and path. A documentation route that is disabled responds like
+any unknown path. One API-wide handler gives them the stable envelope. It
+classifies each rejection by its HTTP status alone and never by message text:
+
+| Rejection                                                                                                                                                                  | Status | Stable code              |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -----: | ------------------------ |
+| Unknown method and path                                                                                                                                                    |    404 | `RESOURCE_NOT_FOUND`     |
+| Body over the size limit, or too many form parameters                                                                                                                      |    413 | `PAYLOAD_TOO_LARGE`      |
+| Unsupported body charset or content coding                                                                                                                                 |    415 | `UNSUPPORTED_MEDIA_TYPE` |
+| Any other client error status, for example malformed JSON, an undecodable path segment, a body nested too deeply, an aborted or truncated body, or a decompression failure |    400 | `VALIDATION_FAILED`      |
+| Any other failure                                                                                                                                                          |    500 | `INTERNAL_ERROR`         |
+
+- Messages are the fixed shared messages in
+  [Shared Error Codes and Status Mappings](#shared-error-codes-and-status-mappings).
+  The `400` carries no `details`.
+- The response never contains parser text, the method or path, header values,
+  or any part of the body.
+- A `415` carries `Accept-Encoding`
+  ([Error Response Headers](#error-response-headers)).
+- Precedence: a rejection before routing comes before every
+  operation-specific outcome of the owning contract, including
+  authentication.
+- Reach: these rejections on every route, and any failure on a route without
+  its own Context error handling (today only the root route `GET /`, which has
+  no contract). Errors raised inside a route that has Context error handling
+  are unaffected.
+- The handler is a backstop. A future operation that needs another client
+  error meaning defines it in its owning contract and its own error handling.
+
+Owning contracts do not repeat these outcomes per operation. A contract
+statement that an operation defines no `400`, or that orders the operation's
+outcomes, covers only the operation-specific outcomes. The generated
+description does not list them per operation
+([Information Minimization in Generated Documentation](#information-minimization-in-generated-documentation)).
+
+Current behavior (observed 2026-11-18): these requests get the framework's
+error bodies. Several echo client input, against
+[Information Minimization](#information-minimization):
+
+| Request                                  | Status | Body today                                                                                                  |
+| ---------------------------------------- | -----: | ----------------------------------------------------------------------------------------------------------- |
+| Body `not json` with a JSON content type |    400 | `{"message":"Unexpected token 'n', \"not json\" is not valid JSON","error":"Bad Request","statusCode":400}` |
+| Truncated JSON                           |    400 | `{"message":"Unexpected end of JSON input","error":"Bad Request","statusCode":400}`                         |
+| Path segment `%FF`                       |    400 | `{"message":"Failed to decode param '%FF'","error":"Bad Request","statusCode":400}`                         |
+| `charset=latin9`                         |    415 | `{"statusCode":415,"message":"unsupported charset \"LATIN9\""}`                                             |
+| Body over the size limit                 |    413 | `{"statusCode":413,"message":"request entity too large"}`                                                   |
+| Unknown path                             |    404 | `{"message":"Cannot GET /auth/nope","error":"Not Found","statusCode":404}`                                  |
+
+A wrong method on a known path is an unknown method and path, so it returns
+`404`, not `405`.
 
 ### Accepted Specialized Error Categories
 
@@ -509,6 +653,15 @@ Examples that remain internal include:
 
 Context-specific authorization determines whether a hidden resource is
 represented as `403` or `404`.
+
+Error logging (Accepted, not implemented): unexpected failures,
+provider-call failures, and authentication and access-control failures are
+logged with their error type or outcome code and their location, without
+request values, tokens, or library message text. Other client errors are not
+logged. The rule applies to every Context. The accepted changes implement it
+for Identity routes and for
+[Requests Rejected Before Routing](#requests-rejected-before-routing). Chat
+routes log nothing yet, so the rule is not met there until a later change.
 
 ## Context HTTP Capability Subsets
 

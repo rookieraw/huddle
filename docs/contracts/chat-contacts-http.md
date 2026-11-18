@@ -1,7 +1,7 @@
 # Chat Contacts HTTP Contract
 
 Status: Contact-request creation Implemented; Contact-request acceptance Implemented; Contact-request rejection Implemented; incoming Contact-request listing Implemented; outgoing Contact-request listing Implemented; accepted Contact listing Implemented; Contact removal Implemented
-Last reviewed: 2026-11-12
+Last reviewed: 2026-11-18
 
 ## Purpose
 
@@ -12,6 +12,14 @@ evidence of an endpoint.
 
 Rules that apply to more than one Chat contract file, and the index of Chat
 HTTP contract files, are in [`chat-http.md`](chat-http.md).
+
+Requests rejected before routing (an unreadable body, an undecodable path
+segment, or an unknown method and path) follow
+[Requests Rejected Before Routing](http.md#requests-rejected-before-routing)
+on every operation and are not repeated below. They come before every
+operation-specific outcome, including authentication. Where an operation
+below defines no `400`, or orders its outcomes, the statement covers only its
+operation-specific outcomes.
 
 ## Source-of-Truth Boundary
 
@@ -560,8 +568,8 @@ names, default, and maximum. This operation does not lower the maximum.
 An invalid value returns `400 VALIDATION_FAILED`. When both parameters are
 invalid, `limit` is validated first and the response carries exactly one
 detail, for `limit`. The `401` for a missing or unusable access token takes
-precedence over any `400`, because authentication runs before query
-validation.
+precedence over any operation-specific `400`, because authentication runs
+before query validation.
 
 ### Success
 
@@ -750,8 +758,8 @@ names, default, and maximum. This operation does not lower the maximum.
 An invalid value returns `400 VALIDATION_FAILED`. When both parameters are
 invalid, `limit` is validated first and the response carries exactly one
 detail, for `limit`. The `401` for a missing or unusable access token takes
-precedence over any `400`, because authentication runs before query
-validation.
+precedence over any operation-specific `400`, because authentication runs
+before query validation.
 
 ### Success
 
@@ -952,8 +960,8 @@ names, default, and maximum. This operation does not lower the maximum.
 An invalid value returns `400 VALIDATION_FAILED`. When both parameters are
 invalid, `limit` is validated first and the response carries exactly one
 detail, for `limit`. The `401` for a missing or unusable access token takes
-precedence over any `400`, because authentication runs before query
-validation.
+precedence over any operation-specific `400`, because authentication runs
+before query validation.
 
 ### Success
 
@@ -1214,7 +1222,8 @@ relationship returns the not-found outcome.
 ### Error Responses
 
 Every error uses the stable envelope defined in [`http.md`](http.md).
-Non-validation errors omit `error.details`. Authentication is evaluated first.
+Non-validation errors omit `error.details`. Authentication is evaluated first
+among the operation-specific outcomes.
 
 | Situation                                                 | HTTP status | Stable code                   | Public message                              | Consumer action                                                                                                    |
 | --------------------------------------------------------- | ----------: | ----------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -1223,7 +1232,8 @@ Non-validation errors omit `error.details`. Authentication is evaluated first.
 | Relationship lookup or removal transition is unavailable  |         503 | `CONTACT_REMOVAL_UNAVAILABLE` | Contact removal is temporarily unavailable. | Do not assume completion; preserve confirmed state and retry the same route according to bounded client policy.    |
 | Unclassified unexpected failure                           |         500 | `INTERNAL_ERROR`              | An unexpected error occurred.               | Do not assume whether the removal completed; reload the Contacts list before presenting a final state or retrying. |
 
-The operation defines no `400`, `403`, or `409` response. `contactUserId` is an
+The operation defines no operation-specific `400`, `403`, or `409` response.
+`contactUserId` is an
 opaque non-empty segment with no validation rule, every pair that is not a
 current accepted Contact shares the one `404`, and a repeated or lost removal
 is that same `404` rather than a conflict. `CONTACT_NOT_FOUND` is distinct from
