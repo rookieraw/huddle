@@ -1,7 +1,7 @@
 # Security Architecture
 
-Status: Accepted target architecture  
-Last reviewed: 2026-08-07
+Status: Accepted target architecture; the Security Standards Deviations register records current known deviations  
+Last reviewed: 2026-11-19
 
 ## Purpose
 
@@ -600,6 +600,46 @@ Review this document when:
 - a security incident occurs;
 - a major authentication dependency changes.
 
+## Standards Conformance
+
+Huddle's adopted standards, the roles they apply to, the citation rule, and
+what counts as a deviation are decided in
+[ADR 0009](../decisions/0009-adopt-named-standards-and-brownfield-migration-principles.md).
+This section lists the security standards and records known deviations from
+them.
+
+### Security Standards
+
+| Standard                                                | Applies to                                                 | Basis            |
+| ------------------------------------------------------- | ---------------------------------------------------------- | ---------------- |
+| OWASP ASVS 5.0, Level 2                                 | Huddle as an application, every chapter except V10.3–V10.7 | Applied directly |
+| RFC 6749 client requirements (every clause except §5.1) | Huddle as OAuth client of Google and GitHub                | Applied directly |
+| RFC 7636                                                | Huddle as OAuth client                                     | Applied directly |
+| RFC 9700 client requirements                            | Huddle as OAuth client                                     | Applied directly |
+| RFC 7519, RFC 8725                                      | Huddle's own access tokens                                 | Applied directly |
+
+ASVS 5.0 V9 Self-contained Tokens, V10 OAuth and OIDC, and V16 Security
+Logging and Error Handling have particular weight for Huddle's authentication
+design. Level 2 is a verification target for design, review, and tests; it is
+not a completed assessment (see [Known Limits](#known-limits)).
+
+RFC 6749 §5.1 and the HTTP standards are listed in the
+[shared HTTP contract](../contracts/http.md#standards-conformance).
+
+### Security Standards Deviations
+
+This register lists the known deviations from the standards above. It is not
+the result of a conformance assessment. Its format, placement, and lifecycle
+are defined in
+[Brownfield Migration Principles](../engineering/brownfield-migration.md#deviation-records).
+
+| Behavior                                                                                                        | Standard and clause                                                                                                                                                                                                                                                                 | Current behavior                                                                                                                                                                                                                                             | Reason                                                                                                                                               | Decision date | Plan                                                                                                                                                                                                                                                                        |
+| --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Google and GitHub sign-in ([OAuth start and callback routes](../contracts/identity-http.md#google-oauth-start)) | RFC 6749 §10.12 (MUST); RFC 9700 §2.1 (MUST prevent CSRF; mix-up defense REQUIRED for a client of more than one authorization server), §2.1.1 (MUST prevent code injection; PKCE RECOMMENDED for confidential clients), §4.7.1 (MUST); ASVS 5.0 V10.1.2, V10.2.1, V10.2.2 (Level 2) | The authorization request carries no `state` and no PKCE challenge, and nothing bound to the browser records which provider a request went to; only the distinct callback paths separate the providers                                                       | The provider integrations were delivered without these protections; [OAuth state validation](#credential-and-oauth-security) is required but not met | 2026-11-18    | A separate Identity change adds per-request `state` bound to the browser, PKCE, and a check that each callback answers the provider its request went to                                                                                                                     |
+| Every route, including registration, sign-in, token refresh, and verification                                   | ASVS 5.0 V6.1.1 (Level 1), V6.3.1 (Level 1), V2.4.1 (Level 2)                                                                                                                                                                                                                       | No rate limiting or anti-automation control exists, and no limits are documented                                                                                                                                                                             | [Abuse Controls](#abuse-controls) require measured limits and an accepted policy, which do not exist yet                                             | 2026-11-18    | A separate change measures, documents, and enforces limits; a limited request receives `429`                                                                                                                                                                                |
+| Security events on Identity and Chat routes                                                                     | ASVS 5.0 V16.3.1, V16.3.2 (Level 2), on Identity and Chat routes; ASVS 5.0 V16.3.4 (Level 2), on Chat routes                                                                                                                                                                        | No route logs authentication operations (successful or failed) or failed authorization. Unexpected errors are logged on Identity routes by the framework default, but not on Chat routes; see [Error logging](../contracts/http.md#information-minimization) | The error logging rule is Accepted, not implemented, and covers failures only; Chat error handling answers unexpected errors without logging them    | 2026-11-18    | Identity authentication and access-control failures: the Identity error envelope delivery. Chat failures and unexpected errors: a separate Chat error-logging change. Successful authentication on every route: a separate change. The row stays until every part is closed |
+| Access-token verification on Passport-protected Identity routes and in the Authentication API used by Chat      | RFC 8725 §3.1 (MUST use each key with exactly one algorithm); ASVS 5.0 V9.2.3 (Level 2)                                                                                                                                                                                             | A token signed with the shared secret under HS256, HS384, or HS512 is accepted, although one algorithm is issued; tokens carry no audience, and none is checked                                                                                              | Verification was implemented without an explicit algorithm or audience rule                                                                          | 2026-11-18    | A separate Identity change restricts verification to the issued algorithm and adds and checks an audience                                                                                                                                                                   |
+
 ## Known Limits
 
 The Portfolio architecture does not claim:
@@ -624,7 +664,9 @@ This document is the source of truth for:
 - cross-context data minimization;
 - external-provider security principles;
 - secrets and logging rules;
-- deployment network-security principles.
+- deployment network-security principles;
+- the adopted security standards and the register of known deviations from
+  them.
 
 This document is not the source of truth for:
 

@@ -20,6 +20,7 @@ It defines:
 - Implemented, accepted, and planned capability groups and their exact contract locations
 - The relationship between human-maintained HTTP contracts and generated
   OpenAPI documentation
+- The adopted HTTP standards and the register of known deviations from them
 
 Exact accepted and implemented endpoint paths, methods, payloads, and status
 behavior belong to the relevant Context-specific contract file.
@@ -66,6 +67,21 @@ When a contract document and executable behavior disagree, treat the discrepancy
 | Deferred     | No endpoint may be introduced without new Phase authorization                          |
 
 A Planned capability name is not a stable public route.
+
+### Known Defects and Decided Changes
+
+An owning contract may record two kinds of difference between implemented
+behavior and the behavior it defines:
+
+| Kind           | Meaning                                                                                                       |
+| -------------- | ------------------------------------------------------------------------------------------------------------- |
+| Known defect   | Implemented behavior contradicts the contract; the contract states the intended behavior and today's behavior |
+| Decided change | An accepted change to Implemented behavior, recorded in the contract before the change is implemented         |
+
+The owning contract records both before the implementing change and removes
+the record in that change. How these interact with contract changes is
+described in
+[Brownfield Migration Principles](../engineering/brownfield-migration.md#3-change-contracts-expand-then-contract).
 
 ## Contract Registry
 
@@ -290,7 +306,8 @@ Clients must not:
 
 ### Timestamps
 
-Public timestamps use ISO 8601 UTC strings.
+Public timestamps use RFC 3339 §5.6 `date-time` strings in UTC, with the `Z`
+offset.
 
 Example:
 
@@ -477,6 +494,10 @@ The envelope fields are:
 
 Clients branch on `error.code`, not `error.message`.
 
+The current API version uses this envelope rather than RFC 9457 Problem
+Details; the decision and its revisit condition are recorded in
+[ADR 0009](../decisions/0009-adopt-named-standards-and-brownfield-migration-principles.md#problem-details-rfc-9457).
+
 `error.details`:
 
 - is present only when `error.code` is `VALIDATION_FAILED` and safe,
@@ -533,11 +554,12 @@ response carries these headers.
 
 - Every `401` response carries `WWW-Authenticate: Bearer realm="huddle"`.
   RFC 9110 §15.5.2 requires a challenge on every `401`, and RFC 6750 §3
-  defines the `Bearer` scheme. A `Bearer` challenge does not open a browser's
-  built-in login dialog.
-- The RFC 6750 §3.1 `error` attribute is not used. It would distinguish a
-  missing token from an invalid one, which `AUTHENTICATION_REQUIRED`
-  deliberately does not.
+  (adopted by analogy) defines the `Bearer` scheme. A `Bearer` challenge does
+  not open a browser's built-in login dialog.
+- The RFC 6750 §3.1 (adopted by analogy) `error` attribute is not used. It
+  would distinguish a missing token from an invalid one, which
+  `AUTHENTICATION_REQUIRED` deliberately does not. This is a recorded
+  deviation; see [HTTP Standards Deviations](#http-standards-deviations).
 - Every `415` response carries `Accept-Encoding`, listing the content codings
   the API accepts for request bodies (RFC 9110 §15.5.16).
 - The generated description lists the `WWW-Authenticate` header on every
@@ -662,6 +684,43 @@ logged. The rule applies to every Context. The accepted changes implement it
 for Identity routes and for
 [Requests Rejected Before Routing](#requests-rejected-before-routing). Chat
 routes log nothing yet, so the rule is not met there until a later change.
+
+## Standards Conformance
+
+Huddle's adopted standards, the roles they apply to, the citation rule, and
+what counts as a deviation are decided in
+[ADR 0009](../decisions/0009-adopt-named-standards-and-brownfield-migration-principles.md).
+This section lists the clauses that govern HTTP behavior and records known
+deviations from them.
+
+### HTTP Standards
+
+| Standard      | Applies to                                                | Basis                                                                                                                                                        |
+| ------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| RFC 9110      | Methods, status codes, and headers of every route         | Applied directly                                                                                                                                             |
+| RFC 3339      | Public timestamps ([Timestamps](#timestamps))             | Applied directly                                                                                                                                             |
+| RFC 6750      | Huddle's bearer access tokens and their `401` challenge   | Adopted by analogy                                                                                                                                           |
+| RFC 6749 §5.1 | Responses that carry Huddle's tokens or other credentials | Adopted by analogy                                                                                                                                           |
+| RFC 9457      | Error responses                                           | Not used by the current API version; see [ADR 0009](../decisions/0009-adopt-named-standards-and-brownfield-migration-principles.md#problem-details-rfc-9457) |
+
+Every other RFC 6749 clause, and the OAuth, JWT, and ASVS standards, are
+listed in the
+[security architecture](../architecture/security.md#standards-conformance).
+
+### HTTP Standards Deviations
+
+This register lists the known deviations from the clauses above. It is not
+the result of a conformance assessment. Its format, placement, and lifecycle
+are defined in
+[Brownfield Migration Principles](../engineering/brownfield-migration.md#deviation-records).
+
+| Behavior                                                                                                                                                                                                                                                                                                                                                    | Standard and clause                                                    | Current behavior                                                                                                             | Reason                                                                                                                                                               | Decision date | Plan                                                                                                                                                                                                                                                   |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A request whose method the path does not support                                                                                                                                                                                                                                                                                                            | RFC 9110 §9.1 (SHOULD respond `405`)                                   | Returns `404`, as an unknown method and path; see [Requests Rejected Before Routing](#requests-rejected-before-routing)      | Routing matches method and path together, so a wrong method is an unknown route; the accepted handling of requests rejected before routing keeps that classification | 2026-11-18    | Accepted permanently                                                                                                                                                                                                                                   |
+| Responses that carry tokens or a verification token: [Register](identity-http.md#register-with-email-and-password), [Credential Login](identity-http.md#credential-login), [Refresh](identity-http.md#refresh-authentication-tokens), [Google](identity-http.md#google-oauth-callback) and [GitHub](identity-http.md#github-oauth-callback) OAuth callbacks | RFC 6749 §5.1 (MUST; adopted by analogy); ASVS 5.0 V14.3.2 (Level 2)   | Neither `Cache-Control: no-store` nor `Pragma: no-cache` is sent                                                             | Not part of the implemented Identity responses                                                                                                                       | 2026-11-18    | A separate Identity change adds both headers                                                                                                                                                                                                           |
+| [Verify Email](identity-http.md#verify-email)                                                                                                                                                                                                                                                                                                               | RFC 9110 §9.2.1 (MUST); ASVS 5.0 V3.5.3 (Level 1)                      | `GET /auth/verify` verifies the email and consumes the token                                                                 | The verification link is opened directly; no browser flow exists yet to confirm verification with an unsafe method                                                   | 2026-11-18    | Decided with the browser Authentication flow, which moves the state change to an unsafe method                                                                                                                                                         |
+| Every `401` response, on Identity and Chat routes                                                                                                                                                                                                                                                                                                           | RFC 9110 §15.5.2 (MUST); RFC 6750 §3 (MUST; adopted by analogy)        | No `401` carries a challenge; see [Error Response Headers](#error-response-headers)                                          | The challenge is Accepted, not implemented                                                                                                                           | 2026-11-18    | Identity: the Identity error envelope delivery. Chat: the delivery for requests rejected before routing. Both are in [HTTP Error Envelope Alignment](../delivery/phases/02-chat.md#http-error-envelope-alignment); the row stays until both are closed |
+| A `401` for a presented access token that fails authentication                                                                                                                                                                                                                                                                                              | RFC 6750 §3 (SHOULD include the `error` attribute; adopted by analogy) | No `error` attribute is sent, and the accepted challenge carries none; see [Error Response Headers](#error-response-headers) | `AUTHENTICATION_REQUIRED` deliberately does not distinguish a missing token from an invalid one                                                                      | 2026-11-18    | Accepted permanently                                                                                                                                                                                                                                   |
 
 ## Context HTTP Capability Subsets
 
@@ -898,5 +957,7 @@ A new endpoint for one of these capabilities requires an explicit Product Scope 
 - [Meeting Realtime Contract](meeting-realtime.md)
 - [Integration Events](integration-events.md)
 - [Security Architecture](../architecture/security.md)
+- [ADR 0009 — Adopt Named Standards and Brownfield Migration Principles](../decisions/0009-adopt-named-standards-and-brownfield-migration-principles.md)
+- [Brownfield Migration Principles](../engineering/brownfield-migration.md)
 - [Delivery Roadmap](../delivery/roadmap.md)
 - [Current Status](../delivery/status.md)
