@@ -157,10 +157,10 @@ shows the decided outcome; the note under it gives today's behavior.
 | Credential Login with the correct password and an unverified email                                              | 401                          | 403 `EMAIL_NOT_VERIFIED`                                                      | Decided change |
 | Logout with a refresh token that belongs to another user                                                        | 401                          | 403 `FORBIDDEN`                                                               | Decided change |
 
-The concurrent-registration fix depends on the database reporting which
-unique field was violated. If it does not, the race stays
-`500 INTERNAL_ERROR`, and this contract records that as a known limit when
-the change is implemented.
+The fix for both races, concurrent registration and concurrent first OAuth
+sign-in, depends on the database reporting which unique field was violated.
+If it does not, both races stay `500 INTERNAL_ERROR`, and this contract
+records that as a known limit when the change is implemented.
 
 ## Register with Email and Password
 
