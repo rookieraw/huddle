@@ -1,7 +1,7 @@
 # Identity HTTP Contract
 
 Status: Implemented with documented transitional behavior; stable error envelope Accepted, not implemented  
-Last verified against source: 2026-11-18
+Last verified against source: 2026-11-19
 
 ## Purpose
 
@@ -64,24 +64,33 @@ validation library, an authentication library, the database, or the body
 parser, and client input is never echoed. A failure that no rule below
 classifies is `500 INTERNAL_ERROR`, never a guessed client error.
 
-| Code                          | Status | Public message                            | Consumer action                                                                                                                                                                                                     |
-| ----------------------------- | -----: | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VALIDATION_FAILED`           |    400 | Request validation failed.                | Correct the fields named in `details`, then retry. Without `details`, correct the request format.                                                                                                                   |
-| `EMAIL_ALREADY_REGISTERED`    |    409 | Email is already registered.              | Do not retry unchanged. Offer sign-in, or registration with another email.                                                                                                                                          |
-| `VERIFICATION_TOKEN_INVALID`  |    400 | Verification token is invalid or expired. | Do not retry the same token. If the token was used before, or an earlier attempt ended in `INTERNAL_ERROR`, the email may already be verified, so offer sign-in. Otherwise the user needs a new verification token. |
-| `INVALID_CREDENTIALS`         |    401 | Email or password is invalid.             | Let the user correct the email or password. Never say which one is wrong.                                                                                                                                           |
-| `EMAIL_NOT_VERIFIED`          |    403 | Email address is not verified.            | Tell the user to verify their email before signing in.                                                                                                                                                              |
-| `REFRESH_TOKEN_INVALID`       |    401 | Refresh token is invalid or expired.      | Discard the stored token pair and sign in again.                                                                                                                                                                    |
-| `AUTHENTICATION_REQUIRED`     |    401 | Authentication is required.               | Get a new access token (refresh it, or sign in again), then retry.                                                                                                                                                  |
-| `FORBIDDEN`                   |    403 | Access is not allowed.                    | Do not retry unchanged. The session stays valid, so keep the stored token pair.                                                                                                                                     |
-| `OAUTH_AUTHENTICATION_FAILED` |    401 | Provider authentication failed.           | Offer to start provider sign-in again.                                                                                                                                                                              |
-| `INTERNAL_ERROR`              |    500 | An unexpected error occurred.             | Do not assume whether the operation completed. Reconcile before retrying, as the operation's notes describe.                                                                                                        |
+| Code                          | Status | Public message                                 | Consumer action                                                                                                                                                                                                                                 |
+| ----------------------------- | -----: | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VALIDATION_FAILED`           |    400 | Request validation failed.                     | Correct the fields named in `details`, then retry. Without `details`, correct the request format.                                                                                                                                               |
+| `EMAIL_ALREADY_REGISTERED`    |    409 | Email is already registered.                   | Do not retry unchanged. Offer sign-in, or registration with another email.                                                                                                                                                                      |
+| `VERIFICATION_TOKEN_INVALID`  |    400 | Verification token is invalid or expired.      | Do not retry the same token. If the token was used before, or an earlier attempt ended in `INTERNAL_ERROR` or `DEPENDENCY_UNAVAILABLE`, the email may already be verified, so offer sign-in. Otherwise the user needs a new verification token. |
+| `INVALID_CREDENTIALS`         |    401 | Email or password is invalid.                  | Let the user correct the email or password. Never say which one is wrong.                                                                                                                                                                       |
+| `EMAIL_NOT_VERIFIED`          |    403 | Email address is not verified.                 | Tell the user to verify their email before signing in.                                                                                                                                                                                          |
+| `REFRESH_TOKEN_INVALID`       |    401 | Refresh token is invalid or expired.           | Discard the stored token pair and sign in again.                                                                                                                                                                                                |
+| `AUTHENTICATION_REQUIRED`     |    401 | Authentication is required.                    | Get a new access token (refresh it, or sign in again), then retry.                                                                                                                                                                              |
+| `FORBIDDEN`                   |    403 | Access is not allowed.                         | Do not retry unchanged. The session stays valid, so keep the stored token pair.                                                                                                                                                                 |
+| `OAUTH_AUTHENTICATION_FAILED` |    401 | Provider authentication failed.                | Offer to start provider sign-in again.                                                                                                                                                                                                          |
+| `DEPENDENCY_UNAVAILABLE`      |    503 | A required service is temporarily unavailable. | Retry later. Do not assume whether the operation completed. Reconcile before retrying, as the operation's notes describe.                                                                                                                       |
+| `INTERNAL_ERROR`              |    500 | An unexpected error occurred.                  | Do not assume whether the operation completed. Reconcile before retrying, as the operation's notes describe.                                                                                                                                    |
 
-`VALIDATION_FAILED`, `AUTHENTICATION_REQUIRED`, `FORBIDDEN`, and
-`INTERNAL_ERROR` are shared codes owned by
+`VALIDATION_FAILED`, `AUTHENTICATION_REQUIRED`, `FORBIDDEN`,
+`DEPENDENCY_UNAVAILABLE`, and `INTERNAL_ERROR` are shared codes owned by
 [`http.md`](http.md#shared-error-codes-and-status-mappings); the consumer
 actions above are their meaning on Identity routes. The other codes are
 Identity's.
+
+`DEPENDENCY_UNAVAILABLE` means that Identity's database cannot be reached,
+the connection is lost, or no connection becomes available in time. It is
+recognized by the error's type or code, never by its message. Every other
+database failure is `INTERNAL_ERROR`. Identity uses the shared code rather
+than a narrower one, because a consumer always knows which operation failed
+(owner decision 2026-11-19). Only operations that use the database return
+it: the OAuth start routes and Get Current User do not.
 
 How a user obtains a new verification token is decided with the browser
 authentication flow.
@@ -144,23 +153,30 @@ Every `401` carries `WWW-Authenticate`, as
 These rows differ from today's implemented behavior. Each operation's table
 shows the decided outcome; the note under it gives today's behavior.
 
-| Behavior                                                                                                        | Today                        | Decided                                                                       | Kind           |
-| --------------------------------------------------------------------------------------------------------------- | ---------------------------- | ----------------------------------------------------------------------------- | -------------- |
-| Verify Email without `token`                                                                                    | 500                          | 400 `VALIDATION_FAILED`, detail `token`                                       | Known defect   |
-| OAuth callback with a provider `error` other than `access_denied`                                               | 500                          | 401 `OAUTH_AUTHENTICATION_FAILED`                                             | Known defect   |
-| OAuth callback with no provider result                                                                          | 302 to the provider          | 401 `OAUTH_AUTHENTICATION_FAILED`                                             | Known defect   |
-| `displayName` that passes request validation but exceeds 50 code points (for example with a variation selector) | 409 with Domain text         | 400 `VALIDATION_FAILED`, detail `displayName`                                 | Known defect   |
-| OAuth provider profile without an email                                                                         | 500                          | 401 `OAUTH_AUTHENTICATION_FAILED`                                             | Known defect   |
-| OAuth provider rejects the `code`, or another provider call fails                                               | 500                          | 401 `OAUTH_AUTHENTICATION_FAILED`                                             | Known defect   |
-| Concurrent registration, or concurrent first OAuth sign-in, with the same new email                             | 500                          | 409 `EMAIL_ALREADY_REGISTERED`, or 401 `OAUTH_AUTHENTICATION_FAILED` on OAuth | Known defect   |
-| OAuth start route that receives a provider result                                                               | 401, 500, or a code exchange | 401 `OAUTH_AUTHENTICATION_FAILED`                                             | Known defect   |
-| Credential Login with the correct password and an unverified email                                              | 401                          | 403 `EMAIL_NOT_VERIFIED`                                                      | Decided change |
-| Logout with a refresh token that belongs to another user                                                        | 401                          | 403 `FORBIDDEN`                                                               | Decided change |
+| Behavior                                                                                                          | Today                        | Decided                                                                       | Kind           |
+| ----------------------------------------------------------------------------------------------------------------- | ---------------------------- | ----------------------------------------------------------------------------- | -------------- |
+| Verify Email without `token`                                                                                      | 500                          | 400 `VALIDATION_FAILED`, detail `token`                                       | Known defect   |
+| OAuth callback with a provider `error` other than `access_denied`                                                 | 500                          | 401 `OAUTH_AUTHENTICATION_FAILED`                                             | Known defect   |
+| OAuth callback with no provider result                                                                            | 302 to the provider          | 401 `OAUTH_AUTHENTICATION_FAILED`                                             | Known defect   |
+| `displayName` that passes request validation but exceeds 50 code points (for example with a variation selector)   | 409 with Domain text         | 400 `VALIDATION_FAILED`, detail `displayName`                                 | Known defect   |
+| OAuth provider profile without an email                                                                           | 500                          | 401 `OAUTH_AUTHENTICATION_FAILED`                                             | Known defect   |
+| OAuth provider rejects the `code`, or another provider call fails                                                 | 500                          | 401 `OAUTH_AUTHENTICATION_FAILED`                                             | Known defect   |
+| Concurrent registration, or concurrent first OAuth sign-in, with the same new email                               | 500                          | 409 `EMAIL_ALREADY_REGISTERED`, or 401 `OAUTH_AUTHENTICATION_FAILED` on OAuth | Known defect   |
+| OAuth start route that receives a provider result                                                                 | 401, 500, or a code exchange | 401 `OAUTH_AUTHENTICATION_FAILED`                                             | Known defect   |
+| Credential Login with the correct password and an unverified email                                                | 401                          | 403 `EMAIL_NOT_VERIFIED`                                                      | Decided change |
+| Logout with a refresh token that belongs to another user                                                          | 401                          | 403 `FORBIDDEN`                                                               | Decided change |
+| Register, Verify Email, Credential Login, Refresh, Logout, or an OAuth callback while the database is unavailable | 500                          | 503 `DEPENDENCY_UNAVAILABLE`                                                  | Decided change |
 
 The fix for both races, concurrent registration and concurrent first OAuth
 sign-in, depends on the database reporting which unique field was violated.
 If it does not, both races stay `500 INTERNAL_ERROR`, and this contract
 records that as a known limit when the change is implemented.
+
+An unavailable database is reported as `503` in every Context (owner
+decision 2026-11-18). Identity's change depends in the same way on the
+database reporting an outage by an error type or code. An outage that is not
+reported that way stays `500 INTERNAL_ERROR`, and this contract records that
+as a known limit when the change is implemented.
 
 ## Register with Email and Password
 
@@ -214,15 +230,21 @@ Current response:
 
 Errors (codes and messages in [Error Responses](#error-responses)):
 
-| Situation                                                                                               | Status | Code                       | Consumer action                                                                  |
-| ------------------------------------------------------------------------------------------------------- | -----: | -------------------------- | -------------------------------------------------------------------------------- |
-| A declared field is missing or has the wrong format                                                     |    400 | `VALIDATION_FAILED`        | Correct the fields named in `details`, then retry.                               |
-| Email already registered, including a concurrent registration of the same new email that loses the race |    409 | `EMAIL_ALREADY_REGISTERED` | Offer sign-in, or registration with another email.                               |
-| Unexpected failure, including an unavailable database                                                   |    500 | `INTERNAL_ERROR`           | The account may already exist, so a retry can return `EMAIL_ALREADY_REGISTERED`. |
+| Situation                                                                                               | Status | Code                       | Consumer action                                                                               |
+| ------------------------------------------------------------------------------------------------------- | -----: | -------------------------- | --------------------------------------------------------------------------------------------- |
+| A declared field is missing or has the wrong format                                                     |    400 | `VALIDATION_FAILED`        | Correct the fields named in `details`, then retry.                                            |
+| Email already registered, including a concurrent registration of the same new email that loses the race |    409 | `EMAIL_ALREADY_REGISTERED` | Offer sign-in, or registration with another email.                                            |
+| The database is unavailable                                                                             |    503 | `DEPENDENCY_UNAVAILABLE`   | Retry later. The account may already exist, so a retry can return `EMAIL_ALREADY_REGISTERED`. |
+| Unexpected failure                                                                                      |    500 | `INTERNAL_ERROR`           | The account may already exist, so a retry can return `EMAIL_ALREADY_REGISTERED`.              |
 
 Known defects today: a `displayName` that passes request validation but
 exceeds 50 code points returns `409` with Domain text, and the lost
 concurrent registration returns `500`. See
+[Known Defects and Decided Changes](#known-defects-and-decided-changes).
+
+Decided change: an unavailable database returns `500` today. It becomes
+`503 DEPENDENCY_UNAVAILABLE`, so that every Context reports an unavailable
+database as `503`. See
 [Known Defects and Decided Changes](#known-defects-and-decided-changes).
 
 ### Transitional Security Note
@@ -266,14 +288,20 @@ Validation:
 
 Errors (codes and messages in [Error Responses](#error-responses)):
 
-| Situation                               | Status | Code                         | Consumer action                                                                                                   |
-| --------------------------------------- | -----: | ---------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `token` absent, empty, or repeated      |    400 | `VALIDATION_FAILED`          | Use the verification link as received.                                                                            |
-| Token unknown, expired, or already used |    400 | `VERIFICATION_TOKEN_INVALID` | Do not retry the same token; offer sign-in, or a new verification token.                                          |
-| Unexpected failure                      |    500 | `INTERNAL_ERROR`             | The first attempt may have verified the email, so a retry can return `VERIFICATION_TOKEN_INVALID`; offer sign-in. |
+| Situation                               | Status | Code                         | Consumer action                                                                                                                              |
+| --------------------------------------- | -----: | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `token` absent, empty, or repeated      |    400 | `VALIDATION_FAILED`          | Use the verification link as received.                                                                                                       |
+| Token unknown, expired, or already used |    400 | `VERIFICATION_TOKEN_INVALID` | Do not retry the same token; offer sign-in, or a new verification token.                                                                     |
+| The database is unavailable             |    503 | `DEPENDENCY_UNAVAILABLE`     | Retry the same link later. The first attempt may have verified the email, so a retry can return `VERIFICATION_TOKEN_INVALID`; offer sign-in. |
+| Unexpected failure                      |    500 | `INTERNAL_ERROR`             | The first attempt may have verified the email, so a retry can return `VERIFICATION_TOKEN_INVALID`; offer sign-in.                            |
 
 Known defect today: a request without `token` returns `500`. An empty or
 repeated `token` already returns `400`, with the transitional body. See
+[Known Defects and Decided Changes](#known-defects-and-decided-changes).
+
+Decided change: an unavailable database returns `500` today. It becomes
+`503 DEPENDENCY_UNAVAILABLE`, so that every Context reports an unavailable
+database as `503`. See
 [Known Defects and Decided Changes](#known-defects-and-decided-changes).
 
 The token is single-purpose and time-bounded according to Identity behavior.
@@ -323,16 +351,20 @@ Response:
 
 Errors (codes and messages in [Error Responses](#error-responses)):
 
-| Situation                                                    | Status | Code                  | Consumer action                                                       |
-| ------------------------------------------------------------ | -----: | --------------------- | --------------------------------------------------------------------- |
-| A declared field is missing or has the wrong format          |    400 | `VALIDATION_FAILED`   | Correct the fields named in `details`, then retry.                    |
-| Unknown email, wrong password, or account without a password |    401 | `INVALID_CREDENTIALS` | Let the user correct the email or password; never say which is wrong. |
-| Correct password, email not verified                         |    403 | `EMAIL_NOT_VERIFIED`  | Tell the user to verify their email before signing in.                |
-| Unexpected failure                                           |    500 | `INTERNAL_ERROR`      | Do not assume whether sign-in completed; retry sign-in.               |
+| Situation                                                    | Status | Code                     | Consumer action                                                       |
+| ------------------------------------------------------------ | -----: | ------------------------ | --------------------------------------------------------------------- |
+| A declared field is missing or has the wrong format          |    400 | `VALIDATION_FAILED`      | Correct the fields named in `details`, then retry.                    |
+| Unknown email, wrong password, or account without a password |    401 | `INVALID_CREDENTIALS`    | Let the user correct the email or password; never say which is wrong. |
+| Correct password, email not verified                         |    403 | `EMAIL_NOT_VERIFIED`     | Tell the user to verify their email before signing in.                |
+| The database is unavailable                                  |    503 | `DEPENDENCY_UNAVAILABLE` | Retry sign-in later.                                                  |
+| Unexpected failure                                           |    500 | `INTERNAL_ERROR`         | Do not assume whether sign-in completed; retry sign-in.               |
 
-Decided change: the unverified-email outcome returns `401` today. It becomes
+Decided changes: the unverified-email outcome returns `401` today. It becomes
 `403`, because the credentials are valid and the sign-in is refused (RFC 9110
-§15.5.4), which also keeps it apart from a client's `401` handling. See
+§15.5.4), which also keeps it apart from a client's `401` handling. An
+unavailable database returns `500` today. It becomes
+`503 DEPENDENCY_UNAVAILABLE`, so that every Context reports an unavailable
+database as `503`. See
 [Known Defects and Decided Changes](#known-defects-and-decided-changes).
 
 Authentication errors must not reveal unnecessary account-existence details;
@@ -379,11 +411,17 @@ Validation:
 
 Errors (codes and messages in [Error Responses](#error-responses)):
 
-| Situation                                                                                            | Status | Code                    | Consumer action                                                                                                                                                                                         |
-| ---------------------------------------------------------------------------------------------------- | -----: | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `refreshToken` missing or not a string                                                               |    400 | `VALIDATION_FAILED`     | Correct the request before retrying.                                                                                                                                                                    |
-| Unknown, expired, revoked, or reused token (including an empty string), or its user no longer exists |    401 | `REFRESH_TOKEN_INVALID` | Discard the stored token pair and sign in again.                                                                                                                                                        |
-| Unexpected failure                                                                                   |    500 | `INTERNAL_ERROR`        | If the first attempt already rotated the token, a retry with the same token counts as reuse, which revokes the user's refresh tokens and returns `REFRESH_TOKEN_INVALID`; the user then signs in again. |
+| Situation                                                                                            | Status | Code                     | Consumer action                                                                                                                                                                                                      |
+| ---------------------------------------------------------------------------------------------------- | -----: | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `refreshToken` missing or not a string                                                               |    400 | `VALIDATION_FAILED`      | Correct the request before retrying.                                                                                                                                                                                 |
+| Unknown, expired, revoked, or reused token (including an empty string), or its user no longer exists |    401 | `REFRESH_TOKEN_INVALID`  | Discard the stored token pair and sign in again.                                                                                                                                                                     |
+| The database is unavailable                                                                          |    503 | `DEPENDENCY_UNAVAILABLE` | Retry later. If the first attempt already rotated the token, a retry with the same token counts as reuse, which revokes the user's refresh tokens and returns `REFRESH_TOKEN_INVALID`; the user then signs in again. |
+| Unexpected failure                                                                                   |    500 | `INTERNAL_ERROR`         | If the first attempt already rotated the token, a retry with the same token counts as reuse, which revokes the user's refresh tokens and returns `REFRESH_TOKEN_INVALID`; the user then signs in again.              |
+
+Decided change: an unavailable database returns `500` today. It becomes
+`503 DEPENDENCY_UNAVAILABLE`, so that every Context reports an unavailable
+database as `503`. See
+[Known Defects and Decided Changes](#known-defects-and-decided-changes).
 
 A missing `refreshToken` fails request validation and returns `400`, as the
 implementation does.
@@ -438,11 +476,25 @@ Errors (codes and messages in [Error Responses](#error-responses)):
 | Access token missing or unusable (checked before body validation) |    401 | `AUTHENTICATION_REQUIRED` | Get a new access token, then retry.                                             |
 | `refreshToken` missing or not a string                            |    400 | `VALIDATION_FAILED`       | Correct the request before retrying.                                            |
 | Refresh token belongs to another user; it is not revoked          |    403 | `FORBIDDEN`               | Do not retry unchanged. The session stays valid, so keep the stored token pair. |
+| The database is unavailable                                       |    503 | `DEPENDENCY_UNAVAILABLE`  | Do not assume whether the refresh token was revoked. Retry as described below.  |
 | Unexpected failure                                                |    500 | `INTERNAL_ERROR`          | Do not assume whether the refresh token was revoked.                            |
 
-Decided change: a refresh token that belongs to another user returns `401`
+After `503 DEPENDENCY_UNAVAILABLE`, the client retries logout with the same
+refresh token only while that token has not been used to refresh since. If
+the access token must be refreshed first, the client then logs out with the
+refresh token that the refresh returned: a successful refresh revokes the old
+token, so logging out with the old one would leave the new one active. If
+that refresh returns `REFRESH_TOKEN_INVALID`, the client discards the stored
+token pair. The code does not say why. The first logout may have revoked the
+token, so the refresh counted as reuse, which revokes the user's refresh
+tokens. The token may also have expired or been rotated by another client, or
+its user may no longer exist.
+
+Decided changes: a refresh token that belongs to another user returns `401`
 today. It becomes `403`, because the caller is authenticated and the action is
-refused. See
+refused. An unavailable database returns `500` today. It becomes
+`503 DEPENDENCY_UNAVAILABLE`, so that every Context reports an unavailable
+database as `503`. See
 [Known Defects and Decided Changes](#known-defects-and-decided-changes).
 
 Logout does not accept a body-supplied actor identifier.
@@ -514,10 +566,11 @@ Current response:
 
 Errors (codes and messages in [Error Responses](#error-responses)):
 
-| Situation                                                                                                                                                                                                                                                                                                                                 | Status | Code                          | Consumer action                                                                                |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -----: | ----------------------------- | ---------------------------------------------------------------------------------------------- |
-| Any of: a provider `error` in the query, including `access_denied`; no provider result at all; the provider rejects the `code`; another provider call fails; the provider profile has no email; the provider identity cannot be safely linked to an account, including a concurrent first sign-in with the same email that loses the race |    401 | `OAUTH_AUTHENTICATION_FAILED` | Offer to start provider sign-in again.                                                         |
-| Unexpected failure, including a malformed provider profile response                                                                                                                                                                                                                                                                       |    500 | `INTERNAL_ERROR`              | Do not assume whether an account was created or linked; offer to start provider sign-in again. |
+| Situation                                                                                                                                                                                                                                                                                                                                 | Status | Code                          | Consumer action                                                                                      |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -----: | ----------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Any of: a provider `error` in the query, including `access_denied`; no provider result at all; the provider rejects the `code`; another provider call fails; the provider profile has no email; the provider identity cannot be safely linked to an account, including a concurrent first sign-in with the same email that loses the race |    401 | `OAUTH_AUTHENTICATION_FAILED` | Offer to start provider sign-in again.                                                               |
+| The database is unavailable                                                                                                                                                                                                                                                                                                               |    503 | `DEPENDENCY_UNAVAILABLE`      | Do not assume whether an account was created or linked; offer to start provider sign-in again later. |
+| Unexpected failure, including a malformed provider profile response                                                                                                                                                                                                                                                                       |    500 | `INTERNAL_ERROR`              | Do not assume whether an account was created or linked; offer to start provider sign-in again.       |
 
 The callback never starts a new provider flow.
 
@@ -525,6 +578,11 @@ Known defects today: a provider `error` other than `access_denied`, a
 rejected `code` or other provider-call failure, a profile without email, and
 a lost first sign-in race return `500`; a request with no provider result
 redirects to the provider. See
+[Known Defects and Decided Changes](#known-defects-and-decided-changes).
+
+Decided change: an unavailable database returns `500` today. It becomes
+`503 DEPENDENCY_UNAVAILABLE`, so that every Context reports an unavailable
+database as `503`. See
 [Known Defects and Decided Changes](#known-defects-and-decided-changes).
 
 Current account-linking behavior requires the provider email and existing Huddle email to satisfy Identity's verification rules.
@@ -580,7 +638,7 @@ Current response:
 }
 ```
 
-Errors and known defects: as for
+Errors, known defects, and decided changes: as for
 [Google OAuth Callback](#google-oauth-callback). For GitHub, an empty email
 list is an unexpected failure (`500`).
 

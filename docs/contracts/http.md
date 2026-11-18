@@ -1,7 +1,7 @@
 # HTTP Contracts
 
 Status: Shared conventions accepted; Identity endpoints and first Chat subset implemented
-Last reviewed: 2026-11-18
+Last reviewed: 2026-11-19
 Last verified against source: 2026-11-18
 
 ## Purpose
@@ -447,8 +447,9 @@ The implementing change retires the transitional form in the same change, per
 - Response descriptions match `identity-http.md`, and the documented
   responses change where it records a decided change or a known defect: the
   verification `400` gains `VALIDATION_FAILED`; the OAuth callbacks document
-  `401` and `500` and no redirect; the OAuth start routes keep their redirect
-  and gain `401` and `500`; login and logout each gain a `403`.
+  `401`, `500`, and `503` and no redirect; the OAuth start routes keep their
+  redirect and gain `401` and `500`; login and logout each gain a `403`; and
+  registration, verification, login, refresh, and logout each gain a `503`.
 - Every documented `401` lists the `WWW-Authenticate` header
   ([Error Response Headers](#error-response-headers)).
 - Each newly documented response is exercised by a response-agreement test,
@@ -523,7 +524,7 @@ The following codes are the stable shared defaults:
 | State conflict               | `CONFLICT`                |         409 | Defined when first used                                     | Follow the owning operation's reconciliation guidance.                                           |
 | Request too large            | `PAYLOAD_TOO_LARGE`       |         413 | Request body is too large.                                  | Reduce the request body before retrying.                                                         |
 | Unsupported request encoding | `UNSUPPORTED_MEDIA_TYPE`  |         415 | Request content type, charset or encoding is not supported. | Send the body in a supported charset and content coding (see `Accept-Encoding`) before retrying. |
-| Dependency unavailable       | `DEPENDENCY_UNAVAILABLE`  |         503 | Defined when first used                                     | Preserve confirmed state and retry according to policy.                                          |
+| Dependency unavailable       | `DEPENDENCY_UNAVAILABLE`  |         503 | A required service is temporarily unavailable.              | Preserve confirmed state and retry according to policy.                                          |
 | Unexpected failure           | `INTERNAL_ERROR`          |         500 | An unexpected error occurred.                               | Do not assume whether the operation completed safely.                                            |
 
 Each shared code in use has one fixed public message, shown above. A shared
@@ -537,6 +538,11 @@ implemented by Chat with these messages. The messages for `FORBIDDEN` and
 `UNSUPPORTED_MEDIA_TYPE`, are Accepted, not implemented. The last two are
 returned only for
 [Requests Rejected Before Routing](#requests-rejected-before-routing).
+`DEPENDENCY_UNAVAILABLE` and its message are first used by Identity for an
+unavailable database
+([`identity-http.md`](identity-http.md#envelope-and-messages)) and are
+Accepted, not implemented. Chat reports its dependency outages with the
+narrower `503` codes its contracts define.
 
 An owning Context contract may define a narrower stable code only when its
 consumer must distinguish that outcome. The narrower code retains this
@@ -676,9 +682,9 @@ Examples that remain internal include:
 Context-specific authorization determines whether a hidden resource is
 represented as `403` or `404`.
 
-Error logging (Accepted, not implemented): unexpected failures,
-provider-call failures, and authentication and access-control failures are
-logged with their error type or outcome code and their location, without
+Error logging (Accepted, not implemented): unexpected failures, dependency
+outages, provider-call failures, and authentication and access-control
+failures are logged with their error type or outcome code and their location, without
 request values, tokens, or library message text. Other client errors are not
 logged. The rule applies to every Context. The accepted changes implement it
 for Identity routes and for

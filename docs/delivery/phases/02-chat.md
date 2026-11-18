@@ -84,11 +84,16 @@ separate deliveries, each its own change.
 - Identity module wiring for the filter;
 - the `WWW-Authenticate` header on Identity's `401` responses;
 - Identity's Passport guards, strategies, and provider profile mappers;
-- typed Application errors for each client-error outcome, and where the
-  register, login, verify, refresh, logout, and OAuth login use cases throw
-  them;
+- typed Application errors for each client-error outcome and for the
+  dependency-unavailable outcome, and where the register, login, verify,
+  refresh, logout, and OAuth login use cases throw them;
 - Identity's user repository, only to translate a unique violation on the
   email into the email-already-registered error;
+- Identity's user and refresh-token repositories, only to translate an
+  unavailable database into the dependency-unavailable error. That error may
+  reach Identity's Directory and Profile Query APIs as the error they throw
+  on a repository failure. Their signatures, return values, and package
+  exports do not change, and the error type is not exported;
 - the API Gateway validation pipe, only so that it reports failing fields as
   structured data;
 - the shared error envelope schema: moving it to the API Gateway's shared HTTP
@@ -99,8 +104,10 @@ separate deliveries, each its own change.
 It must not change routes or success payloads; statuses other than those
 `identity-http.md` records as known defects or decided changes; validation
 rules other than the `displayName` length rule; Domain code; token issuance,
-rotation, or revocation; Identity's public package exports and public APIs;
-or Chat's observable responses or logging.
+rotation, or revocation; Identity's public package exports and public APIs,
+except that the dependency-unavailable error may reach the Directory and
+Profile Query APIs as stated above; or Chat's observable responses or
+logging.
 
 **Requests rejected before routing, and Chat's `401` header.** Its
 implementation may change only:
