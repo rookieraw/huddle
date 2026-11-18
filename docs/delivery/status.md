@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-11-17
+Last updated: 2026-11-18
 
 Current implementation phase: Phase 2 — Contacts and Chat
 
@@ -130,12 +130,14 @@ Accepted target documentation is not evidence of implementation for the remainin
 
 ## Next Implementation Work
 
-Further Phase 2 implementation continues with the Contacts frontend delivery, followed by the remaining Chat capabilities and their authorized frontend slices in:
+Further Phase 2 implementation continues with the HTTP error envelope alignment slice, then the Contacts frontend delivery, followed by the remaining Chat capabilities and their authorized frontend slices in:
 
 [`phases/02-chat.md`](phases/02-chat.md)
 
 Its remaining high-level outcome is:
 
+- the Identity error envelope, as accepted in [`../contracts/identity-http.md`](../contracts/identity-http.md#error-responses);
+- the handling of requests rejected before routing, with Chat's `401` `WWW-Authenticate` header, as accepted in [`../contracts/http.md`](../contracts/http.md#requests-rejected-before-routing);
 - Contacts frontend delivery;
 - Direct Conversations;
 - Group Conversations;
@@ -178,6 +180,8 @@ Failure at a future gate must be recorded when discovered. It must not be report
 
 Do not currently assume the existence of:
 
+- the stable error envelope on Identity endpoints;
+- the stable handling of requests rejected before routing, and the `WWW-Authenticate` and `Accept-Encoding` error response headers;
 - frontend Contacts delivery;
 - Direct or Group Chat;
 - MongoDB Message persistence;
