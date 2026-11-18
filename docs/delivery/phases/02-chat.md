@@ -25,7 +25,7 @@ Calling, Meetings, Billing, and Notification are not part of this phase.
 
 ## Implementation Authority
 
-Phase 2 may implement only the Chat and user-visible capabilities authorized by this document, and the one engineering slice described at the end of this section.
+Phase 2 may implement only the Chat and user-visible capabilities authorized by this document, and the two engineering slices described at the end of this section.
 
 Target behavior is defined in:
 
@@ -41,7 +41,7 @@ This phase defines which parts of those targets may be implemented now.
 
 The existence of a future interface, journey, navigation seam, Conversation type, Integration Event, entitlement, or extension point does not authorize its early implementation.
 
-Phase 2 may also deliver one engineering slice early: the
+Phase 2 may also deliver two engineering slices early. The first is the
 [Initial OpenAPI Foundation](#initial-openapi-foundation). It is neither a
 Chat capability nor a user-visible capability. Its implementation may change
 only:
@@ -67,6 +67,60 @@ Describing Identity's existing HTTP endpoints is documentation metadata. It is
 not an Identity extension under [Minimum Identity Support](#minimum-identity-support),
 and it does not reopen Phase 1.
 
+### HTTP Error Envelope Alignment
+
+The second engineering slice aligns error responses with the accepted rules in
+[`contracts/http.md`](../../contracts/http.md) and
+[`contracts/identity-http.md`](../../contracts/identity-http.md#error-responses).
+It is neither a Chat capability nor a user-visible capability. It has two
+separate deliveries, each its own change.
+
+**Identity error envelope.** Its implementation may change only:
+
+- Identity's HTTP interface: an Identity error filter and its error logging,
+  controller error translation, request DTOs (including a query object for
+  the verification token and the `displayName` length rule), documentation
+  metadata, and one table of fixed public messages;
+- Identity module wiring for the filter;
+- the `WWW-Authenticate` header on Identity's `401` responses;
+- Identity's Passport guards, strategies, and provider profile mappers;
+- typed Application errors for each client-error outcome, and where the
+  register, login, verify, refresh, logout, and OAuth login use cases throw
+  them;
+- Identity's user repository, only to translate a unique violation on the
+  email into the email-already-registered error;
+- the API Gateway validation pipe, only so that it reports failing fields as
+  structured data;
+- the shared error envelope schema: moving it to the API Gateway's shared HTTP
+  transport, registering it with the description, and the Chat import paths
+  the move requires;
+- tests, the regenerated description under `docs/api/`, and documentation.
+
+It must not change routes or success payloads; statuses other than those
+`identity-http.md` records as known defects or decided changes; validation
+rules other than the `displayName` length rule; Domain code; token issuance,
+rotation, or revocation; Identity's public package exports and public APIs;
+or Chat's observable responses or logging.
+
+**Requests rejected before routing, and Chat's `401` header.** Its
+implementation may change only:
+
+- one API Gateway error handler for
+  [Requests Rejected Before Routing](../../contracts/http.md#requests-rejected-before-routing),
+  and its error logging;
+- its registration, so that every application built from the root module,
+  including test applications, gets it;
+- Chat's error filter, only to add the `WWW-Authenticate` header to its `401`;
+- Chat's documentation metadata, only to document that header;
+- tests, including those that touch disabled documentation routes, the
+  regenerated description, and documentation.
+
+It must not change any other Context error behavior, or any route's status,
+code, or body.
+
+Neither delivery reopens Phase 1, and neither is an Identity extension under
+[Minimum Identity Support](#minimum-identity-support).
+
 ## Entry Criteria
 
 Phase 2 begins only after:
@@ -86,19 +140,20 @@ A completed Phase 1 backend does not automatically establish a browser-safe Auth
 
 ## Required Documents by Task
 
-| Task                   | Read these documents                                                                                                                           |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Identity `displayName` | This phase file and `contexts/identity.md`                                                                                                     |
-| Contacts               | This phase file, `contexts/chat.md`, `contracts/http.md`, `contracts/chat-http.md` (index), and `contracts/chat-contacts-http.md`              |
-| Direct Conversation    | This phase file, `contexts/chat.md`, and `contracts/http.md`                                                                                   |
-| Group Conversation     | This phase file, `contexts/chat.md`, and `product/tiers.md` when quota-related                                                                 |
-| Message persistence    | This phase file, `contexts/chat.md`, `architecture/data-and-consistency.md`, and ADR 0003                                                      |
-| Realtime messaging     | This phase file, `contexts/chat.md`, `contracts/chat-realtime.md`, and `architecture/security.md`                                              |
-| Identity lookup        | This phase file, `contexts/identity.md`, `contexts/chat.md`, and ADR 0004                                                                      |
-| Quota enforcement      | This phase file, `product/tiers.md`, `contexts/chat.md`, and `contexts/billing.md`                                                             |
-| Frontend experience    | This phase file, `product/user-experience.md`, applicable HTTP or realtime contracts, `architecture/security.md`, and `engineering/testing.md` |
-| Tests                  | Relevant task documents and `engineering/testing.md`                                                                                           |
-| OpenAPI foundation     | This phase file, `contracts/http.md`, owning contracts of the described operations, `architecture/security.md`, and `engineering/testing.md`   |
+| Task                          | Read these documents                                                                                                                                                                              |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Identity `displayName`        | This phase file and `contexts/identity.md`                                                                                                                                                        |
+| Contacts                      | This phase file, `contexts/chat.md`, `contracts/http.md`, `contracts/chat-http.md` (index), and `contracts/chat-contacts-http.md`                                                                 |
+| Direct Conversation           | This phase file, `contexts/chat.md`, and `contracts/http.md`                                                                                                                                      |
+| Group Conversation            | This phase file, `contexts/chat.md`, and `product/tiers.md` when quota-related                                                                                                                    |
+| Message persistence           | This phase file, `contexts/chat.md`, `architecture/data-and-consistency.md`, and ADR 0003                                                                                                         |
+| Realtime messaging            | This phase file, `contexts/chat.md`, `contracts/chat-realtime.md`, and `architecture/security.md`                                                                                                 |
+| Identity lookup               | This phase file, `contexts/identity.md`, `contexts/chat.md`, and ADR 0004                                                                                                                         |
+| Quota enforcement             | This phase file, `product/tiers.md`, `contexts/chat.md`, and `contexts/billing.md`                                                                                                                |
+| Frontend experience           | This phase file, `product/user-experience.md`, applicable HTTP or realtime contracts, `architecture/security.md`, and `engineering/testing.md`                                                    |
+| Tests                         | Relevant task documents and `engineering/testing.md`                                                                                                                                              |
+| OpenAPI foundation            | This phase file, `contracts/http.md`, owning contracts of the described operations, `architecture/security.md`, and `engineering/testing.md`                                                      |
+| HTTP error envelope alignment | This phase file, `contracts/http.md`, `contracts/identity-http.md`, `contracts/chat-contacts-http.md`, `contexts/identity.md`, `architecture/security.md`, ADR 0008, and `engineering/testing.md` |
 
 Do not load Calling, Meeting, Stripe, or Notification documents for an ordinary Phase 2 Chat or frontend task.
 
@@ -390,6 +445,10 @@ Before an Authentication UI implementation outcome, explicitly decide and docume
 The decision must update the owning Identity, HTTP-contract, security, implementation, and test sources together where applicable.
 
 This Phase file does not select that transport.
+
+The Authentication UI also requires the Identity error envelope delivery of
+[HTTP Error Envelope Alignment](#http-error-envelope-alignment) to be
+implemented first.
 
 #### Chat Contract Gate
 
