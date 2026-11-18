@@ -1,7 +1,7 @@
 # Brownfield Migration Principles
 
 Status: Accepted engineering policy  
-Last reviewed: 2026-11-18
+Last reviewed: 2026-11-19
 
 ## Purpose
 
@@ -33,13 +33,9 @@ before implementation.
 ### 2. Record Current Behavior Before Changing It
 
 Before an outcome changes implemented behavior, the behavior it changes is
-recorded:
-
-- by a test that passes against the unchanged code and pins the observable
-  behavior (a characterization test), or by an existing test that already
-  pins it; and
-- where the behavior is not described by an owning contract, by an observed
-  current-behavior statement in the owning document, with its date.
+recorded by a test that passes against the unchanged code and pins the
+observable behavior (a characterization test), or by an existing test that
+already pins it.
 
 A characterization test records what the code does, not what it should do.
 It is not RED evidence for the change; see
